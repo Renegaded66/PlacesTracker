@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="120dp"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginEnd="12dp"
+    android:clickable="true"
+    android:focusable="true">
+
+    <FrameLayout
+        android:layout_width="120dp"
+        android:layout_height="120dp">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/ivStopPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/RoundedCornersSmall"
+            android:background="#EEE" />
+
+        <View
+            android:id="@+id/draftOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#80FFFFFF"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/ivDraftBadge"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="4dp"
+            android:src="@drawable/ic_add_circle"
+            app:tint="?attr/colorTertiary"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tvStopPreviewDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:textSize="12sp"
+        android:textColor="?attr/colorOnSurface"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+</LinearLayout>

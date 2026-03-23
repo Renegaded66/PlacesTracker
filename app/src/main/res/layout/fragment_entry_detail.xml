@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/detailRootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/windowBackground"
+    android:fitsSystemWindows="true">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp"
+        android:theme="@style/ThemeOverlay.MaterialComponents.ActionBar">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:title="Eigenschaften"
+            app:titleTextColor="?attr/colorOnSurface"/>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="16dp">
+
+            <TextView
+                android:id="@+id/tvDetailTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                tools:text="Titel des Ortes" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp">
+
+                <LinearLayout
+                    android:id="@+id/llDetailFlags"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cvCountryName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_above="@id/llDetailFlags"
+                    android:visibility="gone"
+                    app:cardCornerRadius="8dp"
+                    app:cardElevation="4dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                    <TextView
+                        android:id="@+id/tvCountryNamePopup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="8dp"
+                        android:paddingVertical="4dp"
+                        android:textSize="12sp"
+                        tools:text="Deutschland" />
+                </com.google.android.material.card.MaterialCardView>
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/tvDetailDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="?android:attr/textColorSecondary"
+                tools:text="12.05.2024 - 14:30" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDetailMap"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_marginTop="16dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="1.5dp"
+                app:strokeColor="?attr/colorOutlineVariant">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <android.webkit.WebView
+                        android:id="@+id/detailCesiumWebView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <ImageButton
+                        android:id="@+id/btnFullscreenMap"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="12dp"
+                        android:background="@drawable/circle_background"
+                        android:src="@drawable/ic_fullscreen"
+                        android:elevation="4dp"
+                        android:contentDescription="Vollbild"
+                        app:tint="?attr/colorOnSurface" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tvDetailNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="16sp"
+                tools:text="Hier stehen die Notizen zum Ort..." />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Medien"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvDetailMedia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                app:spanCount="3"
+                tools:listitem="@layout/item_media" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

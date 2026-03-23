@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Automatische Erkennung"
+            android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Heimat-Standort"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardHomeMap"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginBottom="8dp"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant">
+
+            <android.webkit.WebView
+                android:id="@+id/homeWebView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvHomeCoords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tippe auf die Karte, um dein Zuhause zu markieren"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:layout_marginBottom="24dp" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchAutoGallery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Galerie automatisch durchsuchen"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Die App erstellt Entwürfe für neue Orte, wenn du Fotos außerhalb deines Heimat-Radius (20km) aufnimmst."
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:alpha="0.7" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSaveAutoSettings"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:layout_marginTop="32dp"
+            android:text="Speichern"
+            app:cornerRadius="16dp" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

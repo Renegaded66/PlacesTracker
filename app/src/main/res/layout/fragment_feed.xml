@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/FeedBackground"
+    android:background="?android:attr/windowBackground">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="64dp" />
+
+        <!-- Globaler Profil Header -->
+        <RelativeLayout
+            android:id="@+id/globalProfileHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="8dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/ivGlobalUserAvatar"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_alignParentStart="true"
+                android:scaleType="centerCrop"
+                android:src="@drawable/placeholder"
+                app:shapeAppearanceOverlay="@style/CircleImage"
+                app:strokeColor="?attr/colorPrimary"
+                app:strokeWidth="2dp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginStart="16dp"
+                android:layout_toEndOf="@id/ivGlobalUserAvatar"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvGlobalUsername"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/default_username"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvGlobalUserFlag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFriends"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="Freunde"
+                app:icon="@drawable/ic_friends" />
+
+        </RelativeLayout>
+
+        <!-- View Switcher (List vs Globe) -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleGroupView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginVertical="8dp"
+            app:singleSelection="true"
+            app:checkedButton="@+id/btnListView">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnListView"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="List"
+                app:icon="@drawable/ic_feed" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnGlobeView"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Globe"
+                app:icon="@drawable/ic_marker" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Filter Sektion -->
+        <HorizontalScrollView
+            android:id="@+id/filterScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFilterType"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Typ"
+                    app:chipIcon="@drawable/ic_feed"
+                    style="@style/Widget.Material3.Chip.Filter" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFilterDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Datum"
+                    app:chipIcon="@drawable/ic_calendar"
+                    style="@style/Widget.Material3.Chip.Filter" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chipFilterLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Standort"
+                    app:chipIcon="@drawable/ic_marker"
+                    style="@style/Widget.Material3.Chip.Filter" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnResetFilter"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Reset"
+                    android:visibility="gone"
+                    app:icon="@android:drawable/ic_menu_revert" />
+
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#1A000000"
+            android:layout_marginHorizontal="16dp" />
+            
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <!-- Listenansicht -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/feedRecycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="16dp"
+            android:clipToPadding="false"
+            android:layoutAnimation="@anim/layout_animation_fall_down" />
+
+        <!-- Weltkugel Ansicht -->
+        <android.webkit.WebView
+            android:id="@+id/feedCesiumWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <!-- FAB Container -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="32dp"
+        android:gravity="end"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/layoutAddExperience"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+            
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/new_entry"
+                android:textColor="?attr/colorOnSurface"
+                android:background="@drawable/rounded_corners"
+                android:padding="4dp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabExperience"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:fabSize="mini"
+                app:srcCompat="@drawable/ic_feed" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutAddTrip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Trip"
+                android:textColor="?attr/colorOnSurface"
+                android:background="@drawable/rounded_corners"
+                android:padding="4dp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:fabSize="mini"
+                app:srcCompat="@drawable/ic_marker" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layoutAutoTrip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="Auto Trip"
+                android:textColor="?attr/colorOnSurface"
+                android:background="@drawable/rounded_corners"
+                android:padding="4dp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabAutoTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:fabSize="mini"
+                app:srcCompat="@drawable/ic_play_pause" />
+        </LinearLayout>
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAdd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Hinzufügen"
+            app:srcCompat="@drawable/ic_add" />
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

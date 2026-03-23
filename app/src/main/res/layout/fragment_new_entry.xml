@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/newEntryScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="32dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Titel" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Notizen (optional)"
+                    android:minLines="3"
+                    android:gravity="top" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Datum & Uhrzeit Zeile -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:id="@+id/ivCalendar"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@drawable/ic_calendar"
+                    android:padding="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
+
+                <TextView
+                    android:id="@+id/tvDateDisplay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Datum auswählen"
+                    android:textSize="16sp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <ImageView
+                    android:id="@+id/ivTime"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    android:padding="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless" />
+
+                <TextView
+                    android:id="@+id/tvTimeDisplay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Uhrzeit (optional)"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Standort auswählen"
+                android:layout_marginTop="24dp"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                app:icon="@drawable/ic_marker" />
+
+            <!-- Cesium 3D Globe Vorschau -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNewEntryMap"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginTop="8dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <android.webkit.WebView
+                        android:id="@+id/newEntryCesiumWebView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+
+                    <ImageButton
+                        android:id="@+id/btnFullscreenMap"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="12dp"
+                        android:background="@drawable/circle_background"
+                        android:src="@drawable/ic_fullscreen"
+                        android:elevation="4dp"
+                        app:tint="?attr/colorOnSurface" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/tvCoordinates"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Keine Koordinaten"
+                android:textAlignment="center"
+                android:layout_marginTop="4dp"
+                android:textColor="?android:attr/textColorSecondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="Medien"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/mediaRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <!-- Platzhalter für Save Button -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="100dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSave"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom"
+        android:text="Eintrag speichern"
+        android:layout_margin="16dp"
+        app:cornerRadius="16dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

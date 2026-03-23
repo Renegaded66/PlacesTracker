@@ -1,0 +1,17 @@
+package com.d_drostes_apps.placestracker.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "user_profile")
+data class UserProfile(
+    @PrimaryKey val id: Int = 1,
+    val username: String,
+    val profilePicturePath: String?,
+    val countryCode: String? = null,
+    val language: String = "de",
+    val homeLatitude: Double? = null,
+    val homeLongitude: Double? = null,
+    val isAutoGalleryScanEnabled: Boolean = false,
+    val themeColor: Int = -10044455 // Standard-Lila (Material 3 standard)
+)

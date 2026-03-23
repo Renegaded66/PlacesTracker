@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">PlacesTracker</string>
+    <string name="default_username">User</string>
+    <string name="settings_title">Settings</string>
+    <string name="profile_edit">Edit Profile</string>
+    <string name="app_settings">App Settings</string>
+    <string name="language">Language</string>
+    <string name="save">Save</string>
+    <string name="new_entry">New Entry</string>
+    <string name="edit_entry">Edit Entry</string>
+    <string name="title_hint">Title</string>
+    <string name="notes_hint">Notes (optional)</string>
+    <string name="date_hint">Select Date</string>
+    <string name="time_hint">Time (optional)</string>
+    <string name="location_hint">Select Location</string>
+    <string name="save_entry">Save Entry</string>
+    <string name="delete_entry">Delete Entry</string>
+    <string name="delete_confirm">Do you really want to delete this entry permanently?</string>
+    <string name="select_language">Select Language</string>
+    <string name="german">German</string>
+    <string name="english">English</string>
+</resources>

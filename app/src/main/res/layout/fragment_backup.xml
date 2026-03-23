@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/windowBackground">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="24dp" />
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:title="Backup" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Sichere deine Reisen, Bilder und Einstellungen in einer Datei, um sie später wiederherzustellen oder auf ein anderes Gerät zu übertragen."
+            android:textSize="16sp"
+            android:alpha="0.7"
+            android:layout_marginBottom="32dp"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCreateBackup"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="Backup erstellen"
+            app:icon="@drawable/ic_play_pause"
+            app:cornerRadius="16dp"
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRestoreBackup"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:text="Backup hochladen"
+            app:icon="@drawable/ic_add_circle"
+            app:cornerRadius="16dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tvBackupStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text=""
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/backupProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="invisible" />
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">PlacesTracker</string>
+    <string name="default_username">Benutzer</string>
+    <string name="settings_title">Einstellungen</string>
+    <string name="profile_edit">Profil bearbeiten</string>
+    <string name="app_settings">App-Einstellungen</string>
+    <string name="language">Sprache</string>
+    <string name="save">Speichern</string>
+    <string name="new_entry">Neuer Eintrag</string>
+    <string name="edit_entry">Eintrag bearbeiten</string>
+    <string name="title_hint">Titel</string>
+    <string name="notes_hint">Notizen (optional)</string>
+    <string name="date_hint">Datum auswählen</string>
+    <string name="time_hint">Uhrzeit (optional)</string>
+    <string name="location_hint">Standort auswählen</string>
+    <string name="save_entry">Eintrag speichern</string>
+    <string name="delete_entry">Eintrag löschen</string>
+    <string name="delete_confirm">Möchtest du diesen Eintrag wirklich dauerhaft löschen?</string>
+    <string name="select_language">Sprache auswählen</string>
+    <string name="german">Deutsch</string>
+    <string name="english">Englisch</string>
+    <string name="toggle_fullscreen_map">Toggle fullscreen map</string>
+</resources>

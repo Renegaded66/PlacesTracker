@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; background-color: #000; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        
+        .marker {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .trip-marker {
+            border-color: #FFD700;
+            width: 60px;
+            height: 60px;
+            box-shadow: 0 0 15px rgba(255,215,0,0.5);
+        }
+
+        .mini-marker {
+            width: 15px;
+            height: 15px;
+            background-color: #FFD700;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        .user-location-marker {
+            width: 18px;
+            height: 18px;
+            background-color: #007AFF;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(0,122,255,0.6);
+            z-index: 100;
+        }
+
+        .experience-marker {
+            width: 24px;
+            height: 24px;
+            background-color: #007AFF;
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(0,122,255,0.8);
+            z-index: 101;
+        }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: {
+            version: 8,
+            sources: {
+                'satellite': {
+                    type: 'raster',
+                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                    tileSize: 256,
+                    maxzoom: 19
+                },
+                'osm': {
+                    type: 'raster',
+                    tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                    tileSize: 256
+                },
+                'labels': {
+                    type: 'raster',
+                    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                    tileSize: 256
+                }
+            },
+            layers: [
+                {
+                    id: 'satellite',
+                    type: 'raster',
+                    source: 'satellite',
+                    paint: { 'raster-opacity': 1.0 }
+                },
+                {
+                    id: 'osm',
+                    type: 'raster',
+                    source: 'osm',
+                    paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 16, 0.5] }
+                },
+                {
+                    id: 'labels',
+                    type: 'raster',
+                    source: 'labels',
+                    minzoom: 2
+                }
+            ]
+        },
+        projection: 'globe',
+        zoom: 1.5,
+        center: [0, 0],
+        maxPitch: 0, 
+        dragRotate: false 
+    });
+
+    let markers = [];
+    let routes = [];
+    let userMarker = null;
+    let lastBounds = null;
+
+    window.setGlobalData = function(dataJson) {
+        const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
+        clearMap();
+        data.forEach(item => {
+            if (item.type === 'experience' && item.lat && item.lon) {
+                addMarker(item, 'experience');
+            } else if (item.type === 'trip' && item.stops) {
+                const coords = [];
+                item.stops.forEach((stop) => {
+                    if (stop.lat && stop.lon) {
+                        coords.push([stop.lon, stop.lat]);
+                        addMarker({...stop, tripId: item.id}, 'trip');
+                    }
+                });
+                if (coords.length > 1) {
+                    drawRoute('route_' + item.id, coords);
+                }
+            }
+        });
+    };
+
+    function clearMap() {
+        markers.forEach(m => m.remove());
+        markers = [];
+        routes.forEach(id => {
+            if (map.getLayer(id)) map.removeLayer(id);
+            if (map.getSource(id)) map.removeSource(id);
+        });
+        routes = [];
+    }
+
+    function addMarker(item, type) {
+        const el = document.createElement('div');
+        if (type === 'mini') {
+            el.className = 'marker mini-marker';
+        } else if (type === 'experience' && (!item.image || item.image.length < 50)) {
+            el.className = 'experience-marker';
+        } else {
+            el.className = 'marker' + (type === 'trip' ? ' trip-marker' : '');
+            if (item.image && item.image.length > 50) {
+                el.style.backgroundImage = 'url(' + item.image + ')';
+            } else {
+                el.style.backgroundColor = type === 'trip' ? '#FFD700' : '#007AFF';
+                el.innerHTML = '<div style="color:white; font-weight:bold; display:flex; align-items:center; justify-content:center; height:100%">?</div>';
+            }
+        }
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([item.lon, item.lat])
+            .addTo(map);
+        markers.push(marker);
+    }
+
+    function drawRoute(id, coords) {
+        if (map.getSource(id)) map.removeSource(id);
+        if (map.getLayer(id)) map.removeLayer(id);
+        map.addSource(id, {
+            'type': 'geojson',
+            'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': coords } }
+        });
+        map.addLayer({
+            'id': id,
+            'type': 'line',
+            'source': id,
+            'layout': { 'line-join': 'round', 'line-cap': 'round' },
+            'paint': {
+                'line-color': '#FFD700',
+                'line-width': 4,
+                'line-opacity': 0.8
+            }
+        });
+        routes.push(id);
+    }
+
+    window.setLocation = function(lat, lon, image) {
+        clearMap();
+        addMarker({lat: lat, lon: lon, image: image}, 'experience');
+        map.flyTo({ center: [lon, lat], zoom: 17, duration: 1000, essential: true });
+    };
+
+    window.setTripPath = function(pointsJson) {
+        const points = typeof pointsJson === 'string' ? JSON.parse(pointsJson) : pointsJson;
+        clearMap();
+        if (!points || points.length === 0) return;
+        const coords = [];
+        const bounds = new maplibregl.LngLatBounds();
+        points.forEach((p) => {
+            if (p.lat && p.lon) {
+                const lngLat = [p.lon, p.lat];
+                coords.push(lngLat);
+                bounds.extend(lngLat);
+                addMarker(p, p.isMini ? 'mini' : 'trip');
+            }
+        });
+        if (coords.length > 1) drawRoute('trip_route', coords);
+        if (!bounds.isEmpty()) {
+            lastBounds = bounds;
+            map.fitBounds(bounds, { padding: 50, maxZoom: 15 });
+        }
+    };
+
+    window.zoomToPoint = function(lat, lon) {
+        if (lat === null || lon === null) {
+            if (lastBounds) map.fitBounds(lastBounds, { padding: 50, duration: 1000 });
+        } else {
+            map.flyTo({ center: [lon, lat], zoom: 16, duration: 1000, essential: true });
+        }
+    };
+
+    window.setUserLocation = function(lat, lon) {
+        if (!userMarker) {
+            const el = document.createElement('div');
+            el.className = 'user-location-marker';
+            userMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+                .setLngLat([lon, lat])
+                .addTo(map);
+        } else userMarker.setLngLat([lon, lat]);
+    };
+    
+    map.dragRotate.disable();
+    map.touchZoomRotate.disableRotation();
+</script>
+</body>
+</html>

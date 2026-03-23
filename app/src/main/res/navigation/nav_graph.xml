@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/feedFragment">
+
+    <fragment
+        android:id="@+id/feedFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.feed.FeedFragment"
+        android:label="Feed" >
+        <action
+            android:id="@+id/action_feedFragment_to_entryDetailFragment"
+            app:destination="@id/entryDetailFragment" />
+        <action
+            android:id="@+id/action_feedFragment_to_newTripFragment"
+            app:destination="@id/newTripFragment" />
+        <action
+            android:id="@+id/action_feedFragment_to_tripDetailFragment"
+            app:destination="@id/tripDetailFragment" />
+        <action
+            android:id="@+id/action_feedFragment_to_friendsFragment"
+            app:destination="@id/friendsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/friendsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.friends.FriendsFragment"
+        android:label="Freunde">
+        <action
+            android:id="@+id/action_friendsFragment_to_friendFeedFragment"
+            app:destination="@id/friendFeedFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/friendFeedFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.friends.FriendFeedFragment"
+        android:label="Feed von {username}">
+        <argument
+            android:name="friendId"
+            app:argType="string" />
+        <argument
+            android:name="username"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_friendFeedFragment_to_entryDetailFragment"
+            app:destination="@id/entryDetailFragment" />
+        <action
+            android:id="@+id/action_friendFeedFragment_to_tripDetailFragment"
+            app:destination="@id/tripDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/calendarFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.calendar.CalendarFragment" />
+
+    <fragment
+        android:id="@+id/statisticsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.statistics.StatisticsFragment"
+        android:label="Statistik" />
+
+    <fragment
+        android:id="@+id/bucketListFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.bucket.BucketListFragment"
+        android:label="Bucket List" />
+
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.SettingsFragment"
+        android:label="@string/settings_title">
+        <action
+            android:id="@+id/action_settingsFragment_to_profileSettingsFragment"
+            app:destination="@id/profileSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_appSettingsFragment"
+            app:destination="@id/appSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_autoDetectionSettingsFragment"
+            app:destination="@id/autoDetectionSettingsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_backupFragment"
+            app:destination="@id/backupFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/backupFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.BackupFragment"
+        android:label="Backup" />
+
+    <fragment
+        android:id="@+id/autoDetectionSettingsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.AutoDetectionSettingsFragment"
+        android:label="Automatische Erkennung" />
+
+    <fragment
+        android:id="@+id/newEntryFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.newentry.NewEntryFragment"
+        android:label="{title}">
+        <argument
+            android:name="entryId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="New Entry" />
+        <argument
+            android:name="isFromDraft"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/entryDetailFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.feed.EntryDetailFragment"
+        android:label="Details">
+        <argument
+            android:name="entryId"
+            app:argType="integer" />
+        <action
+            android:id="@+id/action_entryDetailFragment_to_newEntryFragment"
+            app:destination="@id/newEntryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/profileSettingsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.ProfileSettingsFragment"
+        android:label="@string/profile_edit" />
+
+    <fragment
+        android:id="@+id/appSettingsFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.AppSettingsFragment"
+        android:label="@string/app_settings" />
+
+    <fragment
+        android:id="@+id/newTripFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.newtrip.NewTripFragment"
+        android:label="{title}">
+        <argument
+            android:name="tripId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="New Trip" />
+        <argument
+            android:name="directAddStop"
+            app:argType="boolean"
+            android:defaultValue="false" />
+        <argument
+            android:name="preLat"
+            app:argType="float"
+            android:defaultValue="0.0" />
+        <argument
+            android:name="preLon"
+            app:argType="float"
+            android:defaultValue="0.0" />
+        <argument
+            android:name="preTime"
+            app:argType="long"
+            android:defaultValue="0L" />
+        <argument
+            android:name="preLocationId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <argument
+            android:name="stopId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/tripDetailFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment"
+        android:label="Trip Details">
+        <argument
+            android:name="tripId"
+            app:argType="integer" />
+        <action
+            android:id="@+id/action_tripDetailFragment_to_tripStopDetailFragment"
+            app:destination="@id/tripStopDetailFragment" />
+        <action
+            android:id="@+id/action_tripDetailFragment_to_newTripFragment"
+            app:destination="@id/newTripFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/tripStopDetailFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment"
+        android:label="Stop Details">
+        <argument
+            android:name="stopId"
+            app:argType="integer" />
+        <argument
+            android:name="isFromDraft"
+            app:argType="boolean"
+            android:defaultValue="false" />
+    </fragment>
+
+</navigation>

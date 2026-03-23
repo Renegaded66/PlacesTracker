@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="?attr/colorSurface">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Medien-Optionen"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="24dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSetAsCover"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Als Titelbild festlegen"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:icon="@android:drawable/btn_star_big_on"
+        android:textAlignment="viewStart" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUseImageLocation"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:text="Standort von diesem Bild verwenden"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:icon="@drawable/ic_marker"
+        android:textAlignment="viewStart" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnUseImageDateTime"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:text="Datum &amp; Uhrzeit übernehmen"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:icon="@drawable/ic_calendar"
+        android:textAlignment="viewStart" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnRemoveMedia"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="8dp"
+        android:text="Medium entfernen"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:icon="@android:drawable/ic_menu_delete"
+        android:textColor="?attr/colorError"
+        app:iconTint="?attr/colorError"
+        android:textAlignment="viewStart" />
+
+</LinearLayout>

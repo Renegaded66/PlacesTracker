@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://unpkg.com/maplibre-gl@^3.0.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@^3.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        .marker {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .marker:active { transform: scale(1.2); z-index: 999; }
+        .trip-marker { border-color: #FFD700; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: {
+                version: 8,
+                sources: {
+                    'satellite': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256,
+                        attribution: 'ArcGIS'
+                    },
+                    'labels': {
+                        type: 'raster',
+                        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'],
+                        tileSize: 256
+                    }
+                },
+                layers: [
+                    { id: 'satellite', type: 'raster', source: 'satellite' },
+                    { id: 'labels', type: 'raster', source: 'labels', minzoom: 2.5 }
+                ]
+            },
+            center: [10, 50],
+            zoom: 1.5,
+            projection: 'globe'
+        });
+
+        map.on('style.load', () => {
+            map.setFog({
+                color: 'rgb(20, 40, 80)',
+                'high-color': 'rgb(0, 0, 0)',
+                'horizon-blend': 0.15,
+                'space-color': 'rgb(0, 0, 0)',
+                'star-intensity': 0.6
+            });
+        });
+
+        let markers = [];
+
+        window.setGlobalData = function(dataJson) {
+            const data = JSON.parse(dataJson);
+            markers.forEach(m => m.remove());
+            markers = [];
+            
+            data.forEach(item => {
+                if (item.type === 'experience' && item.lat && item.lon) {
+                    createMarker(item, 'experience');
+                } else if (item.type === 'trip' && item.stops) {
+                    const coords = [];
+                    item.stops.forEach((stop, index) => {
+                        if (stop.lat && stop.lon) {
+                            coords.push([stop.lon, stop.lat]);
+                            createMarker({...stop, tripId: item.id}, 'trip');
+                        }
+                    });
+                    if (coords.length > 1) {
+                        drawRoute(item.id, coords);
+                    }
+                }
+            });
+        };
+
+        function createMarker(item, type) {
+            const el = document.createElement('div');
+            el.className = 'marker' + (type === 'trip' ? ' trip-marker' : '');
+            if (item.image) el.style.backgroundImage = `url(${item.image})`;
+            
+            el.onclick = (e) => {
+                e.stopPropagation();
+                if (window.Android) {
+                    const id = type === 'experience' ? 'exp_' + item.id : 'stop_' + item.tripId + '_' + item.id;
+                    window.Android.onMarkerClicked(id);
+                }
+            };
+
+            const marker = new maplibregl.Marker(el)
+                .setLngLat([item.lon, item.lat])
+                .addTo(map);
+            markers.push(marker);
+        }
+
+        function drawRoute(tripId, coords) {
+            const routeId = 'route_' + tripId;
+            if (map.getSource(routeId)) {
+                map.getSource(routeId).setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords } });
+            } else {
+                map.addSource(routeId, {
+                    type: 'geojson',
+                    data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
+                });
+                map.addLayer({
+                    id: routeId,
+                    type: 'line',
+                    source: routeId,
+                    paint: { 'line-color': '#FFD700', 'line-width': 4, 'line-opacity': 0.7 }
+                });
+            }
+        }
+
+        window.setTripPath = function(json) {
+            const points = JSON.parse(json);
+            const coords = points.map(p => [p.lon, p.lat]);
+            
+            markers.forEach(m => m.remove());
+            markers = [];
+
+            points.forEach(p => createMarker({...p, tripId: 0}, 'trip'));
+
+            if (coords.length > 1) {
+                drawRoute('preview', coords);
+                const bounds = coords.reduce((acc, cur) => acc.extend(cur), new maplibregl.LngLatBounds(coords[0], coords[0]));
+                map.fitBounds(bounds, { padding: 50, duration: 2500 });
+            } else if (coords.length === 1) {
+                map.flyTo({ center: coords[0], zoom: 8, duration: 2500 });
+            }
+        };
+
+        window.setLocation = function(lat, lon, imageBase64) {
+            markers.forEach(m => m.remove());
+            markers = [];
+            createMarker({lat, lon, image: imageBase64}, 'experience');
+            map.flyTo({ center: [lon, lat], zoom: 10, duration: 2500 });
+        };
+
+        window.setReadOnly = function(ro) {
+            // Read-only logic handled via disabling manual clicks
+        };
+
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
+    </script>
+</body>
+</html>
