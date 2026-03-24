@@ -43,7 +43,7 @@
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:text="Backup erstellen"
-            app:icon="@drawable/ic_play_pause"
+            app:icon="@drawable/ic_backup"
             app:cornerRadius="16dp"
             android:layout_marginBottom="16dp" />
 

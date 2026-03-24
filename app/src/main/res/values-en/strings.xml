@@ -19,4 +19,5 @@
     <string name="select_language">Select Language</string>
     <string name="german">German</string>
     <string name="english">English</string>
+    <string name="toggle_fullscreen_map">Toggle fullscreen map</string>
 </resources>

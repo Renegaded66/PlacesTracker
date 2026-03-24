@@ -14,6 +14,9 @@ interface TripDao {
     @Query("SELECT * FROM trips WHERE id = :id")
     suspend fun getTripById(id: Int): Trip?
 
+    @Query("SELECT * FROM trips WHERE friendId = :friendId AND title = :title LIMIT 1")
+    suspend fun getTripByFriendAndTitle(friendId: String, title: String): Trip?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrip(trip: Trip): Long
 

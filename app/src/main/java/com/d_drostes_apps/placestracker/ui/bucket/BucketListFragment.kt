@@ -3,6 +3,7 @@ package com.d_drostes_apps.placestracker.ui.bucket
 import android.app.DatePickerDialog
 import android.app.Dialog
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
@@ -22,6 +23,7 @@ import com.d_drostes_apps.placestracker.data.BucketItem
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.collectLatest
@@ -36,6 +38,8 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
     private lateinit var adapter: BucketAdapter
     private var selectedMedia: String? = null
     private var ivPreview: ImageView? = null
+    private var allItems: List<BucketItem> = emptyList()
+    private var currentFilter = "ALL"
 
     private val mediaPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -72,6 +76,9 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
                     bucketDao.updateBucketItem(item.copy(isCompleted = !item.isCompleted))
                 }
             },
+            onEdit = { item ->
+                showEditItemDialog(item)
+            },
             onDelete = { item ->
                 showDeleteConfirmation(item)
             }
@@ -80,13 +87,32 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             bucketDao.getAllBucketItems().collectLatest { items ->
-                adapter.submitList(items)
+                allItems = items
+                applyFilter()
             }
+        }
+
+        view.findViewById<ChipGroup>(R.id.chipGroupFilter).setOnCheckedStateChangeListener { _, checkedIds ->
+            currentFilter = when (checkedIds.firstOrNull()) {
+                R.id.chipFilterActive -> "ACTIVE"
+                R.id.chipFilterCompleted -> "COMPLETED"
+                else -> "ALL"
+            }
+            applyFilter()
         }
 
         view.findViewById<FloatingActionButton>(R.id.fabAddBucketItem).setOnClickListener {
             showAddItemDialog()
         }
+    }
+
+    private fun applyFilter() {
+        val filtered = when (currentFilter) {
+            "ACTIVE" -> allItems.filter { !it.isCompleted }
+            "COMPLETED" -> allItems.filter { it.isCompleted }
+            else -> allItems
+        }
+        adapter.submitList(filtered)
     }
 
     private fun showDeleteConfirmation(item: BucketItem) {
@@ -103,7 +129,7 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
             .show()
     }
 
-    private fun showAddItemDialog() {
+    private fun showAddItemDialog(existingItem: BucketItem? = null) {
         val dialog = Dialog(requireContext(), R.style.Theme_PlacesTracker)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.dialog_add_bucket_item)
@@ -118,13 +144,26 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
         val btnBack = dialog.findViewById<View>(R.id.btnBack)
         val cbIsTrip = dialog.findViewById<MaterialCheckBox>(R.id.cbIsTrip)
 
-        var selectedDate: Long? = null
-        selectedMedia = null
+        var selectedDate: Long? = existingItem?.date
+        selectedMedia = existingItem?.media?.firstOrNull()
+
+        existingItem?.let {
+            inputTitle.setText(it.title)
+            inputDesc.setText(it.description)
+            cbIsTrip.isChecked = it.isTrip
+            if (it.date != null) {
+                tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(it.date))
+            }
+            if (selectedMedia != null) {
+                Glide.with(this).load(File(selectedMedia!!)).centerCrop().into(ivPreview!!)
+            }
+        }
 
         btnBack.setOnClickListener { dialog.dismiss() }
 
         dialog.findViewById<View>(R.id.layoutBucketDate).setOnClickListener {
             val cal = Calendar.getInstance()
+            if (selectedDate != null) cal.timeInMillis = selectedDate!!
             DatePickerDialog(requireContext(), { _, y, m, d ->
                 cal.set(y, m, d)
                 selectedDate = cal.timeInMillis
@@ -139,23 +178,29 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
             if (title.isBlank()) return@setOnClickListener
 
             lifecycleScope.launch {
-                val item = BucketItem(
+                val item = (existingItem ?: BucketItem(title = "", description = null, date = null)).copy(
                     title = title,
                     description = inputDesc.text.toString(),
                     date = selectedDate,
                     isTrip = cbIsTrip.isChecked,
                     media = if (selectedMedia != null) listOf(selectedMedia!!) else emptyList()
                 )
-                (requireActivity().application as PlacesApplication).database.bucketDao().insertBucketItem(item)
+                val dao = (requireActivity().application as PlacesApplication).database.bucketDao()
+                if (existingItem != null) dao.updateBucketItem(item) else dao.insertBucketItem(item)
                 dialog.dismiss()
             }
         }
         dialog.show()
     }
+
+    private fun showEditItemDialog(item: BucketItem) {
+        showAddItemDialog(item)
+    }
 }
 
 class BucketAdapter(
     private val onToggle: (BucketItem) -> Unit,
+    private val onEdit: (BucketItem) -> Unit,
     private val onDelete: (BucketItem) -> Unit
 ) : RecyclerView.Adapter<BucketAdapter.ViewHolder>() {
 
@@ -166,9 +211,8 @@ class BucketAdapter(
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, position: Int): ViewHolder {
-        val view = View.inflate(parent.context, R.layout.item_bucket, null)
-        view.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_bucket, parent, false)
         return ViewHolder(view)
     }
 
@@ -188,6 +232,7 @@ class BucketAdapter(
         private val overlay = view.findViewById<View>(R.id.completedOverlay)
         private val checkIcon = view.findViewById<ImageView>(R.id.ivCompletedCheck)
         private val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteBucketItem)
+        private val btnEdit = view.findViewById<ImageButton>(R.id.btnEditBucketItem)
 
         fun bind(item: BucketItem) {
             tvTitle.text = item.title
@@ -212,11 +257,9 @@ class BucketAdapter(
 
             cbCompleted.setOnClickListener { onToggle(item) }
             btnDelete.setOnClickListener { onDelete(item) }
+            btnEdit.setOnClickListener { onEdit(item) }
             
-            itemView.setOnLongClickListener {
-                onDelete(item)
-                true
-            }
+            itemView.setOnClickListener { onEdit(item) }
         }
     }
 }

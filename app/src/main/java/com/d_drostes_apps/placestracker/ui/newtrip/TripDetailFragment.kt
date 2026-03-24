@@ -157,8 +157,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             onMiniStopClick = { location ->
                 val bundle = Bundle().apply {
                     putInt("tripId", tripId)
-                    putDouble("preLat", location.latitude)
-                    putDouble("preLon", location.longitude)
+                    putFloat("preLat", location.latitude.toFloat())
+                    putFloat("preLon", location.longitude.toFloat())
                     putLong("preTime", location.timestamp)
                     putLong("preLocationId", location.id)
                     putBoolean("directAddStop", true)
@@ -187,8 +187,10 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         rvStops.adapter = tripAdapter
 
         // Scroll-Listener for Auto-Zoom
+        // Scroll-Listener for Auto-Zoom
         nestedScroll.setOnScrollChangeListener(NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
-            if (scrollY <= 0) {
+            // Wenn der Nutzer ganz nach oben scrollt, zentrieren wir die gesamte Route wieder
+            if (scrollY <= 10) {
                 if (lastFocusedStopId != null) {
                     lastFocusedStopId = null
                     mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
@@ -196,19 +198,46 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 return@OnScrollChangeListener
             }
 
-            val layoutManager = rvStops.layoutManager as LinearLayoutManager
-            val firstVisible = layoutManager.findFirstVisibleItemPosition()
-            if (firstVisible != RecyclerView.NO_POSITION) {
-                val item = tripAdapter?.getItemAt(firstVisible)
-                if (item is TripItem.Stop) {
-                    if (lastFocusedStopId != item.stop.id) {
-                        lastFocusedStopId = item.stop.id
-                        item.stop.location?.split(",")?.let { coords ->
-                            if (coords.size == 2) {
-                                mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${coords[0]}, ${coords[1]});", null)
+            val childCount = rvStops.childCount
+            for (i in 0 until childCount) {
+                val child = rvStops.getChildAt(i)
+
+                // Absolute Y-Position des Elements relativ zur ScrollView berechnen
+                val absoluteTop = rvStops.top + child.top
+                val absoluteBottom = rvStops.top + child.bottom
+
+                // Prüfen, ob das Element gerade oben an der Kante anliegt (mit 150px Puffer)
+                if (absoluteTop <= scrollY + 150 && absoluteBottom > scrollY) {
+                    val position = rvStops.getChildAdapterPosition(child)
+                    if (position != RecyclerView.NO_POSITION) {
+                        val item = tripAdapter?.getItemAt(position)
+
+                        if (item is TripItem.Stop) {
+                            if (lastFocusedStopId != item.stop.id) {
+                                // ID sofort speichern, damit es nicht pro Pixel feuert
+                                lastFocusedStopId = item.stop.id
+
+                                // Nur an die Karte senden, wenn ein Standort da ist
+                                item.stop.location?.split(",")?.let { coords ->
+                                    if (coords.size == 2) {
+                                        val lat = coords[0].toDoubleOrNull()
+                                        val lon = coords[1].toDoubleOrNull()
+                                        if (lat != null && lon != null) {
+                                            mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (item is TripItem.MiniStop) {
+                            // Bonus: Wenn du Mini-Stopps eingeblendet hast, zoomt die Karte nun auch dorthin!
+                            val miniId = -(item.location.id.toInt()) // Minus, um ID-Kollisionen mit normalen Stopps zu vermeiden
+                            if (lastFocusedStopId != miniId) {
+                                lastFocusedStopId = miniId
+                                mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${item.location.latitude}, ${item.location.longitude});", null)
                             }
                         }
                     }
+                    break // Element gefunden, Schleife abbrechen
                 }
             }
         })

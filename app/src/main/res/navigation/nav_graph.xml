@@ -9,18 +9,38 @@
         android:id="@+id/feedFragment"
         android:name="com.d_drostes_apps.placestracker.ui.feed.FeedFragment"
         android:label="Feed" >
+
         <action
             android:id="@+id/action_feedFragment_to_entryDetailFragment"
-            app:destination="@id/entryDetailFragment" />
+            app:destination="@id/entryDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
         <action
             android:id="@+id/action_feedFragment_to_newTripFragment"
-            app:destination="@id/newTripFragment" />
+            app:destination="@id/newTripFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
         <action
             android:id="@+id/action_feedFragment_to_tripDetailFragment"
-            app:destination="@id/tripDetailFragment" />
+            app:destination="@id/tripDetailFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+
         <action
             android:id="@+id/action_feedFragment_to_friendsFragment"
-            app:destination="@id/friendsFragment" />
+            app:destination="@id/friendsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -52,17 +72,20 @@
 
     <fragment
         android:id="@+id/calendarFragment"
-        android:name="com.d_drostes_apps.placestracker.ui.calendar.CalendarFragment" />
+        android:name="com.d_drostes_apps.placestracker.ui.calendar.CalendarFragment"
+/>
 
     <fragment
         android:id="@+id/statisticsFragment"
         android:name="com.d_drostes_apps.placestracker.ui.statistics.StatisticsFragment"
-        android:label="Statistik" />
+        android:label="Statistik"
+         />
 
     <fragment
         android:id="@+id/bucketListFragment"
         android:name="com.d_drostes_apps.placestracker.ui.bucket.BucketListFragment"
-        android:label="Bucket List" />
+        android:label="Bucket List"
+        />
 
     <fragment
         android:id="@+id/settingsFragment"

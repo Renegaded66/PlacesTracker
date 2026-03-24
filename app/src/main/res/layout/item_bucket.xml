@@ -53,15 +53,30 @@
                 android:textStyle="bold"
                 tools:text="TRIP" />
 
-            <ImageButton
-                android:id="@+id/btnDeleteBucketItem"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_gravity="top|end"
                 android:layout_margin="8dp"
-                android:background="@drawable/circle_background"
-                android:src="@android:drawable/ic_menu_delete"
-                app:tint="?attr/colorError" />
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnEditBucketItem"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/circle_background"
+                    android:src="@android:drawable/ic_menu_edit"
+                    app:tint="@android:color/white" />
+
+                <ImageButton
+                    android:id="@+id/btnDeleteBucketItem"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/circle_background"
+                    android:src="@android:drawable/ic_menu_delete"
+                    app:tint="?attr/colorError" />
+            </LinearLayout>
         </FrameLayout>
 
         <LinearLayout

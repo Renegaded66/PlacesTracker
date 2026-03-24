@@ -52,6 +52,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
     private var currentMediaAdapter: MediaAdapter? = null
     private var currentMediaList: MutableList<String>? = null
+    private lateinit var mapWebView: WebView // NEU
+
+    private var lastZoomedStopIndex: Int = -1 // Speichert, wo wir auf der Karte gerade sind
     
     private val stopMediaPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { uri ->
@@ -86,6 +89,49 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
         toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.tripScrollView)
+
+        mapWebView = view.findViewById(R.id.tripMapPreview)
+        setupMapboxWebView(mapWebView, null)
+
+        mapWebView.setOnTouchListener { v, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
+                MotionEvent.ACTION_UP -> v.parent.requestDisallowInterceptTouchEvent(false)
+            }
+            false
+        }
+
+        // --- NEU: Hier überwachen wir das Scrollen und zoomen zur aktuellen Karte ---
+        scrollView.setOnScrollChangeListener(androidx.core.widget.NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
+            if (stops.isEmpty()) return@OnScrollChangeListener
+
+            val childCount = rvStops.childCount
+            for (i in 0 until childCount) {
+                val child = rvStops.getChildAt(i)
+                // Berechnet die absolute Y-Position des Stopps relativ zum ScrollView
+                val absoluteTop = rvStops.top + child.top
+                val absoluteBottom = rvStops.top + child.bottom
+
+                // Schaut, ob der aktuelle Stopp oben am Rand kratzt (mit einem kleinen Offset von 100 Pixeln)
+                if (absoluteTop <= scrollY + 100 && absoluteBottom > scrollY) {
+                    val position = rvStops.getChildAdapterPosition(child)
+                    if (position != RecyclerView.NO_POSITION && position != lastZoomedStopIndex) {
+                        lastZoomedStopIndex = position
+                        zoomToStop(position)
+                    }
+                    break
+                }
+            }
+
+            // Wenn der Nutzer ganz nach oben scrollt, zentrieren wir die gesamte Route wieder
+            if (scrollY <= 10 && lastZoomedStopIndex != -1) {
+                lastZoomedStopIndex = -1
+                mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
+            }
+        })
+        // --- ENDE NEU ---
+
         adapter = TripStopsAdapter(
             items = stops.map { TripItem.Stop(it) },
             onStopClick = { stop -> showAddStopDialog(stop) },
@@ -95,6 +141,8 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         )
         rvStops.layoutManager = LinearLayoutManager(requireContext())
         rvStops.adapter = adapter
+
+
 
         if (editingTripId != -1) {
             lifecycleScope.launch {
@@ -112,15 +160,16 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 stops.clear()
                 stops.addAll(dbStops)
                 adapter.updateItems(stops.map { TripItem.Stop(it) })
+                updateTripMap()
 
                 // Check for direct add stop (from Mini Stop conversion)
                 if (arguments?.getBoolean("directAddStop") == true) {
-                    val preLat = arguments?.getDouble("preLat") ?: 0.0
-                    val preLon = arguments?.getDouble("preLon") ?: 0.0
+                    val preLat = arguments?.getFloat("preLat") ?: 0.0f
+                    val preLon = arguments?.getFloat("preLon") ?: 0.0f
                     val preTime = arguments?.getLong("preTime") ?: System.currentTimeMillis()
                     val preLocationId = arguments?.getLong("preLocationId") ?: -1L
                     
-                    showAddStopDialog(initialLat = preLat, initialLon = preLon, initialTime = preTime, miniStopIdToDelete = preLocationId)
+                    showAddStopDialog(initialLat = preLat.toDouble(), initialLon = preLon.toDouble(), initialTime = preTime, miniStopIdToDelete = preLocationId)
                     // Clear the argument so it doesn't open again on config change
                     arguments?.remove("directAddStop")
                 }
@@ -168,6 +217,41 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }
         }
+    }
+
+    private fun zoomToStop(position: Int) {
+        if (position >= 0 && position < stops.size) {
+            val stop = stops[position]
+            stop.location?.split(",")?.let { coords ->
+                if (coords.size == 2) {
+                    val lat = coords[0].toDoubleOrNull()
+                    val lon = coords[1].toDoubleOrNull()
+                    if (lat != null && lon != null) {
+                        // Sagt der Karte: Flieg zu diesem Stopp!
+                        mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateTripMap() {
+        if (!::mapWebView.isInitialized) return
+
+        val jsonArray = org.json.JSONArray()
+        stops.forEach { stop ->
+            stop.location?.split(",")?.let { coords ->
+                if (coords.size == 2) {
+                    val obj = org.json.JSONObject()
+                    obj.put("lat", coords[0].toDoubleOrNull() ?: 0.0)
+                    obj.put("lon", coords[1].toDoubleOrNull() ?: 0.0)
+                    obj.put("isMini", false)
+                    jsonArray.put(obj)
+                }
+            }
+        }
+        val script = "javascript:if(window.setTripPath) window.setTripPath('${jsonArray}');"
+        mapWebView.evaluateJavascript(script, null)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -319,6 +403,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                         stops.clear()
                         stops.addAll(dbStops)
                         adapter.updateItems(stops.map { TripItem.Stop(it) })
+                        updateTripMap()
                         dialog.dismiss()
                     }
                 }
@@ -356,6 +441,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 stops.clear()
                 stops.addAll(dbStops)
                 adapter.updateItems(stops.map { TripItem.Stop(it) })
+                updateTripMap()
                 dialog.dismiss()
 
                 Toast.makeText(requireContext(), "Stopp gespeichert", Toast.LENGTH_SHORT).show()
@@ -378,6 +464,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 initialLocation?.split(",")?.let { coords ->
                     if (coords.size == 2) {
                         webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${coords[0]}, ${coords[1]}, '')", null)
+                    }
+                    if (webView == mapWebView) {
+                        updateTripMap()
                     }
                 }
             }

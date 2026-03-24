@@ -20,4 +20,7 @@
     <string name="german">Deutsch</string>
     <string name="english">Englisch</string>
     <string name="toggle_fullscreen_map">Toggle fullscreen map</string>
+    <string name="help">Hilfe</string>
+    <string name="help_title">Erklärungen</string>
+    <string name="help_content">• Erlebnis: Ein einzelner Ort mit Bildern und Notizen.\n\n• Trip: Eine Reise mit mehreren Stopps, die du manuell planst.\n\n• Automatischer Trip: Wähle mehrere Bilder aus deiner Galerie, und die App erstellt daraus automatisch eine Reise mit Stopps basierend auf dem Datum der Bilder.</string>
 </resources>

@@ -169,7 +169,14 @@ class SharingManager(private val context: Context, private val database: AppData
                         dest.absolutePath
                     } else null
                 }
-                database.entryDao().insert(entry.copy(id = 0, friendId = friendId, media = newMedia, coverImage = newCover))
+                
+                // Check if entry already exists for this friend
+                val existingEntry = database.entryDao().getEntryByFriendAndTitle(friendId, entry.title)
+                if (existingEntry != null) {
+                    database.entryDao().update(entry.copy(id = existingEntry.id, friendId = friendId, media = newMedia, coverImage = newCover ?: existingEntry.coverImage))
+                } else {
+                    database.entryDao().insert(entry.copy(id = 0, friendId = friendId, media = newMedia, coverImage = newCover))
+                }
             } else if (sharedData.type == "TRIP" && sharedData.trip != null) {
                 val trip = sharedData.trip
                 val tripCover = trip.coverImage?.let { oldPath ->
@@ -181,7 +188,18 @@ class SharingManager(private val context: Context, private val database: AppData
                         dest.absolutePath
                     } else null
                 }
-                val newTripId = database.tripDao().insertTrip(trip.copy(id = 0, friendId = friendId, coverImage = tripCover)).toInt()
+                
+                // Check if trip already exists for this friend
+                val existingTrip = database.tripDao().getTripByFriendAndTitle(friendId, trip.title)
+                val newTripId = if (existingTrip != null) {
+                    database.tripDao().updateTrip(trip.copy(id = existingTrip.id, friendId = friendId, coverImage = tripCover ?: existingTrip.coverImage))
+                    // Clear existing stops and locations to overwrite them
+                    database.tripDao().deleteStopsForTrip(existingTrip.id)
+                    database.tripDao().deleteLocationsForTrip(existingTrip.id)
+                    existingTrip.id
+                } else {
+                    database.tripDao().insertTrip(trip.copy(id = 0, friendId = friendId, coverImage = tripCover)).toInt()
+                }
                 
                 sharedData.tripStops?.forEach { stop ->
                     val newMedia = stop.media.map { oldPath ->

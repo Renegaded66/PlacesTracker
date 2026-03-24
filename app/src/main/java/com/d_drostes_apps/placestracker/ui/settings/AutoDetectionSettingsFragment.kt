@@ -11,7 +11,6 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,9 +40,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val allGranted = permissions.entries.all { it.value }
-        if (allGranted) {
-            // Permission granted, nothing more to do, switch is already on
-        } else {
+        if (!allGranted) {
             switchAutoGallery.isChecked = false
             Toast.makeText(requireContext(), "Berechtigungen für Galerie-Zugriff erforderlich", Toast.LENGTH_LONG).show()
         }
@@ -63,7 +60,6 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
 
         setupWebView()
 
-        // Fix scrolling for WebView inside NestedScrollView
         webView.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
@@ -73,7 +69,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
         }
 
         lifecycleScope.launch {
-            currentProfile = userDao.getUserProfile().firstOrNull() ?: UserProfile(username = "User", profilePicturePath = null)
+            currentProfile = userDao.getUserProfile().firstOrNull()
             currentProfile?.let {
                 selectedLat = it.homeLatitude
                 selectedLon = it.homeLongitude
@@ -86,9 +82,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
         }
 
         switchAutoGallery.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) {
-                checkAndRequestPermissions()
-            }
+            if (isChecked) checkAndRequestPermissions()
         }
 
         btnSave.setOnClickListener {
@@ -107,11 +101,8 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
                 )
                 userDao.insertOrUpdate(updatedProfile)
                 
-                if (isEnabled) {
-                    GalleryScanWorker.enqueue(requireContext())
-                } else {
-                    GalleryScanWorker.stop(requireContext())
-                }
+                if (isEnabled) GalleryScanWorker.enqueue(requireContext())
+                else GalleryScanWorker.stop(requireContext())
 
                 Toast.makeText(requireContext(), "Einstellungen gespeichert", Toast.LENGTH_SHORT).show()
                 requireActivity().onBackPressedDispatcher.onBackPressed()
@@ -161,6 +152,8 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
+                // Aktiviert den Picker-Modus explizit für dieses Fenster
+                webView.evaluateJavascript("javascript:if(window.setPickerMode) window.setPickerMode(true);", null)
                 if (selectedLat != null && selectedLon != null) {
                     webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${selectedLat}, ${selectedLon});", null)
                 }
@@ -169,17 +162,13 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
 
         val html = try {
             requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
         webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
     private fun updateCoordsText() {
         if (selectedLat != null && selectedLon != null) {
             tvHomeCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", selectedLat, selectedLon)
-        } else {
-            tvHomeCoords.text = "Kein Standort festgelegt"
-        }
+        } else tvHomeCoords.text = "Kein Standort festgelegt"
     }
 }

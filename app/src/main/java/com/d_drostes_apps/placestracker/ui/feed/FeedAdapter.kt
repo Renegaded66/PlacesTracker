@@ -22,6 +22,10 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import android.util.TypedValue
+import com.google.android.material.shape.CornerFamily
+import com.google.android.material.shape.ShapeAppearanceModel
+import com.google.android.material.R as MaterialR
 
 class FeedAdapter(
     private var items: List<FeedItem> = emptyList(),
@@ -33,8 +37,17 @@ class FeedAdapter(
 
     private val expandedTrips = mutableSetOf<Int>()
     private val adapterScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private var currentThemeColor: Int? = null
+
+    fun setThemeColor(color: Int) {
+        currentThemeColor = color
+        notifyDataSetChanged()
+    }
 
     class FeedViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        // --- NEU: Die Haupt-Karte referenzieren ---
+        val cardView: com.google.android.material.card.MaterialCardView = view.findViewById(R.id.feedCard)
+
         val title: TextView = view.findViewById(R.id.feedTitle)
         val image: ImageView = view.findViewById(R.id.feedImage)
         val image2: ImageView = view.findViewById(R.id.feedImage2)
@@ -47,7 +60,7 @@ class FeedAdapter(
         val ivTypeIcon: ImageView = view.findViewById(R.id.ivTypeIcon)
         val tvLocationFlags: TextView = view.findViewById(R.id.tvLocationFlags)
         val tvTrackingBadge: TextView = view.findViewById(R.id.tvTrackingActiveBadge)
-        
+
         val draftBadge: View = view.findViewById(R.id.draftBadge)
         val draftOverlay: View = view.findViewById(R.id.draftOverlay)
         val draftActions: View = view.findViewById(R.id.draftActions)
@@ -70,17 +83,47 @@ class FeedAdapter(
     override fun onBindViewHolder(holder: FeedViewHolder, position: Int) {
         val item = items[position]
         val context = holder.itemView.context
-        
+
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(MaterialR.attr.colorOnPrimary, typedValue, true)
+        val activeColor = currentThemeColor ?: typedValue.data
+
+        // --- NEU: Shape-Design anwenden (Ticket vs. Karte) ---
+        val radiusNormal = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, context.resources.displayMetrics)
+        val radiusCut = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32f, context.resources.displayMetrics)
+
+        if (item is FeedItem.TripItem) {
+            // Ticket-Design für Trips
+            holder.cardView.shapeAppearanceModel = ShapeAppearanceModel.builder()
+                .setTopLeftCorner(CornerFamily.ROUNDED, radiusNormal)
+                .setTopRightCorner(CornerFamily.CUT, radiusCut)
+                .setBottomRightCorner(CornerFamily.ROUNDED, radiusNormal)
+                .setBottomLeftCorner(CornerFamily.CUT, radiusCut)
+                .build()
+
+            val typedValue = TypedValue()
+            context.theme.resolveAttribute(MaterialR.attr.colorOnPrimary, typedValue, true)
+            holder.cardView.strokeColor = activeColor
+            holder.cardView.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, context.resources.displayMetrics).toInt()
+        } else {
+            // Standard-Design für Erlebnisse
+            holder.cardView.shapeAppearanceModel = ShapeAppearanceModel.builder()
+                .setAllCorners(CornerFamily.ROUNDED, radiusNormal)
+                .build()
+            holder.cardView.strokeWidth = 0
+        }
+        // --- ENDE NEU ---
+
         holder.title.text = item.title
 
         val isDraft = showDrafts && if (item is FeedItem.Experience) item.entry.isDraft else false
         holder.draftBadge.visibility = if (isDraft) View.VISIBLE else View.GONE
         holder.draftOverlay.visibility = if (isDraft) View.VISIBLE else View.GONE
         holder.draftActions.visibility = if (isDraft) View.VISIBLE else View.GONE
-        
+
         holder.btnConfirmDraft.setOnClickListener { onConfirmDraft(item) }
         holder.btnRemoveDraft.setOnClickListener { onRemoveDraft(item) }
-
+        holder.ivTypeIcon.setColorFilter(activeColor)
         if (item is FeedItem.Experience) {
             holder.ivTypeIcon.setImageResource(R.drawable.ic_feed)
             holder.tvTrackingBadge.visibility = View.GONE
@@ -99,7 +142,7 @@ class FeedAdapter(
 
         val sdfDate = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
         val sdfDateTime = SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
-        
+
         holder.tvFeedDateTime.visibility = View.VISIBLE
         holder.btnExpandTrip.visibility = View.GONE
         holder.rvStopsPreview.visibility = View.GONE
@@ -110,11 +153,11 @@ class FeedAdapter(
 
         if (item is FeedItem.Experience) {
             holder.tvFeedDateTime.text = sdfDateTime.format(Date(item.date))
-            
+
             val media = item.entry.media
             val coverPath = item.coverImage
             val otherMedia = media.filter { it != coverPath }
-            
+
             if (otherMedia.isNotEmpty()) {
                 holder.extraMediaContainer.visibility = View.VISIBLE
                 holder.image2.visibility = View.VISIBLE
@@ -139,16 +182,16 @@ class FeedAdapter(
                 } else {
                     "${sdfDate.format(Date(minDate))} - ${sdfDate.format(Date(maxDate))}"
                 }
-                
+
                 val diffInMillis = maxDate - minDate
                 val days = TimeUnit.MILLISECONDS.toDays(diffInMillis) + 1
                 tripInfo = "$dateStr | $days Tage"
-                
+
                 // Trip Media Preview
                 val allMedia = item.stops.flatMap { it.media }.distinct()
                 val coverPath = item.coverImage
                 val otherMedia = allMedia.filter { it != coverPath }
-                
+
                 if (otherMedia.isNotEmpty()) {
                     holder.extraMediaContainer.visibility = View.VISIBLE
                     holder.image2.visibility = View.VISIBLE
@@ -166,9 +209,9 @@ class FeedAdapter(
             } else {
                 tripInfo = sdfDate.format(Date(item.date))
             }
-            
+
             holder.tvFeedDateTime.text = tripInfo
-            
+
             // Async distance calculation
             adapterScope.launch {
                 val app = (context.applicationContext as PlacesApplication)
@@ -195,7 +238,7 @@ class FeedAdapter(
             val isExpanded = expandedTrips.contains(item.id)
             holder.btnExpandTrip.rotation = if (isExpanded) 180f else 0f
             holder.rvStopsPreview.visibility = if (isExpanded) View.VISIBLE else View.GONE
-            
+
             if (isExpanded) {
                 holder.rvStopsPreview.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
                 holder.rvStopsPreview.adapter = TripStopPreviewAdapter(item.stops) { stop ->
@@ -293,7 +336,7 @@ class TripStopPreviewAdapter(
         val stop = stops[position]
         val sdf = SimpleDateFormat("dd.yy HH:mm", Locale.getDefault())
         holder.tvDate.text = sdf.format(Date(stop.date))
-        
+
         holder.draftOverlay.visibility = if (stop.isDraft) View.VISIBLE else View.GONE
 
         val coverPath = stop.coverImage ?: stop.media.firstOrNull()
@@ -305,7 +348,7 @@ class TripStopPreviewAdapter(
         } else {
             holder.ivPic.setImageResource(R.drawable.vorschaubild)
         }
-        
+
         holder.itemView.setOnClickListener { onStopClick(stop) }
     }
 

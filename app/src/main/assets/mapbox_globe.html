@@ -114,6 +114,16 @@
     let routes = [];
     let userMarker = null;
     let lastBounds = null;
+    let pickerMarker = null;
+    let isPickerMode = false;
+
+    window.setPickerMode = function(enabled) {
+        isPickerMode = enabled;
+        if (!enabled && pickerMarker) {
+            pickerMarker.remove();
+            pickerMarker = null;
+        }
+    };
 
     window.setGlobalData = function(dataJson) {
         const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
@@ -145,6 +155,25 @@
         });
         routes = [];
     }
+
+    map.on('click', function(e) {
+        if (!isPickerMode) return;
+
+        const lat = e.lngLat.lat;
+        const lon = e.lngLat.lng;
+
+        if (pickerMarker) pickerMarker.remove();
+
+        const el = document.createElement('div');
+        el.className = 'experience-marker';
+        pickerMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+            .setLngLat([lon, lat])
+            .addTo(map);
+
+        if (window.Android && window.Android.onLocationPicked) {
+            window.Android.onLocationPicked(lat, lon);
+        }
+    });
 
     function addMarker(item, type) {
         const el = document.createElement('div');
@@ -189,9 +218,19 @@
     }
 
     window.setLocation = function(lat, lon, image) {
-        clearMap();
-        addMarker({lat: lat, lon: lon, image: image}, 'experience');
-        map.flyTo({ center: [lon, lat], zoom: 17, duration: 1000, essential: true });
+        if (isPickerMode) {
+            if (pickerMarker) pickerMarker.remove();
+            const el = document.createElement('div');
+            el.className = 'experience-marker';
+            pickerMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+                .setLngLat([lon, lat])
+                .addTo(map);
+            map.flyTo({ center: [lon, lat], zoom: 17, duration: 1000, essential: true });
+        } else {
+            clearMap();
+            addMarker({lat: lat, lon: lon, image: image}, 'experience');
+            map.flyTo({ center: [lon, lat], zoom: 17, duration: 1000, essential: true });
+        }
     };
 
     window.setTripPath = function(pointsJson) {
@@ -215,11 +254,18 @@
         }
     };
 
-    window.zoomToPoint = function(lat, lon) {
+    window.zoomToPoint = function(lat, lon, offsetFactor = 0) {
         if (lat === null || lon === null) {
-            if (lastBounds) map.fitBounds(lastBounds, { padding: 50, duration: 1000 });
+            map.flyTo({ center: [0, 0], zoom: 1.5, duration: 1000, essential: true });
         } else {
-            map.flyTo({ center: [lon, lat], zoom: 16, duration: 1000, essential: true });
+            const paddingBottom = window.innerHeight * offsetFactor;
+            map.flyTo({
+                center: [lon, lat],
+                zoom: 16,
+                duration: 1000,
+                essential: true,
+                padding: { bottom: paddingBottom }
+            });
         }
     };
 

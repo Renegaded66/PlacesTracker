@@ -39,4 +39,16 @@ class MediaDialogFragment : DialogFragment() {
         viewPager.adapter = adapter
         viewPager.setCurrentItem(initialPosition, false)
     }
+
+    companion object {
+        fun newInstance(mediaPaths: ArrayList<String>, initialPosition: Int): MediaDialogFragment {
+            val fragment = MediaDialogFragment()
+            val args = Bundle().apply {
+                putStringArrayList("mediaPaths", mediaPaths)
+                putInt("initialPosition", initialPosition)
+            }
+            fragment.arguments = args
+            return fragment
+        }
+    }
 }
