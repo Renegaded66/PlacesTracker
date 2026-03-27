@@ -3,35 +3,41 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="#000000">
 
-    <!-- Weltkugel Ansicht im Hintergrund -->
-    <android.webkit.WebView
-        android:id="@+id/feedCesiumWebView"
+    <!-- Karten-Container -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <!-- Bottom Sheet Container -->
+        <!-- Cesium 3D Globe WebView -->
+        <WebView
+            android:id="@+id/feedCesiumWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="visible" />
+
+    </FrameLayout>
+
+    <!-- Bottom Sheet -->
     <LinearLayout
         android:id="@+id/bottomSheet"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/bg_feed_bottom_sheet"
-        android:elevation="12dp"
         android:orientation="vertical"
-        app:behavior_fitToContents="false"
+        android:background="@drawable/bg_feed_bottom_sheet"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_peekHeight="120dp"
         app:behavior_halfExpandedRatio="0.6"
         app:behavior_hideable="false"
-        app:behavior_peekHeight="120dp"
-        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+        app:behavior_fitToContents="false">
 
-        <!-- Draggable Header Area: Nur hier kann man ziehen, um die Ansicht zu ändern -->
+        <!-- Header / Drag -->
         <LinearLayout
             android:id="@+id/sheetHeaderArea"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@android:color/transparent">
+            android:orientation="vertical">
 
             <!-- Drag Handle -->
             <View
@@ -192,7 +198,7 @@
                 android:background="#1A000000" />
         </LinearLayout>
 
-        <!-- Listenansicht mit Hintergrundbild -->
+        <!-- Listenansicht -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
@@ -225,14 +231,13 @@
         android:id="@+id/fabContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:gravity="end"
+        android:orientation="vertical"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="32dp"
-        android:gravity="end"
-        android:orientation="vertical"
         android:elevation="20dp">
 
-        <!-- Info/Help Button (topmost when open) -->
         <LinearLayout
             android:id="@+id/layoutHelp"
             android:layout_width="wrap_content"

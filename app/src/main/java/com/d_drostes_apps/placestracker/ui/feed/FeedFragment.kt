@@ -50,11 +50,12 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.graphics.scale
 
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private lateinit var recycler: RecyclerView
-    private lateinit var mapboxWebView: WebView
+    private lateinit var cesiumWebView: WebView
     private var adapter: FeedAdapter? = null
     private var isFabMenuOpen = false
     private var lastItems: List<FeedItem> = emptyList()
@@ -65,7 +66,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private var filterCountries: MutableSet<String> = mutableSetOf()
     private var searchQuery: String = ""
     private val geocoderCache = mutableMapOf<String, Pair<String?, String?>>()
-    
+
     private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
     private var lastZoomedId: String? = null
 
@@ -93,9 +94,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             findNavController().navigate(R.id.action_feedFragment_to_friendsFragment)
         }
 
-        mapboxWebView = view.findViewById(R.id.feedCesiumWebView)
-        mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        setupMapboxWebView()
+        // --- Cesium 3D Globe Setup ---
+        cesiumWebView = view.findViewById(R.id.feedCesiumWebView)
+        cesiumWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        cesiumWebView.settings.loadsImagesAutomatically = true
+        cesiumWebView.settings.blockNetworkImage = false
+        setupCesiumWebView()
 
         // --- Bottom Sheet Setup ---
         val bottomSheet = view.findViewById<View>(R.id.bottomSheet)
@@ -150,60 +154,56 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         val layoutManager = LinearLayoutManager(requireContext())
         recycler.layoutManager = layoutManager
-        
-        adapter = FeedAdapter(emptyList(), 
+
+        adapter = FeedAdapter(emptyList(),
             onItemClick = { item, stopId -> navigateToDetail(item, stopId) },
             onConfirmDraft = { item -> confirmDraft(item) },
             onRemoveDraft = { item -> removeDraft(item) }
         )
         recycler.adapter = adapter
 
-        // Karten-Interaktion: Zoomt zum aktuellen Item oder raus am Anfang
         recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val behavior = bottomSheetBehavior ?: return
-                if (behavior.state != BottomSheetBehavior.STATE_COLLAPSED) {
-                    // Zoom out if at the very top
-                    if (!recyclerView.canScrollVertically(-1)) {
-                        if (lastZoomedId != "top") {
-                            mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
-                            lastZoomedId = "top"
-                        }
-                        return
+                
+                if (!recyclerView.canScrollVertically(-1)) {
+                    lastZoomedId = "top"
+                    return
+                }
+
+                val pos = layoutManager.findFirstVisibleItemPosition()
+                if (pos != RecyclerView.NO_POSITION && pos < lastItems.size) {
+                    val item = lastItems[pos]
+                    val loc = when(item) {
+                        is FeedItem.Experience -> item.entry.location
+                        is FeedItem.TripItem -> item.stops.firstOrNull()?.location
+                    }
+                    val id = when(item) {
+                        is FeedItem.Experience -> "exp_${item.id}"
+                        is FeedItem.TripItem -> "trip_${item.id}"
                     }
 
-                    val pos = layoutManager.findFirstVisibleItemPosition()
-                    if (pos != RecyclerView.NO_POSITION && pos < lastItems.size) {
-                        val item = lastItems[pos]
-                        val loc = when(item) {
-                            is FeedItem.Experience -> item.entry.location
-                            is FeedItem.TripItem -> item.stops.firstOrNull()?.location
-                        }
-                        val id = when(item) {
-                            is FeedItem.Experience -> "exp_${item.id}"
-                            is FeedItem.TripItem -> "trip_${item.id}"
-                        }
-                        
-                        if (id != lastZoomedId && loc != null) {
-                            val coords = loc.split(",")
-                            if (coords.size == 2) {
-                                // Wir senden einen Offset-Faktor mit, damit der Punkt oben zentriert wird
-                                // Wenn das BottomSheet 60% einnimmt (0.6), ist der freie Bereich oben ca. 40% (0.4)
-                                val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
-                                mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${coords[0]}, ${coords[1]}, $offset);", null)
-                                lastZoomedId = id
-                            }
+                    if (id != lastZoomedId && loc != null) {
+                        val coords = loc.split(",")
+                        if (coords.size == 2) {
+                            val lat = coords[0].toDoubleOrNull() ?: 0.0
+                            val lon = coords[1].toDoubleOrNull() ?: 0.0
+                            
+                            val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
+                            cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, $offset);", null)
+                            
+                            lastZoomedId = id
                         }
                     }
                 }
             }
         })
-        
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 combine(
-                    repository.allEntries, 
-                    tripRepository.allTrips, 
+                    repository.allEntries,
+                    tripRepository.allTrips,
                     tripRepository.allTripStops
                 ) { entries, trips, allStops ->
                     val items = mutableListOf<FeedItem>()
@@ -320,6 +320,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private fun updateResetButton(btn: MaterialButton) { btn.visibility = if (filterType != null || filterDateStart != null || filterCountries.isNotEmpty() || searchQuery.isNotEmpty()) View.VISIBLE else View.GONE }
 
     private fun applyFilters() {
+        if (view == null) return
         viewLifecycleOwner.lifecycleScope.launch {
             var filtered = lastItems; filterType?.let { type -> filtered = filtered.filter { if (type == "Experience") it is FeedItem.Experience else it is FeedItem.TripItem } }; if (filterDateStart != null && filterDateEnd != null) filtered = filtered.filter { it.date in filterDateStart!!..filterDateEnd!! }
             if (filterCountries.isNotEmpty() || searchQuery.isNotEmpty()) { val geocoder = Geocoder(requireContext(), Locale.getDefault()); filtered = withContext(Dispatchers.IO) { filtered.filter { item -> var matchesSearch = true; var matchesCountry = true; if (searchQuery.isNotEmpty()) matchesSearch = checkSearchMatch(item, searchQuery, geocoder); if (filterCountries.isNotEmpty()) { val loc = when (item) { is FeedItem.Experience -> item.entry.location; is FeedItem.TripItem -> item.stops.firstOrNull()?.location }; val code = loc?.let { getGeocodedData(it, geocoder).first }; matchesCountry = code != null && filterCountries.contains(code) }; matchesSearch && matchesCountry } } }
@@ -331,23 +332,70 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private fun removeDraft(item: FeedItem) { lifecycleScope.launch { if (item is FeedItem.Experience) (requireActivity().application as PlacesApplication).repository.delete(item.entry) else if (item is FeedItem.TripItem) item.stops.filter { it.isDraft }.forEach { (requireActivity().application as PlacesApplication).database.tripDao().deleteStop(it) } } }
 
-    private fun setupMapboxWebView() {
-        mapboxWebView.settings.apply { javaScriptEnabled = true; domStorageEnabled = true; allowFileAccess = true; allowFileAccessFromFileURLs = true; allowUniversalAccessFromFileURLs = true; mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW }
-        mapboxWebView.addJavascriptInterface(object { @JavascriptInterface fun onMarkerClicked(id: String) { activity?.runOnUiThread { if (id.startsWith("exp_")) { val entryId = id.substring(4).toIntOrNull(); lastItems.find { it is FeedItem.Experience && it.id == entryId }?.let { navigateToDetail(it) } } else if (id.startsWith("stop_")) { val parts = id.split("_"); if (parts.size >= 3) { val tripId = parts[1].toIntOrNull(); val stopId = parts[2].toIntOrNull(); lastItems.find { it is FeedItem.TripItem && it.id == tripId }?.let { navigateToDetail(it, stopId) } } } } } }, "Android")
-        mapboxWebView.webViewClient = object : WebViewClient() { override fun onPageFinished(view: WebView?, url: String?) { updateGlobeData() } }
-        val html = try { requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
-        mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
+    private fun setupCesiumWebView() {
+        cesiumWebView.settings.apply { 
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            allowFileAccessFromFileURLs = true
+            allowUniversalAccessFromFileURLs = true
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW 
+        }
+        cesiumWebView.addJavascriptInterface(object { 
+            @JavascriptInterface 
+            fun onMarkerClicked(id: String) { 
+                activity?.runOnUiThread { 
+                    if (id.startsWith("exp_")) { 
+                        val entryId = id.substring(4).toIntOrNull()
+                        lastItems.find { it is FeedItem.Experience && it.id == entryId }?.let { navigateToDetail(it) } 
+                    } else if (id.startsWith("stop_")) { 
+                        val parts = id.split("_")
+                        if (parts.size >= 3) { 
+                            val tripId = parts[1].toIntOrNull()
+                            val stopId = parts[2].toIntOrNull()
+                            lastItems.find { it is FeedItem.TripItem && it.id == tripId }?.let { navigateToDetail(it, stopId) } 
+                        } 
+                    } 
+                } 
+            }
+            @JavascriptInterface
+            fun onZoomChanged(height: Float) {
+                // Hier könnten wir auf Zoom-Events reagieren falls nötig
+            }
+        }, "Android")
+        cesiumWebView.webViewClient = object : WebViewClient() { override fun onPageFinished(view: WebView?, url: String?) { updateGlobeData() } }
+        val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
+        cesiumWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
     private fun updateGlobeData() {
+        if (view == null) return
         viewLifecycleOwner.lifecycleScope.launch {
             val jsonArray = withContext(Dispatchers.Default) { val array = JSONArray(); lastItems.forEach { item -> if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) { val obj = JSONObject(); obj.put("type", "experience"); obj.put("id", item.id); item.entry.location!!.split(",").let { if (it.size == 2) { obj.put("lat", it[0].toDouble()); obj.put("lon", it[1].toDouble()); obj.put("image", item.coverImage?.let { getBase64Thumbnail(it) }); array.put(obj) } } } else if (item is FeedItem.TripItem) { val obj = JSONObject(); obj.put("type", "trip"); obj.put("id", item.id); val stopsArray = JSONArray(); item.stops.forEach { stop -> if (!stop.location.isNullOrBlank()) { val sObj = JSONObject(); sObj.put("id", stop.id); stop.location!!.split(",").let { if (it.size == 2) { sObj.put("lat", it[0].toDouble()); sObj.put("lon", it[1].toDouble()); sObj.put("image", (stop.coverImage ?: stop.media.firstOrNull())?.let { getBase64Thumbnail(it) }); stopsArray.put(sObj) } } } }; if (stopsArray.length() > 0) { obj.put("stops", stopsArray); array.put(obj) } } }; array }
-            mapboxWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData('${jsonArray}');", null)
+            cesiumWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData('${jsonArray}');", null)
         }
     }
 
-    private fun getBase64Thumbnail(path: String): String? { try { val file = File(path); if (!file.exists()) return null; val bitmap = BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = 4 }) ?: return null; val resized = Bitmap.createScaledBitmap(bitmap, 120, 120, true); val outputStream = ByteArrayOutputStream(); resized.compress(Bitmap.CompressFormat.PNG, 100, outputStream); return "data:image/png;base64," + android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP) } catch (e: Exception) { return null } }
+    private fun getBase64Thumbnail(path: String): String? {
+        try {
+            val file = File(path)
+            if (!file.exists()) return null
 
+            // HIER WAR DER FEHLER: inSampleSize = 4 hat das Bild zerstört.
+            // Wir setzen es auf 2 (guter Kompromiss aus RAM-Schonung und Schärfe).
+            val options = BitmapFactory.Options().apply { inSampleSize = 2 }
+            val bitmap = BitmapFactory.decodeFile(path, options) ?: return null
+
+            // Knackscharfe 400x400 Pixel für Cesium
+            val resized = Bitmap.createScaledBitmap(bitmap, 400, 400, true)
+            val outputStream = ByteArrayOutputStream()
+            resized.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+
+            return "data:image/png;base64," + android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
+        } catch (e: Exception) {
+            return null
+        }
+    }
     private fun navigateToDetail(item: FeedItem, stopId: Int? = null) { findNavController().navigate(if (item is FeedItem.Experience) R.id.action_feedFragment_to_entryDetailFragment else R.id.action_feedFragment_to_tripDetailFragment, Bundle().apply { if (item is FeedItem.Experience) putInt("entryId", item.id) else { putInt("tripId", item.id); stopId?.let { putInt("stopId", it) } } }) }
 
     private fun setupExpandableFab(view: View) {
@@ -356,29 +404,29 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val layoutExperience = view.findViewById<View>(R.id.layoutAddExperience)
         val layoutTrip = view.findViewById<View>(R.id.layoutAddTrip)
         val layoutAutoTrip = view.findViewById<View>(R.id.layoutAutoTrip)
-        
+
         val fabHelp = view.findViewById<FloatingActionButton>(R.id.fabHelp)
         val fabExperience = view.findViewById<FloatingActionButton>(R.id.fabExperience)
         val fabTrip = view.findViewById<FloatingActionButton>(R.id.fabTrip)
         val fabAutoTrip = view.findViewById<FloatingActionButton>(R.id.fabAutoTrip)
-        
+
         val layouts = listOf(layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
-        layouts.forEach { 
+        layouts.forEach {
             it.visibility = View.GONE
             it.alpha = 0f
-            it.translationY = 50f 
+            it.translationY = 50f
         }
 
-        fabAdd.setOnClickListener { 
+        fabAdd.setOnClickListener {
             isFabMenuOpen = !isFabMenuOpen
-            if (isFabMenuOpen) { 
+            if (isFabMenuOpen) {
                 fabAdd.animate().rotation(135f).setDuration(300).start()
-                layouts.forEachIndexed { index, layout -> 
+                layouts.forEachIndexed { index, layout ->
                     layout.visibility = View.VISIBLE
-                    layout.animate().alpha(1f).translationY(0f).setDuration(300).setStartDelay((index * 50).toLong()).start() 
-                } 
+                    layout.animate().alpha(1f).translationY(0f).setDuration(300).setStartDelay((index * 50).toLong()).start()
+                }
             } else {
-                closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip) 
+                closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
             }
         }
 
@@ -386,20 +434,20 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             showHelpDialog()
             closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
         }
-        
-        fabExperience.setOnClickListener { 
+
+        fabExperience.setOnClickListener {
             findNavController().navigate(R.id.newEntryFragment)
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip) 
+            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
         }
-        
-        fabTrip.setOnClickListener { 
+
+        fabTrip.setOnClickListener {
             findNavController().navigate(R.id.newTripFragment)
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip) 
+            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
         }
-        
-        fabAutoTrip.setOnClickListener { 
+
+        fabAutoTrip.setOnClickListener {
             autoTripPicker.launch("image/*")
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip) 
+            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
         }
     }
 
@@ -411,18 +459,18 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .show()
     }
 
-    private fun closeFabMenu(mainFab: FloatingActionButton, vararg layouts: View) { 
+    private fun closeFabMenu(mainFab: FloatingActionButton, vararg layouts: View) {
         isFabMenuOpen = false
         mainFab.animate().rotation(0f).setDuration(300).start()
-        layouts.reversed().forEachIndexed { index, layout -> 
+        layouts.reversed().forEachIndexed { index, layout ->
             layout.animate()
                 .alpha(0f)
                 .translationY(50f)
                 .setDuration(200)
                 .setStartDelay((index * 50).toLong())
                 .withEndAction { layout.visibility = View.GONE }
-                .start() 
-        } 
+                .start()
+        }
     }
 
     private fun getFlagEmoji(countryCode: String): String { if (countryCode.length != 2) return ""; val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6; val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6; return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter)) }
