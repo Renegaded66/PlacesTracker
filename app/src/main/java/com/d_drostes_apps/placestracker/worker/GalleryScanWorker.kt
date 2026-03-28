@@ -69,7 +69,8 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                         val distFromHome = FloatArray(1)
                         Location.distanceBetween(profile.homeLatitude, profile.homeLongitude, photoLat, photoLon, distFromHome)
                         
-                        if (distFromHome[0] > 20000) { // > 20km from home
+                        val minDistanceMeters = profile.autoGalleryScanDistance * 1000
+                        if (minDistanceMeters == 0 || distFromHome[0] > minDistanceMeters) {
                             var foundGroup = false
                             for (group in groups) {
                                 val distToGroup = FloatArray(1)

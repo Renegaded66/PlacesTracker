@@ -27,6 +27,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.R
+import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -296,6 +297,12 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                         scrollToPhoto(photo)
                     }
                 }
+            }
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean {
+                val alreadySpun = FeedFragment.GlobeAnimationState.hasSpunThisSession
+                FeedFragment.GlobeAnimationState.hasSpunThisSession = true
+                return alreadySpun
             }
         }, "Android")
 

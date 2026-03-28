@@ -16,7 +16,8 @@
             android:layout_height="wrap_content"
             android:text="Automatische Erkennung"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
-            android:layout_marginBottom="24dp" />
+            android:layout_marginBottom="24dp"
+            android:layout_marginTop="24dp" />
 
         <TextView
             android:layout_width="match_parent"
@@ -34,10 +35,27 @@
             app:strokeWidth="1dp"
             app:strokeColor="?attr/colorOutlineVariant">
 
-            <android.webkit.WebView
-                android:id="@+id/homeWebView"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent">
+
+                <android.webkit.WebView
+                    android:id="@+id/homeWebView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btnCurrentLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom|end"
+                    android:layout_margin="16dp"
+                    app:fabSize="mini"
+                    app:tint="?attr/colorPrimary"
+                    app:backgroundTint="?attr/colorSurface"
+                    app:srcCompat="@android:drawable/ic_menu_mylocation" />
+
+            </FrameLayout>
 
         </com.google.android.material.card.MaterialCardView>
 
@@ -55,12 +73,35 @@
             android:layout_height="wrap_content"
             android:text="Galerie automatisch durchsuchen"
             android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="16dp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Die App erstellt Entwürfe für neue Orte, wenn du Fotos außerhalb deines Heimat-Radius (20km) aufnimmst."
+            android:text="Heimat-Radius (km)"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Entfernung zum Heimatort"
+            android:layout_marginBottom="8dp">
+
+            <AutoCompleteTextView
+                android:id="@+id/spinnerDistance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <TextView
+            android:id="@+id/tvDistanceDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Die App erstellt Entwürfe für neue Orte, wenn du Fotos außerhalb deines Heimat-Radius aufnimmst. Bei 0 km wird jedes Foto als Erlebnis gewertet."
             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
             android:alpha="0.7" />
 

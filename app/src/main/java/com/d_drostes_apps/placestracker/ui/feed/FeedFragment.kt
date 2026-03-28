@@ -117,6 +117,38 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
 
         recycler = view.findViewById(R.id.feedRecycler)
+
+        // =================================================================
+        // 🌟 FIX: WebView-Größe an BottomSheet anpassen (Sauberes Zentrieren)
+        // =================================================================
+
+        // 1. Größe beim Wischen anpassen
+        bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {}
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                // Wir setzen die Höhe der WebView exakt auf den Abstand vom oberen Rand
+                // bis zur Kante des BottomSheets.
+                val layoutParams = cesiumWebView.layoutParams
+                layoutParams.height = bottomSheet.top
+                cesiumWebView.layoutParams = layoutParams
+            }
+        })
+
+        // 2. Größe beim allerersten Layout-Aufbau anpassen
+        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val sheetTop = bottomSheet.top
+                if (sheetTop > 0) {
+                    view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    val layoutParams = cesiumWebView.layoutParams
+                    layoutParams.height = sheetTop
+                    cesiumWebView.layoutParams = layoutParams
+                }
+            }
+        })
+        // =================================================================
+
         recycler.setOnTouchListener { _, event ->
             val behavior = bottomSheetBehavior ?: return@setOnTouchListener false
             if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
@@ -173,9 +205,13 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val behavior = bottomSheetBehavior ?: return
-                
+
+                // 🌟 NEU: Wenn wir ganz oben angekommen sind, zoomen wir wieder in den Weltraum!
                 if (!recyclerView.canScrollVertically(-1)) {
-                    lastZoomedId = "top"
+                    if (lastZoomedId != "top") { // Verhindert, dass der Befehl 100x gesendet wird
+                        lastZoomedId = "top"
+                        cesiumWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
+                    }
                     return
                 }
 
@@ -196,10 +232,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         if (coords.size == 2) {
                             val lat = coords[0].toDoubleOrNull() ?: 0.0
                             val lon = coords[1].toDoubleOrNull() ?: 0.0
-                            
+
                             val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
                             cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, $offset);", null)
-                            
+
                             lastZoomedId = id
                         }
                     }
@@ -370,6 +406,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             fun onZoomChanged(height: Float) {
                 // Hier könnten wir auf Zoom-Events reagieren falls nötig
             }
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean {
+                val alreadySpun = GlobeAnimationState.hasSpunThisSession
+                GlobeAnimationState.hasSpunThisSession = true
+                return alreadySpun
+            }
         }, "Android")
         cesiumWebView.webViewClient = object : WebViewClient() { override fun onPageFinished(view: WebView?, url: String?) { updateGlobeData() } }
         val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
@@ -481,5 +523,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
-    private fun getFlagEmoji(countryCode: String): String { if (countryCode.length != 2) return ""; val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6; val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6; return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter)) }
+    private fun getFlagEmoji(countryCode: String): String { if (countryCode.length != 2) return ""; val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6; val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6; return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
+    }
+    object GlobeAnimationState{
+        var hasSpunThisSession = false
+    }
 }

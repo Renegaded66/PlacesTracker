@@ -33,6 +33,11 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* 🌟 NEU: Versteckt das Cesium-Logo und die Links unten im Bild */
+        .cesium-widget-credits {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -174,6 +179,33 @@
     });
 
     let polylineEntities = [];
+    let homeMarker = null;
+    let pickerMode = false;
+
+    window.setPickerMode = function(enabled) {
+        pickerMode = enabled;
+    };
+
+    window.setLocation = function(lat, lon) {
+        if (homeMarker) {
+            viewer.entities.remove(homeMarker);
+        }
+        homeMarker = viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(lon, lat),
+            point: {
+                pixelSize: 20,
+                color: Cesium.Color.DODGERBLUE,
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 4,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+            }
+        });
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 5000),
+            duration: 1.5
+        });
+    };
 
     function createRoundImage(imageUrl, color) {
         const baseSize = 180;
@@ -288,7 +320,23 @@
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function(click){
         const picked = viewer.scene.pick(click.position);
-        if(picked && picked.id && picked.id._customId && window.Android) window.Android.onMarkerClicked(picked.id._customId);
+        if(picked && picked.id && picked.id._customId && window.Android) {
+            window.Android.onMarkerClicked(picked.id._customId);
+            return;
+        }
+
+        if (pickerMode) {
+            const ray = viewer.camera.getPickRay(click.position);
+            const cartesian = viewer.scene.globe.pick(ray, viewer.scene);
+            if (cartesian) {
+                const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                const lat = Cesium.Math.toDegrees(cartographic.latitude);
+                const lon = Cesium.Math.toDegrees(cartographic.longitude);
+
+                window.setLocation(lat, lon);
+                if (window.Android) window.Android.onLocationPicked(lat, lon);
+            }
+        }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
     window.zoomToPoint = function(lat, lon, offset){
@@ -298,67 +346,74 @@
         });
     };
 
+    // 🌟 NEU: Fliegt butterweich zurück in die Weltraum-Ansicht
+    window.resetGlobeView = function() {
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(10, 50, 20000000), // Standard Weltraum-Koordinaten
+            duration: 1.5 // 1.5 Sekunden für einen sanften Flug
+        });
+    };
+
     // =================================================================
-    // 🌟 NEU: 360° SMOOTH INTRO-SPIN & IDLE-ROTATION
+    // 🌟 NEU: 360° SMOOTH INTRO-SPIN (Verknüpft mit Android-Gedächtnis)
     // =================================================================
-    let isAutoRotating = false;
-    let isIntroSpinning = true;
 
-    let introStartTime = 0;
-    const introDuration = 3000; // 3 Sekunden für exakt 360° (Zügig & Dynamisch!)
-    let previousEasedProgress = 0;
+    // Wir fragen Android (Kotlin), ob wir in dieser App-Sitzung schon gedreht haben
+    let hasSpun = false;
+    if (window.Android && window.Android.checkAndMarkSpun) {
+        hasSpun = window.Android.checkAndMarkSpun();
+    }
 
-    const slowSpinSpeed = 0.0008; // 🌟 HIER: Wieder doppelt so schnell für die dauerhafte Drehung
+    // Nur wenn Android "false" zurückgibt, starten wir die Animation!
+    if (!hasSpun) {
+        let isAutoRotating = false;
+        let isIntroSpinning = true;
 
-    viewer.clock.onTick.addEventListener(function() {
-        if (!isAutoRotating) return;
+        let introStartTime = 0;
+        const introDuration = 2000;
+        let previousEasedProgress = 0;
 
-        if (isIntroSpinning) {
-            // Berechnet, wie viel Prozent der 3 Sekunden bereits vergangen sind (0.0 bis 1.0)
-            let now = Date.now();
-            let progress = (now - introStartTime) / introDuration;
+        const slowSpinSpeed = 0.0008;
 
-            if (progress >= 1.0) {
-                // Intro ist fertig, den winzigen Restbetrag noch zu Ende drehen
-                let deltaAngle = (1.0 - previousEasedProgress) * (Math.PI * 2);
-                viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
-                isIntroSpinning = false; // Umschalten auf dauerhaften Idle-Spin!
+        viewer.clock.onTick.addEventListener(function() {
+            if (!isAutoRotating) return;
+
+            if (isIntroSpinning) {
+                let now = Date.now();
+                let progress = (now - introStartTime) / introDuration;
+
+                if (progress >= 1.0) {
+                    let deltaAngle = (1.0 - previousEasedProgress) * (Math.PI * 2);
+                    viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
+                    isIntroSpinning = false;
+                } else {
+                    let easedProgress = -(Math.cos(Math.PI * progress) - 1) / 2;
+                    let deltaAngle = (easedProgress - previousEasedProgress) * (Math.PI * 2);
+                    viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
+                    previousEasedProgress = easedProgress;
+                }
             } else {
-                // 🌟 DIE MAGIE: Smooth Easing (Ease-In-Out Sine)
-                // Sorgt für weiche Beschleunigung und sanftes Abbremsen
-                let easedProgress = -(Math.cos(Math.PI * progress) - 1) / 2;
-
-                // Wir drehen die Kamera nur um das winzige Stück, das seit dem letzten Frame dazukam
-                let deltaAngle = (easedProgress - previousEasedProgress) * (Math.PI * 2);
-                viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
-                previousEasedProgress = easedProgress;
+                viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, slowSpinSpeed);
             }
-        } else {
-            // Der endlose, sanfte Idle-Spin
-            viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, slowSpinSpeed);
-        }
-    });
+        });
 
-    // ⏱️ TIMER 1: Warte auf Texturen (3 Sekunden)
-    setTimeout(() => {
-        introStartTime = Date.now(); // Startzeitpunkt des Spins festhalten
-        isAutoRotating = true; // Spin los!
-
-        // ⏱️ TIMER 2: Abbruch-Sensor scharfschalten (etwas verzögert, damit kein Phantom-Klick stört)
         setTimeout(() => {
-            const stopRotation = () => { isAutoRotating = false; };
+            introStartTime = Date.now();
+            isAutoRotating = true;
 
-            // Reagiert sofort, wenn der Nutzer die Kamera per Wischen bewegt
-            viewer.camera.moveStart.addEventListener(stopRotation);
+            setTimeout(() => {
+                const stopRotation = () => { isAutoRotating = false; };
 
-            // Reagiert auf direkte Bildschirm-Berührungen
-            const canvas = viewer.scene.canvas;
-            canvas.addEventListener('mousedown', stopRotation, { passive: true });
-            canvas.addEventListener('touchstart', stopRotation, { passive: true });
-            canvas.addEventListener('wheel', stopRotation, { passive: true });
+                viewer.camera.moveStart.addEventListener(stopRotation);
+
+                const canvas = viewer.scene.canvas;
+                canvas.addEventListener('mousedown', stopRotation, { passive: true });
+                canvas.addEventListener('touchstart', stopRotation, { passive: true });
+                canvas.addEventListener('wheel', stopRotation, { passive: true });
+            }, 800);
+
         }, 1000);
-
-    }, 3000);
+    }
     // =================================================================
 
     window.addEventListener("load",()=>{
