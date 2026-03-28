@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class], version = 15, exportSchema = false)
+@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class], version = 41, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao
@@ -27,6 +27,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Sicherheits-Migration: Fügt Spalten hinzu, falls sie fehlen, löscht aber niemals Tabellen.
+        private val MIGRATION_SAFE = object : Migration(15, 40) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE user_profile ADD COLUMN isTimelineGalleryEnabled INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    // Spalte existiert evtl. schon
+                }
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -34,8 +45,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "places_tracker_db"
                 )
-                .addMigrations(MIGRATION_14_15)
-                .fallbackToDestructiveMigration(true)
+                .addMigrations(MIGRATION_14_15, MIGRATION_SAFE)
+                .fallbackToDestructiveMigration(false) // ABSOLUTES VERBOT: Nie wieder die DB löschen!
                 .build()
                 INSTANCE = instance
                 instance

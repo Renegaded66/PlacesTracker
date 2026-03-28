@@ -13,5 +13,7 @@ data class UserProfile(
     val homeLatitude: Double? = null,
     val homeLongitude: Double? = null,
     val isAutoGalleryScanEnabled: Boolean = false,
+    val autoGalleryScanDistance: Int = 20, // Distanz in km
+    val isTimelineGalleryEnabled: Boolean = false,
     val themeColor: Int = -10044455 // Standard-Lila (Material 3 standard)
 )

@@ -89,9 +89,14 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val tvGlobalUsername = view.findViewById<TextView>(R.id.tvGlobalUsername)
         val tvGlobalFlag = view.findViewById<TextView>(R.id.tvGlobalUserFlag)
         val btnFriends = view.findViewById<MaterialButton>(R.id.btnFriends)
+        val btnTimelineGallery = view.findViewById<ImageButton>(R.id.btnTimelineGallery)
 
         btnFriends.setOnClickListener {
             findNavController().navigate(R.id.action_feedFragment_to_friendsFragment)
+        }
+
+        btnTimelineGallery.setOnClickListener {
+            findNavController().navigate(R.id.timelineGalleryFragment)
         }
 
         // --- Cesium 3D Globe Setup ---
@@ -139,6 +144,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         ivGlobalAvatar.strokeColor = colorStateList
                         btnFriends.setTextColor(color)
                         btnFriends.iconTint = colorStateList
+                        btnTimelineGallery.imageTintList = colorStateList
                         adapter?.setThemeColor(color)
                     }
                     tvGlobalUsername.text = profile?.username ?: getString(R.string.default_username)
@@ -148,6 +154,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         ivGlobalAvatar.setImageResource(R.drawable.placeholder)
                     }
                     profile?.countryCode?.let { tvGlobalFlag.text = getFlagEmoji(it) }
+                    
+                    btnTimelineGallery.visibility = if (profile?.isTimelineGalleryEnabled == true) View.VISIBLE else View.GONE
                 }
             }
         }

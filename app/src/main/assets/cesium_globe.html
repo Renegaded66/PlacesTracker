@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <title>Cesium Globe</title>
 
-    <!-- Cesium CDN -->
     <script src="https://unpkg.com/cesium@1.111/Build/Cesium/Cesium.js"></script>
     <link href="https://unpkg.com/cesium@1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
@@ -13,6 +12,7 @@
             width: 100%; height: 100%;
             margin: 0; padding: 0;
             overflow: hidden;
+            background: #000;
         }
 
         #loader {
@@ -42,7 +42,6 @@
 <script>
     Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0Nzc1Nzc0Yi1mYzg4LTQwZWQtODc1NS0xNzBkZjU1ZGRlZDAiLCJpZCI6NDA4ODc5LCJpYXQiOjE3NzQ0MzExMDh9.l97sgxaAGqcNZS7CQ2wvZm1Lv1FBcDgIO5uyaksXKqk";
 
-    // 🌍 Viewer
     const viewer = new Cesium.Viewer('cesiumContainer', {
         terrain: Cesium.Terrain.fromWorldTerrain(),
         baseLayerPicker: false,
@@ -60,7 +59,7 @@
     viewer.scene.globe.showGroundAtmosphere = false;
     viewer.scene.skyAtmosphere.show = false;
 
-    // Der dicke, angehobene Smooth Glow
+    // Der Glow-Effekt
     viewer.scene.primitives.add(new Cesium.Primitive({
         geometryInstances: new Cesium.GeometryInstance({
             geometry: new Cesium.EllipsoidGeometry({
@@ -88,68 +87,49 @@
         })
     }));
 
-    // 📸 Satelliten-Textur
     viewer.imageryLayers.removeAll();
+
+    // 🗺️ SCHICHT 1 (UNTEN): CartoDB Voyager Map (Retina @2x Auflösung)
     viewer.imageryLayers.addImageryProvider(
+        new Cesium.UrlTemplateImageryProvider({
+            url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png",
+            subdomains: ['a', 'b', 'c', 'd'],
+            maximumLevel: 19
+        })
+    );
+
+    // 📸 SCHICHT 2 (OBEN): ArcGIS Satellit
+    const satelliteLayer = viewer.imageryLayers.addImageryProvider(
         new Cesium.UrlTemplateImageryProvider({
             url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         })
     );
+
+    // 🌟 Weicher Übergang (Mit Try-Catch abgesichert!)
+    viewer.scene.preUpdate.addEventListener(function() {
+        try {
+            if (!viewer.camera.positionCartographic) return;
+
+            const height = viewer.camera.positionCartographic.height;
+            const fadeStart = 5000000.0;
+            const fadeEnd   = 1500000.0;
+
+            if (height >= fadeStart) {
+                satelliteLayer.alpha = 1.0;
+            } else if (height <= fadeEnd) {
+                satelliteLayer.alpha = 0.0;
+            } else {
+                satelliteLayer.alpha = (height - fadeEnd) / (fadeStart - fadeEnd);
+            }
+        } catch(e) {}
+    });
 
     viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(10, 50, 20000000),
         orientation: { heading: 0, pitch: -Math.PI / 2, roll: 0 }
     });
 
-    // 📸 1. Die Satelliten-Textur (Boden)
-    viewer.imageryLayers.removeAll();
-    viewer.imageryLayers.addImageryProvider(
-        new Cesium.UrlTemplateImageryProvider({
-            url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        })
-    );
-
-    // 🗺️ 2. NEU: Die Ländergrenzen und Städtenamen (Transparentes Overlay)
-    //viewer.imageryLayers.addImageryProvider(
-    //    new Cesium.UrlTemplateImageryProvider({
-    //        url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-    //    })
-    //);
-    const referenceLayer = viewer.imageryLayers.addImageryProvider(
-        new Cesium.UrlTemplateImageryProvider({
-            url: "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-            // Zwingt Cesium dazu, keine zu tiefen (matschigen) Zoom-Level zu laden
-            maximumLevel: 10
-        })
-    );
-
-    // 🌟 NEU: Der "Double Fade" (Weiches Ein- und Ausblenden je nach Kamerahöhe)
-    viewer.scene.preUpdate.addEventListener(function() {
-        const height = viewer.camera.positionCartographic.height;
-        let newAlpha = 0.0;
-
-        if (height > 8000000.0) {
-            // Weltall (über 8000km): Unsichtbar
-            newAlpha = 0.0;
-        } else if (height > 4000000.0) {
-            // Sanftes EINBLENDEN beim Anflug auf die Erde (zwischen 8000km und 4000km)
-            newAlpha = 0.8 * (1.0 - ((height - 4000000.0) / 4000000.0));
-        } else if (height > 500000.0) {
-            // Perfekte Höhe: Deutlich sichtbar (aber bei 80% Deckkraft für einen Premium-Look)
-            newAlpha = 0.8;
-        } else if (height > 100000.0) {
-            // Sanftes AUSBLENDEN beim nahen Reinzoomen! (Zwischen 500km und 100km)
-            // Das versteckt den Pixel-Matsch absolut elegant!
-            newAlpha = 0.8 * ((height - 100000.0) / 400000.0);
-        } else {
-            // Zu nah: Komplett unsichtbar. Der Fokus liegt nun voll auf deinen Markern!
-            newAlpha = 0.0;
-        }
-
-        referenceLayer.alpha = newAlpha;
-    });
-
-    // ⚡ Controls & Limits
+    // Controls
     const controller = viewer.scene.screenSpaceCameraController;
     controller.enableRotate = true;
     controller.enableTranslate = true;
@@ -160,40 +140,28 @@
     controller.zoomFactor = 15.0;
     controller.inertiaZoom = 0.05;
     controller.maximumMovementRatio = 0.4;
-
     controller.maximumZoomDistance = 25000000;
     controller.minimumZoomDistance = 100;
 
-    // =================================================================
-    // 🌟 CLUSTERING (Extreme Überlappung erlaubt)
-    // =================================================================
+    // Clustering
     const markerDataSource = new Cesium.CustomDataSource('markers');
     viewer.dataSources.add(markerDataSource);
 
     markerDataSource.clustering.enabled = true;
-
-    // 🌟 NEU: Heruntergesetzt auf 5! Erlaubt massives Überlappen der Bilder,
-    // bevor sie sich zu einer "+X" Bubble zusammenziehen.
     markerDataSource.clustering.pixelRange = -20;
     markerDataSource.clustering.minimumClusterSize = 2;
 
     markerDataSource.clustering.clusterEvent.addEventListener(function(clusteredEntities, cluster) {
-
-        // 🌟 NEU: Schöne, freigestellte Schrift OHNE grauen Kasten
         cluster.label.show = true;
         cluster.label.text = '+' + (clusteredEntities.length - 1);
-        cluster.label.font = 'bold 20px sans-serif'; // Etwas größer gemacht
+        cluster.label.font = 'bold 20px sans-serif';
         cluster.label.fillColor = Cesium.Color.WHITE;
-
-        // Der Kino-Untertitel-Trick: Weiße Schrift mit schwarzem Rand
         cluster.label.style = Cesium.LabelStyle.FILL_AND_OUTLINE;
         cluster.label.outlineColor = Cesium.Color.BLACK;
         cluster.label.outlineWidth = 5;
-
         cluster.label.pixelOffset = new Cesium.Cartesian2(0, 0);
         cluster.label.disableDepthTestDistance = Number.POSITIVE_INFINITY;
 
-        // Das Bild darunter
         cluster.billboard.show = true;
         cluster.billboard.image = clusteredEntities[0]._safeImageUrl;
         cluster.billboard.width = 63;
@@ -270,10 +238,7 @@
                 image: finalImageUrl,
                 width: 63,
                 height: 63,
-
-                // 🌟 NEU: Zentriert das einzelne Profilbild exakt auf die Koordinate!
                 verticalOrigin: Cesium.VerticalOrigin.CENTER,
-
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY
             }
@@ -283,24 +248,20 @@
         entity._safeImageUrl = finalImageUrl;
     }
 
-    // 🔄 Daten aus Android
     window.setGlobalData = function(json) {
         try {
             const data = JSON.parse(json);
-
             markerDataSource.entities.removeAll();
-
             polylineEntities.forEach(e => viewer.entities.remove(e));
             polylineEntities = [];
 
             data.forEach(item => {
-                if(item.type==="experience") {
-                    if(item.lat && item.lon) addMarker(item.lat,item.lon,"exp_"+item.id,item.image);
+                if(item.type==="experience" && item.lat && item.lon) {
+                    addMarker(item.lat,item.lon,"exp_"+item.id,item.image);
                 }
 
                 if(item.type==="trip") {
                     let coordinates = [];
-
                     item.stops.forEach(s => {
                         if(s.lat && s.lon) {
                             coordinates.push(Cesium.Cartesian3.fromDegrees(s.lon, s.lat));
@@ -321,7 +282,6 @@
                     }
                 }
             });
-
         } catch(e){ console.error(e); }
     };
 
@@ -337,6 +297,69 @@
             duration: 1.2
         });
     };
+
+    // =================================================================
+    // 🌟 NEU: 360° SMOOTH INTRO-SPIN & IDLE-ROTATION
+    // =================================================================
+    let isAutoRotating = false;
+    let isIntroSpinning = true;
+
+    let introStartTime = 0;
+    const introDuration = 3000; // 3 Sekunden für exakt 360° (Zügig & Dynamisch!)
+    let previousEasedProgress = 0;
+
+    const slowSpinSpeed = 0.0008; // 🌟 HIER: Wieder doppelt so schnell für die dauerhafte Drehung
+
+    viewer.clock.onTick.addEventListener(function() {
+        if (!isAutoRotating) return;
+
+        if (isIntroSpinning) {
+            // Berechnet, wie viel Prozent der 3 Sekunden bereits vergangen sind (0.0 bis 1.0)
+            let now = Date.now();
+            let progress = (now - introStartTime) / introDuration;
+
+            if (progress >= 1.0) {
+                // Intro ist fertig, den winzigen Restbetrag noch zu Ende drehen
+                let deltaAngle = (1.0 - previousEasedProgress) * (Math.PI * 2);
+                viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
+                isIntroSpinning = false; // Umschalten auf dauerhaften Idle-Spin!
+            } else {
+                // 🌟 DIE MAGIE: Smooth Easing (Ease-In-Out Sine)
+                // Sorgt für weiche Beschleunigung und sanftes Abbremsen
+                let easedProgress = -(Math.cos(Math.PI * progress) - 1) / 2;
+
+                // Wir drehen die Kamera nur um das winzige Stück, das seit dem letzten Frame dazukam
+                let deltaAngle = (easedProgress - previousEasedProgress) * (Math.PI * 2);
+                viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
+                previousEasedProgress = easedProgress;
+            }
+        } else {
+            // Der endlose, sanfte Idle-Spin
+            viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, slowSpinSpeed);
+        }
+    });
+
+    // ⏱️ TIMER 1: Warte auf Texturen (3 Sekunden)
+    setTimeout(() => {
+        introStartTime = Date.now(); // Startzeitpunkt des Spins festhalten
+        isAutoRotating = true; // Spin los!
+
+        // ⏱️ TIMER 2: Abbruch-Sensor scharfschalten (etwas verzögert, damit kein Phantom-Klick stört)
+        setTimeout(() => {
+            const stopRotation = () => { isAutoRotating = false; };
+
+            // Reagiert sofort, wenn der Nutzer die Kamera per Wischen bewegt
+            viewer.camera.moveStart.addEventListener(stopRotation);
+
+            // Reagiert auf direkte Bildschirm-Berührungen
+            const canvas = viewer.scene.canvas;
+            canvas.addEventListener('mousedown', stopRotation, { passive: true });
+            canvas.addEventListener('touchstart', stopRotation, { passive: true });
+            canvas.addEventListener('wheel', stopRotation, { passive: true });
+        }, 1000);
+
+    }, 3000);
+    // =================================================================
 
     window.addEventListener("load",()=>{
         const loader = document.getElementById("loader");

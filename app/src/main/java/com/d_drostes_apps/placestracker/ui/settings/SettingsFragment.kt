@@ -1,5 +1,7 @@
 package com.d_drostes_apps.placestracker.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -13,6 +15,7 @@ import com.d_drostes_apps.placestracker.R
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
+import androidx.core.net.toUri
 
 class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
@@ -57,6 +60,14 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         cardBackup.setOnClickListener {
             findNavController().navigate(R.id.backupFragment)
+        }
+
+        val btnBuyMeACoffee = view.findViewById<ImageView>(R.id.btnBuyMeACoffee)
+
+        btnBuyMeACoffee.setOnClickListener {
+            val url = "https://www.buymeacoffee.com/deinname"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
         }
     }
 }

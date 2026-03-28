@@ -249,6 +249,13 @@
                         app:tint="?android:attr/textColorSecondary" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+            <ImageView
+                android:id="@+id/btnBuyMeACoffee"
+                android:layout_width="150dp"
+                android:layout_height="150dp"
+                android:src="@drawable/buymeacoffee"
+                android:layout_margin="16dp"
+                android:contentDescription="Buy Me a Coffee"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

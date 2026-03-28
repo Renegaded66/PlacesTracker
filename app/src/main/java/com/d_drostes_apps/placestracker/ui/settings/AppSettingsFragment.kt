@@ -20,6 +20,7 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.UserProfile
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
@@ -27,6 +28,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
 
     private lateinit var languageSelector: AutoCompleteTextView
     private lateinit var viewCurrentColor: View
+    private lateinit var switchTimelineGallery: SwitchMaterial
     private var selectedLanguageCode: String = "de"
     private var selectedColor: Int = -10044455 // Default
 
@@ -54,6 +56,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
 
         languageSelector = view.findViewById(R.id.languageSelector)
         viewCurrentColor = view.findViewById(R.id.viewCurrentColor)
+        switchTimelineGallery = view.findViewById(R.id.switchTimelineGallery)
         val btnPickColor = view.findViewById<LinearLayout>(R.id.btnPickColor)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveAppSettings)
         val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
@@ -68,6 +71,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
             profile?.let {
                 selectedLanguageCode = it.language
                 selectedColor = it.themeColor
+                switchTimelineGallery.isChecked = it.isTimelineGalleryEnabled
                 val lang = languages.find { l -> l.code == it.language }
                 languageSelector.setText(lang?.name ?: "Deutsch", false)
                 viewCurrentColor.backgroundTintList = ColorStateList.valueOf(selectedColor)
@@ -87,9 +91,19 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
             lifecycleScope.launch {
                 val currentProfile = userDao.getUserProfile().firstOrNull()
                 if (currentProfile != null) {
-                    userDao.insertOrUpdate(currentProfile.copy(language = selectedLanguageCode, themeColor = selectedColor))
+                    userDao.insertOrUpdate(currentProfile.copy(
+                        language = selectedLanguageCode, 
+                        themeColor = selectedColor,
+                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked
+                    ))
                 } else {
-                    userDao.insertOrUpdate(UserProfile(username = "Benutzer", profilePicturePath = null, language = selectedLanguageCode, themeColor = selectedColor))
+                    userDao.insertOrUpdate(UserProfile(
+                        username = "Benutzer", 
+                        profilePicturePath = null, 
+                        language = selectedLanguageCode, 
+                        themeColor = selectedColor,
+                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked
+                    ))
                 }
                 
                 val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(selectedLanguageCode)
