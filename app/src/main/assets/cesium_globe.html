@@ -34,7 +34,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* 🌟 NEU: Versteckt das Cesium-Logo und die Links unten im Bild */
+        /* 🌟 Versteckt das Cesium-Logo und die Links unten im Bild */
         .cesium-widget-credits {
             display: none !important;
         }
@@ -110,7 +110,7 @@
         })
     );
 
-    // 🌟 Weicher Übergang (Mit Try-Catch abgesichert!)
+    // 🌟 Weicher Übergang
     viewer.scene.preUpdate.addEventListener(function() {
         try {
             if (!viewer.camera.positionCartographic) return;
@@ -346,42 +346,32 @@
         });
     };
 
-    // 🌟 NEU: Fliegt butterweich zurück in die Weltraum-Ansicht
     window.resetGlobeView = function() {
         viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(10, 50, 20000000), // Standard Weltraum-Koordinaten
-            duration: 1.5 // 1.5 Sekunden für einen sanften Flug
+            destination: Cesium.Cartesian3.fromDegrees(10, 50, 20000000),
+            duration: 1.5
         });
     };
 
-    // =================================================================
-    // 🌟 NEU: 360° SMOOTH INTRO-SPIN (Verknüpft mit Android-Gedächtnis)
-    // =================================================================
-
-    // Wir fragen Android (Kotlin), ob wir in dieser App-Sitzung schon gedreht haben
+    // Animation Spin
     let hasSpun = false;
     if (window.Android && window.Android.checkAndMarkSpun) {
         hasSpun = window.Android.checkAndMarkSpun();
     }
 
-    // Nur wenn Android "false" zurückgibt, starten wir die Animation!
     if (!hasSpun) {
         let isAutoRotating = false;
         let isIntroSpinning = true;
-
         let introStartTime = 0;
         const introDuration = 2000;
         let previousEasedProgress = 0;
-
         const slowSpinSpeed = 0.0008;
 
         viewer.clock.onTick.addEventListener(function() {
             if (!isAutoRotating) return;
-
             if (isIntroSpinning) {
                 let now = Date.now();
                 let progress = (now - introStartTime) / introDuration;
-
                 if (progress >= 1.0) {
                     let deltaAngle = (1.0 - previousEasedProgress) * (Math.PI * 2);
                     viewer.camera.rotate(Cesium.Cartesian3.UNIT_Z, deltaAngle);
@@ -400,21 +390,16 @@
         setTimeout(() => {
             introStartTime = Date.now();
             isAutoRotating = true;
-
             setTimeout(() => {
                 const stopRotation = () => { isAutoRotating = false; };
-
                 viewer.camera.moveStart.addEventListener(stopRotation);
-
                 const canvas = viewer.scene.canvas;
                 canvas.addEventListener('mousedown', stopRotation, { passive: true });
                 canvas.addEventListener('touchstart', stopRotation, { passive: true });
                 canvas.addEventListener('wheel', stopRotation, { passive: true });
             }, 800);
-
         }, 1000);
     }
-    // =================================================================
 
     window.addEventListener("load",()=>{
         const loader = document.getElementById("loader");

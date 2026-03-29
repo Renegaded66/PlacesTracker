@@ -28,7 +28,8 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
     private data class PhotoGroup(
         val lat: Double,
         val lon: Double,
-        val uris: MutableList<Uri> = mutableListOf()
+        val uris: MutableList<Uri> = mutableListOf(),
+        val timestamp: Long
     )
 
     override suspend fun doWork(): Result {
@@ -38,6 +39,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         val profile = userDao.getUserProfile().first() ?: return Result.success()
 
         if (!profile.isAutoGalleryScanEnabled || profile.homeLatitude == null || profile.homeLongitude == null) {
+            Log.d("GalleryScanWorker", "Auto scan disabled or home location missing")
             return Result.success()
         }
 
@@ -56,7 +58,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
 
         val groups = mutableListOf<PhotoGroup>()
 
-        newPhotos.forEach { uri ->
+        newPhotos.forEach { (uri, dateTaken) ->
             try {
                 applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
                     val exif = ExifInterface(inputStream)
@@ -67,7 +69,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                         val photoLon = latLong[1].toDouble()
                         
                         val distFromHome = FloatArray(1)
-                        Location.distanceBetween(profile.homeLatitude, profile.homeLongitude, photoLat, photoLon, distFromHome)
+                        Location.distanceBetween(profile.homeLatitude!!, profile.homeLongitude!!, photoLat, photoLon, distFromHome)
                         
                         val minDistanceMeters = profile.autoGalleryScanDistance * 1000
                         if (minDistanceMeters == 0 || distFromHome[0] > minDistanceMeters) {
@@ -82,7 +84,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                                 }
                             }
                             if (!foundGroup) {
-                                groups.add(PhotoGroup(photoLat, photoLon, mutableListOf(uri)))
+                                groups.add(PhotoGroup(photoLat, photoLon, mutableListOf(uri), dateTaken))
                             }
                         }
                     }
@@ -95,14 +97,14 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         Log.d("GalleryScanWorker", "Created ${groups.size} location groups")
 
         groups.forEach { group ->
-            createDraft(group.uris, group.lat, group.lon)
+            createDraft(group.uris, group.lat, group.lon, group.timestamp)
         }
 
         prefs.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
         return Result.success()
     }
 
-    private suspend fun createDraft(photoUris: List<Uri>, lat: Double, lon: Double) {
+    private suspend fun createDraft(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long) {
         val app = applicationContext as PlacesApplication
         val tripDao = app.database.tripDao()
         val entryDao = app.database.entryDao()
@@ -118,30 +120,32 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             val draftStop = TripStop(
                 tripId = activeTrip.id,
                 title = "Neuer Stopp (Entwurf)",
-                date = System.currentTimeMillis(),
+                date = timestamp,
                 location = "$lat,$lon",
                 media = internalFilePaths,
-                isDraft = true
+                isDraft = true,
+                coverImage = internalFilePaths.firstOrNull()
             )
             tripDao.insertStop(draftStop)
             sendNotification("Neuer Stopp erkannt!", "Möchtest du ${internalFilePaths.size} Fotos deinem aktuellen Trip hinzufügen?", activeTrip.id, true)
         } else {
             val draftEntry = Entry(
                 title = "Neues Erlebnis (Entwurf)",
-                date = System.currentTimeMillis(),
+                date = timestamp,
                 notes = "",
                 location = "$lat,$lon",
                 media = internalFilePaths,
-                isDraft = true
+                isDraft = true,
+                coverImage = internalFilePaths.firstOrNull()
             )
             entryDao.insert(draftEntry)
             sendNotification("Neues Erlebnis erkannt!", "Möchtest du ein Erlebnis mit ${internalFilePaths.size} Fotos erstellen?", -1, false)
         }
     }
 
-    private fun queryNewPhotos(since: Long): List<Uri> {
-        val photos = mutableListOf<Uri>()
-        val projection = arrayOf(MediaStore.Images.Media._ID)
+    private fun queryNewPhotos(since: Long): List<Pair<Uri, Long>> {
+        val photos = mutableListOf<Pair<Uri, Long>>()
+        val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED)
         val selection = "${MediaStore.Images.Media.DATE_ADDED} >= ?"
         val selectionArgs = arrayOf((since / 1000).toString())
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
@@ -154,16 +158,22 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             sortOrder
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+            val dateColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+            val addedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+            
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
-                photos.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()))
+                var date = cursor.getLong(dateColumn)
+                if (date == 0L) date = cursor.getLong(addedColumn) * 1000
+                
+                photos.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()) to date)
             }
         }
         return photos
     }
 
     private fun copyToInternalStorage(uri: Uri): File {
-        val fileName = "${UUID.randomUUID()}.jpg"
+        val fileName = "auto_${UUID.randomUUID()}.jpg"
         val destFile = File(applicationContext.filesDir, fileName)
         applicationContext.contentResolver.openInputStream(uri)?.use { input ->
             destFile.outputStream().use { output ->
@@ -210,6 +220,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
 
             val request = PeriodicWorkRequestBuilder<GalleryScanWorker>(15, TimeUnit.MINUTES)
                 .setConstraints(constraints)
+                .addTag("GalleryScan")
                 .build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
@@ -217,10 +228,12 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                 ExistingPeriodicWorkPolicy.UPDATE,
                 request
             )
+            Log.d("GalleryScanWorker", "Enqueued periodic work")
         }
         
         fun stop(context: Context) {
             WorkManager.getInstance(context).cancelUniqueWork("GalleryScan")
+            Log.d("GalleryScanWorker", "Cancelled periodic work")
         }
     }
 }
