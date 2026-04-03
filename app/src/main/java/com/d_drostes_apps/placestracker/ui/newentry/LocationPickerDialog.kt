@@ -61,7 +61,7 @@ class LocationPickerDialog(
             }
         }
 
-        val html = requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
+        val html = requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
 
         btnClose.setOnClickListener { dismiss() }

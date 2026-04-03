@@ -30,7 +30,7 @@
                     android:id="@+id/inputTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Titel" />
+                    android:hint="@string/title_hint" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -43,10 +43,18 @@
                     android:id="@+id/inputNotes"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Notizen (optional)"
+                    android:hint="@string/notes_hint"
                     android:minLines="3"
                     android:gravity="top" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchPublic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Öffentlich teilen (Weltkugel)"
+                android:textSize="16sp" />
 
             <!-- Datum & Uhrzeit Zeile -->
             <LinearLayout
@@ -69,7 +77,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Datum auswählen"
+                    android:text="@string/date_hint"
                     android:textSize="16sp" />
 
                 <View
@@ -90,7 +98,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Uhrzeit (optional)"
+                    android:text="@string/time_hint"
                     android:textSize="16sp" />
             </LinearLayout>
 
@@ -98,12 +106,11 @@
                 android:id="@+id/btnLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Standort auswählen"
+                android:text="@string/location_hint"
                 android:layout_marginTop="24dp"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 app:icon="@drawable/ic_marker" />
 
-            <!-- Cesium 3D Globe Vorschau -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardNewEntryMap"
                 android:layout_width="match_parent"
@@ -128,8 +135,9 @@
                         android:layout_height="40dp"
                         android:layout_gravity="top|end"
                         android:layout_margin="12dp"
-                        android:background="@drawable/circle_background"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_fullscreen"
+                        android:contentDescription="@string/toggle_fullscreen_map"
                         android:elevation="4dp"
                         app:tint="?attr/colorOnSurface" />
                 </FrameLayout>
@@ -139,7 +147,7 @@
                 android:id="@+id/tvCoordinates"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Keine Koordinaten"
+                android:text="@string/no_coordinates"
                 android:textAlignment="center"
                 android:layout_marginTop="4dp"
                 android:textColor="?android:attr/textColorSecondary" />
@@ -148,7 +156,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
-                android:text="Medien"
+                android:text="@string/media"
                 android:textStyle="bold"
                 android:textSize="16sp" />
 
@@ -159,7 +167,6 @@
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false" />
 
-            <!-- Platzhalter für Save Button -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="100dp" />
@@ -172,7 +179,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_gravity="bottom"
-        android:text="Eintrag speichern"
+        android:text="@string/save_entry"
         android:layout_margin="16dp"
         app:cornerRadius="16dp" />
 

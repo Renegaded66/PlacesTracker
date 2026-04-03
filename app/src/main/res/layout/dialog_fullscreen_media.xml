@@ -19,6 +19,6 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
         android:elevation="10dp"
-        android:contentDescription="Schließen" />
+        android:contentDescription="@string/close" />
 
 </FrameLayout>

@@ -1,8 +1,6 @@
 package com.d_drostes_apps.placestracker.ui.feed
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.media.ExifInterface
 import android.net.Uri
@@ -14,7 +12,6 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +29,7 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.FeedItem
 import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripStop
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.button.MaterialButton
@@ -45,12 +43,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
-import androidx.core.graphics.scale
 
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
@@ -118,17 +114,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         recycler = view.findViewById(R.id.feedRecycler)
 
-        // =================================================================
-        // 🌟 FIX: WebView-Größe an BottomSheet anpassen (Sauberes Zentrieren)
-        // =================================================================
-
         // 1. Größe beim Wischen anpassen
         bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {}
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                // Wir setzen die Höhe der WebView exakt auf den Abstand vom oberen Rand
-                // bis zur Kante des BottomSheets.
                 val layoutParams = cesiumWebView.layoutParams
                 layoutParams.height = bottomSheet.top
                 cesiumWebView.layoutParams = layoutParams
@@ -147,7 +137,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 }
             }
         })
-        // =================================================================
 
         recycler.setOnTouchListener { _, event ->
             val behavior = bottomSheetBehavior ?: return@setOnTouchListener false
@@ -206,9 +195,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val behavior = bottomSheetBehavior ?: return
 
-                // 🌟 NEU: Wenn wir ganz oben angekommen sind, zoomen wir wieder in den Weltraum!
                 if (!recyclerView.canScrollVertically(-1)) {
-                    if (lastZoomedId != "top") { // Verhindert, dass der Befehl 100x gesendet wird
+                    if (lastZoomedId != "top") {
                         lastZoomedId = "top"
                         cesiumWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
                     }
@@ -227,16 +215,37 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         is FeedItem.TripItem -> "trip_${item.id}"
                     }
 
-                    if (id != lastZoomedId && loc != null) {
-                        val coords = loc.split(",")
-                        if (coords.size == 2) {
-                            val lat = coords[0].toDoubleOrNull() ?: 0.0
-                            val lon = coords[1].toDoubleOrNull() ?: 0.0
+                    if (id != lastZoomedId) {
+                        lastZoomedId = id
+                        val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
 
-                            val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
-                            cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, $offset);", null)
+                        if (item is FeedItem.TripItem && item.stops.isNotEmpty()) {
+                            // 🌟 NEU: Alle gültigen Koordinaten des Trips sammeln
+                            val lats = item.stops.mapNotNull { it.location?.split(",")?.getOrNull(0)?.toDoubleOrNull() }
+                            val lons = item.stops.mapNotNull { it.location?.split(",")?.getOrNull(1)?.toDoubleOrNull() }
 
-                            lastZoomedId = id
+                            if (lats.isNotEmpty() && lons.isNotEmpty()) {
+                                val minLat = lats.minOrNull() ?: 0.0
+                                val maxLat = lats.maxOrNull() ?: 0.0
+                                val minLon = lons.minOrNull() ?: 0.0
+                                val maxLon = lons.maxOrNull() ?: 0.0
+
+                                // Wenn es nur 1 Stopp gibt, machen wir einen normalen Point-Zoom
+                                if (minLat == maxLat && minLon == maxLon) {
+                                    cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($minLat, $minLon, $offset);", null)
+                                } else {
+                                    // Sonst zoomen wir auf die gesamte Bounding-Box!
+                                    cesiumWebView.evaluateJavascript("javascript:if(window.zoomToBounds) window.zoomToBounds($minLat, $minLon, $maxLat, $maxLon, $offset);", null)
+                                }
+                            }
+                        } else if (item is FeedItem.Experience && loc != null) {
+                            // Erlebnisse (Einzelne Punkte) wie gewohnt anzoomen
+                            val coords = loc.split(",")
+                            if (coords.size == 2) {
+                                val lat = coords[0].toDoubleOrNull() ?: 0.0
+                                val lon = coords[1].toDoubleOrNull() ?: 0.0
+                                cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, $offset);", null)
+                            }
                         }
                     }
                 }
@@ -256,7 +265,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         val stops = allStops.filter { it.tripId == trip.id }
                         items.add(FeedItem.TripItem(trip, stops))
                     }
-                    items.sortByDescending { it.date }
+                    
+                    items.sortWith(compareByDescending<FeedItem> { it.isLive }.thenByDescending { it.sortDate })
                     items
                 }.collect { combinedItems ->
                     lastItems = combinedItems
@@ -270,15 +280,24 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun showAutoTripConfirmation(uris: List<Uri>) {
-        AlertDialog.Builder(requireContext()).setTitle("Automatischer Trip").setMessage("Möchtest du aus den ${uris.size} ausgewählten Bildern automatisch einen Trip erstellen lassen? Bilder werden nach Tagen gruppiert.").setPositiveButton("Ja, erstellen") { _, _ -> createAutoTrip(uris) }.setNegativeButton("Abbrechen", null).show()
+        AlertDialog.Builder(requireContext())
+            .setTitle("Automatischer Trip")
+            // 🌟 NEU: Text angepasst
+            .setMessage("Möchtest du aus den ${uris.size} ausgewählten Bildern automatisch einen Trip erstellen lassen? Bilder werden nach Standorten (Radius 1km) gebündelt.")
+            .setPositiveButton("Ja, erstellen") { _, _ -> createAutoTrip(uris) }
+            .setNegativeButton("Abbrechen", null)
+            .show()
     }
 
     private fun createAutoTrip(uris: List<Uri>) {
         val progressDialog = AlertDialog.Builder(requireContext()).setMessage("Bilder werden verarbeitet...").setCancelable(false).show()
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val app = requireActivity().application as PlacesApplication
                 val tripDao = app.database.tripDao()
+
+                // 1. Bilder extrahieren und nach Zeit sortieren
                 val imageDataList = uris.mapNotNull { uri ->
                     val file = copyToInternalStorage(uri)
                     val exif = try { ExifInterface(file.absolutePath) } catch (e: Exception) { null }
@@ -288,18 +307,138 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     val location = if (exif?.getLatLong(latLong) == true) "${latLong[0]},${latLong[1]}" else null
                     if (date != null) Triple(file.absolutePath, date, location) else null
                 }.sortedBy { it.second }
-                if (imageDataList.isEmpty()) { withContext(Dispatchers.Main) { progressDialog.dismiss(); Toast.makeText(requireContext(), "Keine gültigen Bilder gefunden.", Toast.LENGTH_SHORT).show() }; return@launch }
-                val groupedByDay = imageDataList.groupBy { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it.second)) }
+
+                if (imageDataList.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        progressDialog.dismiss()
+                        Toast.makeText(requireContext(), "Keine gültigen Bilder gefunden.", Toast.LENGTH_SHORT).show()
+                    }
+                    return@launch
+                }
+
+                // =================================================================
+                // 🌟 NEU: Smarte Gruppierung nach Entfernung (> 1km Radius)
+                // =================================================================
+                val stops = mutableListOf<List<Triple<String, Long, String?>>>()
+                var currentGroup = mutableListOf<Triple<String, Long, String?>>()
+                var currentRefLocation: android.location.Location? = null
+
+                for (image in imageDataList) {
+                    val imgLocStr = image.third
+                    if (imgLocStr != null) {
+                        val coords = imgLocStr.split(",")
+                        if (coords.size == 2) {
+                            val imgLat = coords[0].toDoubleOrNull()
+                            val imgLon = coords[1].toDoubleOrNull()
+
+                            if (imgLat != null && imgLon != null) {
+                                val imgLoc = android.location.Location("").apply {
+                                    latitude = imgLat
+                                    longitude = imgLon
+                                }
+
+                                if (currentRefLocation == null) {
+                                    // Das ist das allererste Bild mit Standort im aktuellen Stopp
+                                    currentRefLocation = imgLoc
+                                    currentGroup.add(image)
+                                } else {
+                                    // Distanz zum Referenz-Standort des Stopps berechnen (in Metern)
+                                    val distanceInMeters = currentRefLocation.distanceTo(imgLoc)
+
+                                    if (distanceInMeters > 1000f) { // 1000 Meter = 1 Kilometer
+                                        // 🛑 Mehr als 1km entfernt! Wir schließen den aktuellen Stopp ab.
+                                        if (currentGroup.isNotEmpty()) stops.add(currentGroup)
+
+                                        // Eröffnen einen neuen Stopp mit diesem Bild als neuem Mittelpunkt
+                                        currentGroup = mutableListOf(image)
+                                        currentRefLocation = imgLoc
+                                    } else {
+                                        // ✅ Unter 1km entfernt. Gehört noch zum selben Stopp!
+                                        currentGroup.add(image)
+                                    }
+                                }
+                                continue // Fertig mit diesem Bild, ab zum nächsten!
+                            }
+                        }
+                    }
+                    // Wenn wir hier landen, hatte das Bild keinen (gültigen) Standort.
+                    // Es wird einfach blind zum aktuell laufenden Stopp hinzugefügt.
+                    currentGroup.add(image)
+                }
+                // Den allerletzten offenen Stopp noch hinzufügen
+                if (currentGroup.isNotEmpty()) stops.add(currentGroup)
+                // =================================================================
+
+
+                // 3. Trip in Datenbank anlegen
                 val firstDate = imageDataList.first().second
                 val tripId = tripDao.insertTrip(Trip(title = "Automatische Reise", date = firstDate, coverImage = imageDataList.first().first)).toInt()
-                groupedByDay.forEach { (day, images) ->
-                    val stopLocation = images.find { it.third != null }?.third
+
+                // Androids eingebauter (kostenloser) Geocoder für Städtenamen
+                val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                val sdf = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
+
+                // 4. Stopps anlegen und benennen
+                stops.forEach { images ->
+                    // Wir suchen das erste Bild in dieser Gruppe, das GPS-Daten hat, um die Stadt abzufragen
+                    val refImageWithLocation = images.find { it.third != null }
+                    val stopLocation = refImageWithLocation?.third
                     val stopDate = images.first().second
                     val stopMedia = images.map { it.first }
-                    tripDao.insertStop(TripStop(tripId = tripId, title = "Stopp am $day", date = stopDate, location = stopLocation, media = stopMedia, coverImage = stopMedia.first()))
+
+                    // Fallback-Name, falls kein Internet da ist oder GPS fehlt
+                    var stopName = "Stopp am ${sdf.format(Date(stopDate))}"
+
+                    // =================================================================
+                    // 🌟 NEU: Stadtname automatisch über kostenlosen Geocoder abfragen
+                    // =================================================================
+                    if (stopLocation != null) {
+                        try {
+                            val coords = stopLocation.split(",")
+                            if (coords.size == 2) {
+                                // "1" bedeutet, wir wollen nur das beste Ergebnis
+                                @Suppress("DEPRECATION")
+                                val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1)
+                                val address = addresses?.firstOrNull()
+
+                                if (address != null) {
+                                    // Wir nehmen die Stadt (locality). Falls es z.B. nur ein Landkreis ist,
+                                    // nehmen wir die SubAdminArea (Region).
+                                    val city = address.locality ?: address.subAdminArea ?: address.adminArea
+                                    if (city != null) {
+                                        stopName = city
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Wenn der Geocoder fehlschlägt (z.B. Offline-Modus), passiert nichts.
+                            // Er behält dann einfach den "Stopp am..." Namen.
+                        }
+                    }
+
+                    tripDao.insertStop(TripStop(
+                        tripId = tripId,
+                        title = stopName,
+                        date = stopDate,
+                        location = stopLocation,
+                        media = stopMedia,
+                        coverImage = stopMedia.first()
+                    ))
                 }
-                withContext(Dispatchers.Main) { progressDialog.dismiss(); findNavController().navigate(R.id.newTripFragment, Bundle().apply { putInt("tripId", tripId); putString("title", "Automatische Reise bearbeiten") }) }
-            } catch (e: Exception) { withContext(Dispatchers.Main) { progressDialog.dismiss(); Toast.makeText(requireContext(), "Fehler: ${e.message}", Toast.LENGTH_LONG).show() } }
+
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    findNavController().navigate(R.id.newTripFragment, Bundle().apply {
+                        putInt("tripId", tripId)
+                        putString("title", "Automatische Reise bearbeiten")
+                    })
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    progressDialog.dismiss()
+                    Toast.makeText(requireContext(), "Fehler: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 
@@ -403,17 +542,15 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 } 
             }
             @JavascriptInterface
-            fun onZoomChanged(height: Float) {
-                // Hier könnten wir auf Zoom-Events reagieren falls nötig
-            }
-            @JavascriptInterface
-            fun checkAndMarkSpun(): Boolean {
-                val alreadySpun = GlobeAnimationState.hasSpunThisSession
-                GlobeAnimationState.hasSpunThisSession = true
-                return alreadySpun
-            }
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
         }, "Android")
-        cesiumWebView.webViewClient = object : WebViewClient() { override fun onPageFinished(view: WebView?, url: String?) { updateGlobeData() } }
+        cesiumWebView.webViewClient = object : WebViewClient() { 
+            override fun onPageFinished(view: WebView?, url: String?) { 
+                updateGlobeData() 
+                // 🌍 Den Intro-Spin nur beim ersten Start der App triggern
+                cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
+            } 
+        }
         val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
         cesiumWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
@@ -421,31 +558,47 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private fun updateGlobeData() {
         if (view == null) return
         viewLifecycleOwner.lifecycleScope.launch {
-            val jsonArray = withContext(Dispatchers.Default) { val array = JSONArray(); lastItems.forEach { item -> if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) { val obj = JSONObject(); obj.put("type", "experience"); obj.put("id", item.id); item.entry.location!!.split(",").let { if (it.size == 2) { obj.put("lat", it[0].toDouble()); obj.put("lon", it[1].toDouble()); obj.put("image", item.coverImage?.let { getBase64Thumbnail(it) }); array.put(obj) } } } else if (item is FeedItem.TripItem) { val obj = JSONObject(); obj.put("type", "trip"); obj.put("id", item.id); val stopsArray = JSONArray(); item.stops.forEach { stop -> if (!stop.location.isNullOrBlank()) { val sObj = JSONObject(); sObj.put("id", stop.id); stop.location!!.split(",").let { if (it.size == 2) { sObj.put("lat", it[0].toDouble()); sObj.put("lon", it[1].toDouble()); sObj.put("image", (stop.coverImage ?: stop.media.firstOrNull())?.let { getBase64Thumbnail(it) }); stopsArray.put(sObj) } } } }; if (stopsArray.length() > 0) { obj.put("stops", stopsArray); array.put(obj) } } }; array }
+            val jsonArray = withContext(Dispatchers.Default) { 
+                val array = JSONArray()
+                lastItems.forEach { item -> 
+                    if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) { 
+                        val obj = JSONObject()
+                        obj.put("type", "experience")
+                        obj.put("id", item.id)
+                        item.entry.location!!.split(",").let { coords ->
+                            if (coords.size == 2) { 
+                                obj.put("lat", coords[0].toDouble())
+                                obj.put("lon", coords[1].toDouble())
+                                obj.put("image", GlobeUtils.getBase64Thumbnail(item.coverImage))
+                                array.put(obj) 
+                            } 
+                        } 
+                    } else if (item is FeedItem.TripItem) { 
+                        val obj = JSONObject()
+                        obj.put("type", "trip")
+                        obj.put("id", item.id)
+                        val stopsArray = JSONArray()
+                        item.stops.forEach { stop -> 
+                            if (!stop.location.isNullOrBlank()) { 
+                                val sObj = JSONObject()
+                                sObj.put("id", stop.id)
+                                stop.location!!.split(",").let { coords ->
+                                    if (coords.size == 2) { 
+                                        sObj.put("lat", coords[0].toDouble())
+                                        sObj.put("lon", coords[1].toDouble())
+                                        sObj.put("image", GlobeUtils.getBase64Thumbnail(stop.coverImage ?: stop.media.firstOrNull()))
+                                        stopsArray.put(sObj) 
+                                    } 
+                                } 
+                            } 
+                        }; if (stopsArray.length() > 0) { obj.put("stops", stopsArray); array.put(obj) } 
+                    } 
+                }; array 
+            }
             cesiumWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData('${jsonArray}');", null)
         }
     }
 
-    private fun getBase64Thumbnail(path: String): String? {
-        try {
-            val file = File(path)
-            if (!file.exists()) return null
-
-            // HIER WAR DER FEHLER: inSampleSize = 4 hat das Bild zerstört.
-            // Wir setzen es auf 2 (guter Kompromiss aus RAM-Schonung und Schärfe).
-            val options = BitmapFactory.Options().apply { inSampleSize = 2 }
-            val bitmap = BitmapFactory.decodeFile(path, options) ?: return null
-
-            // Knackscharfe 400x400 Pixel für Cesium
-            val resized = Bitmap.createScaledBitmap(bitmap, 400, 400, true)
-            val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-
-            return "data:image/png;base64," + android.util.Base64.encodeToString(outputStream.toByteArray(), android.util.Base64.NO_WRAP)
-        } catch (e: Exception) {
-            return null
-        }
-    }
     private fun navigateToDetail(item: FeedItem, stopId: Int? = null) { findNavController().navigate(if (item is FeedItem.Experience) R.id.action_feedFragment_to_entryDetailFragment else R.id.action_feedFragment_to_tripDetailFragment, Bundle().apply { if (item is FeedItem.Experience) putInt("entryId", item.id) else { putInt("tripId", item.id); stopId?.let { putInt("stopId", it) } } }) }
 
     private fun setupExpandableFab(view: View) {
@@ -524,8 +677,5 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun getFlagEmoji(countryCode: String): String { if (countryCode.length != 2) return ""; val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6; val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6; return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
-    }
-    object GlobeAnimationState{
-        var hasSpunThisSession = false
     }
 }

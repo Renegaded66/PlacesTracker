@@ -15,8 +15,8 @@
             android:id="@+id/toolbarYearSummary"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="Jahresrückblick"
-            app:navigationIcon="@drawable/ic_back"
+            app:title="@string/year_summary"
+            app:navigationIcon="@drawable/ic_arrow_back"
             app:navigationIconTint="?attr/colorOnSurface"
             app:titleTextColor="?attr/colorOnSurface" />
     </com.google.android.material.appbar.AppBarLayout>
@@ -40,7 +40,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:text="Jahr wählen"
+                android:text="@string/select_year"
                 app:icon="@drawable/ic_calendar"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="32dp" />
@@ -90,7 +90,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Trips"
+                            android:text="@string/trips"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -117,7 +117,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Erlebnisse"
+                            android:text="@string/experiences"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -144,7 +144,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="km Distanz"
+                            android:text="@string/km_distance"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -171,7 +171,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Länder"
+                            android:text="@string/countries"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -192,7 +192,7 @@
                 android:id="@+id/tvYearPhotosTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Erinnerungen"
+                android:text="@string/memories"
                 android:layout_marginTop="32dp"
                 android:layout_marginBottom="12dp"
                 android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
@@ -212,7 +212,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="64dp"
-                android:text="Keine Daten für dieses Jahr vorhanden."
+                android:text="@string/no_data_for_year"
                 android:gravity="center"
                 android:visibility="gone" />
 

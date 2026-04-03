@@ -3,6 +3,7 @@ package com.d_drostes_apps.placestracker.data
 import com.google.gson.annotations.SerializedName
 
 data class SharedData(
+    @SerializedName("sender_id") val senderId: String? = null,
     @SerializedName("sender_username") val senderUsername: String,
     @SerializedName("sender_profile_picture") val senderProfilePicture: String?,
     @SerializedName("sender_country_code") val senderCountryCode: String?,

@@ -6,7 +6,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "user_profile")
 data class UserProfile(
     @PrimaryKey val id: Int = 1,
-    val username: String,
+    var username: String,
     val profilePicturePath: String?,
     val countryCode: String? = null,
     val language: String = "de",
@@ -15,5 +15,8 @@ data class UserProfile(
     val isAutoGalleryScanEnabled: Boolean = false,
     val autoGalleryScanDistance: Int = 20, // Distanz in km
     val isTimelineGalleryEnabled: Boolean = false,
-    val themeColor: Int = -10044455 // Standard-Lila (Material 3 standard)
+    val themeColor: Int = -10044455, // Standard-Lila (Material 3 standard)
+    val isSyncEnabled: Boolean = false,
+    val supabaseUserId: String? = null,
+    val lastSyncTime: Long = 0
 )

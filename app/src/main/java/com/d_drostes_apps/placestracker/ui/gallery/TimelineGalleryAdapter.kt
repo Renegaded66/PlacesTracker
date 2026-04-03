@@ -43,7 +43,7 @@ class TimelineGalleryAdapter(
         } else if (holder is PhotoViewHolder && item is GalleryItem.Photo) {
             Glide.with(holder.ivPhoto)
                 .load(item.uri)
-                .thumbnail(0.1f)
+                .override(400,400)
                 .centerCrop()
                 .into(holder.ivPhoto)
             holder.itemView.setOnClickListener { onPhotoClick(item) }

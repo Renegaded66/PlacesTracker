@@ -1,5 +1,7 @@
 package com.d_drostes_apps.placestracker.ui.newtrip
 
+import android.content.Context
+import android.location.Geocoder
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +13,10 @@ import com.bumptech.glide.Glide
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.TripLocation
 import com.d_drostes_apps.placestracker.data.TripStop
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -19,12 +25,14 @@ sealed class TripItem {
     data class Stop(val stop: TripStop) : TripItem()
     data class MiniStop(val location: TripLocation) : TripItem()
     data class MiniStopExpand(val isExpanded: Boolean, val count: Int, val id: String) : TripItem()
+    data class Transport(val fromStopId: Int, val toStopId: Int, val mode: String?) : TripItem()
 
     val timestamp: Long
         get() = when (this) {
             is Stop -> stop.date
             is MiniStop -> location.timestamp
             is MiniStopExpand -> 0L
+            is Transport -> 0L
         }
 }
 
@@ -34,15 +42,20 @@ class TripStopsAdapter(
     private val onMiniStopClick: (TripLocation) -> Unit,
     private val onDeleteMiniStop: (TripLocation) -> Unit,
     private val onToggleExpand: (String) -> Unit,
+    private val onTransportClick: (Int, String?) -> Unit,
     private val onConfirmDraft: (TripStop) -> Unit = {},
-    private val onRemoveDraft: (TripStop) -> Unit = {}
+    private val onRemoveDraft: (TripStop) -> Unit = {},
+    private val scope: CoroutineScope? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         private const val TYPE_STOP = 0
         private const val TYPE_MINI_STOP = 1
         private const val TYPE_EXPAND = 2
+        private const val TYPE_TRANSPORT = 3
     }
+
+    private val flagCache = mutableMapOf<String, String>()
 
     fun updateItems(newItems: List<TripItem>) {
         this.items = newItems
@@ -58,6 +71,7 @@ class TripStopsAdapter(
             is TripItem.Stop -> TYPE_STOP
             is TripItem.MiniStop -> TYPE_MINI_STOP
             is TripItem.MiniStopExpand -> TYPE_EXPAND
+            is TripItem.Transport -> TYPE_TRANSPORT
         }
     }
 
@@ -71,6 +85,10 @@ class TripStopsAdapter(
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_mini_stop_expand, parent, false)
                 ExpandViewHolder(view)
             }
+            TYPE_TRANSPORT -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_transport_plus, parent, false)
+                TransportViewHolder(view)
+            }
             else -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_mini_stop, parent, false)
                 MiniStopViewHolder(view)
@@ -83,6 +101,7 @@ class TripStopsAdapter(
             is TripItem.Stop -> (holder as StopViewHolder).bind(item.stop)
             is TripItem.MiniStop -> (holder as MiniStopViewHolder).bind(item.location)
             is TripItem.MiniStopExpand -> (holder as ExpandViewHolder).bind(item)
+            is TripItem.Transport -> (holder as TransportViewHolder).bind(item)
         }
     }
 
@@ -92,6 +111,7 @@ class TripStopsAdapter(
         private val ivPic: ImageView = view.findViewById(R.id.ivStopPic)
         private val tvTitle: TextView = view.findViewById(R.id.tvStopTitle)
         private val tvDate: TextView = view.findViewById(R.id.tvStopDate)
+        private val tvFlag: TextView = view.findViewById(R.id.tvStopFlag)
         private val draftOverlay: View = view.findViewById(R.id.draftOverlay)
         private val draftBadge: View = view.findViewById(R.id.draftBadge)
         private val btnConfirm: Button = view.findViewById(R.id.btnConfirmStopDraft)
@@ -120,7 +140,62 @@ class TripStopsAdapter(
                 ivPic.setImageResource(R.drawable.vorschaubild)
             }
 
+            // Load Flag
+            tvFlag.visibility = View.GONE
+            stop.location?.let { loc ->
+                if (flagCache.containsKey(loc)) {
+                    tvFlag.text = flagCache[loc]
+                    tvFlag.visibility = View.VISIBLE
+                } else {
+                    scope?.launch {
+                        val flag = getFlagForLocation(itemView.context, loc)
+                        if (flag != null) {
+                            flagCache[loc] = flag
+                            withContext(Dispatchers.Main) {
+                                tvFlag.text = flag
+                                tvFlag.visibility = View.VISIBLE
+                            }
+                        }
+                    }
+                }
+            }
+
             itemView.setOnClickListener { onStopClick(stop) }
+        }
+    }
+
+    private suspend fun getFlagForLocation(context: Context, location: String): String? = withContext(Dispatchers.IO) {
+        try {
+            val coords = location.split(",")
+            val geocoder = Geocoder(context, Locale.getDefault())
+            @Suppress("DEPRECATION")
+            val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1)
+            val code = addresses?.firstOrNull()?.countryCode
+            if (code != null) getFlagEmoji(code) else null
+        } catch (e: Exception) { null }
+    }
+
+    private fun getFlagEmoji(countryCode: String): String {
+        if (countryCode.length != 2) return ""
+        val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6
+        val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6
+        return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
+    }
+
+    inner class TransportViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val btnTransport: com.google.android.material.button.MaterialButton = view.findViewById(R.id.btnTransportAction)
+
+        fun bind(item: TripItem.Transport) {
+            val iconRes = when(item.mode) {
+                "car" -> android.R.drawable.ic_menu_directions
+                "bike" -> android.R.drawable.ic_menu_mylocation
+                "plane" -> android.R.drawable.ic_menu_send
+                "train" -> android.R.drawable.ic_menu_slideshow
+                "walk" -> android.R.drawable.ic_menu_compass
+                else -> R.drawable.ic_add
+            }
+            btnTransport.setIconResource(iconRes)
+            btnTransport.setOnClickListener { onTransportClick(item.toStopId, item.mode) }
         }
     }
 

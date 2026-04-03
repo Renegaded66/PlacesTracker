@@ -19,8 +19,11 @@ import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.UserProfile
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
+import com.d_drostes_apps.placestracker.worker.SyncWorker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
@@ -29,13 +32,19 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
     private lateinit var languageSelector: AutoCompleteTextView
     private lateinit var viewCurrentColor: View
     private lateinit var switchTimelineGallery: SwitchMaterial
+    private lateinit var switchSync: SwitchMaterial
+    private lateinit var layoutSyncUsername: TextInputLayout
+    private lateinit var etSyncUsername: TextInputEditText
+    
     private var selectedLanguageCode: String = "de"
     private var selectedColor: Int = -10044455 // Default
 
-    private val languages = listOf(
-        LanguageItem("de", "Deutsch"),
-        LanguageItem("en", "English")
-    )
+    private val languages by lazy {
+        listOf(
+            LanguageItem("de", getString(R.string.german)),
+            LanguageItem("en", getString(R.string.english))
+        )
+    }
 
     private val presetColors = listOf(
         Color.parseColor("#6750A4"), // Purple (Default)
@@ -57,6 +66,10 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
         languageSelector = view.findViewById(R.id.languageSelector)
         viewCurrentColor = view.findViewById(R.id.viewCurrentColor)
         switchTimelineGallery = view.findViewById(R.id.switchTimelineGallery)
+        switchSync = view.findViewById(R.id.switchSync)
+        layoutSyncUsername = view.findViewById(R.id.layoutSyncUsername)
+        etSyncUsername = view.findViewById(R.id.etSyncUsername)
+        
         val btnPickColor = view.findViewById<LinearLayout>(R.id.btnPickColor)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveAppSettings)
         val toolbar = view.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)
@@ -72,11 +85,19 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
                 selectedLanguageCode = it.language
                 selectedColor = it.themeColor
                 switchTimelineGallery.isChecked = it.isTimelineGalleryEnabled
+                switchSync.isChecked = it.isSyncEnabled
+                etSyncUsername.setText(it.username)
+                layoutSyncUsername.visibility = if (it.isSyncEnabled) View.VISIBLE else View.GONE
+                
                 val lang = languages.find { l -> l.code == it.language }
-                languageSelector.setText(lang?.name ?: "Deutsch", false)
+                languageSelector.setText(lang?.name ?: getString(R.string.german), false)
                 viewCurrentColor.backgroundTintList = ColorStateList.valueOf(selectedColor)
                 ThemeHelper.applyThemeColor(view, selectedColor)
             }
+        }
+
+        switchSync.setOnCheckedChangeListener { _, isChecked ->
+            layoutSyncUsername.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
         languageSelector.setOnItemClickListener { _, _, position, _ ->
@@ -88,22 +109,40 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
         }
 
         btnSave.setOnClickListener {
+            val newUsername = etSyncUsername.text.toString().trim()
+            if (switchSync.isChecked && newUsername.isEmpty()) {
+                etSyncUsername.error = "Bitte Benutzername eingeben"
+                return@setOnClickListener
+            }
+
             lifecycleScope.launch {
                 val currentProfile = userDao.getUserProfile().firstOrNull()
-                if (currentProfile != null) {
-                    userDao.insertOrUpdate(currentProfile.copy(
+                val updatedProfile = if (currentProfile != null) {
+                    currentProfile.copy(
+                        username = if (newUsername.isNotEmpty()) newUsername else currentProfile.username,
                         language = selectedLanguageCode, 
                         themeColor = selectedColor,
-                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked
-                    ))
+                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked,
+                        isSyncEnabled = switchSync.isChecked
+                    )
                 } else {
-                    userDao.insertOrUpdate(UserProfile(
-                        username = "Benutzer", 
+                    UserProfile(
+                        username = if (newUsername.isNotEmpty()) newUsername else getString(R.string.default_username), 
                         profilePicturePath = null, 
                         language = selectedLanguageCode, 
                         themeColor = selectedColor,
-                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked
-                    ))
+                        isTimelineGalleryEnabled = switchTimelineGallery.isChecked,
+                        isSyncEnabled = switchSync.isChecked
+                    )
+                }
+                
+                userDao.insertOrUpdate(updatedProfile)
+                
+                // Tatsächlicher Start der Synchronisation
+                if (updatedProfile.isSyncEnabled) {
+                    SyncWorker.startImmediateSync(requireContext())
+                    SyncWorker.schedulePeriodicSync(requireContext())
+                    Toast.makeText(requireContext(), "Synchronisation gestartet...", Toast.LENGTH_SHORT).show()
                 }
                 
                 val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(selectedLanguageCode)
@@ -121,7 +160,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
         val container = dialogView.findViewById<LinearLayout>(R.id.colorContainer)
         
         val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Farbe wählen")
+            .setTitle(R.string.pick_color_title)
             .setView(dialogView)
             .create()
 

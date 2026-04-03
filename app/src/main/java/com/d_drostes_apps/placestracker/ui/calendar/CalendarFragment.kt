@@ -76,7 +76,12 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
         monthPicker.minValue = 0
         monthPicker.maxValue = 11
         monthPicker.value = currentCalendar.get(Calendar.MONTH)
-        monthPicker.displayedValues = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        monthPicker.displayedValues = arrayOf(
+            getString(R.string.jan), getString(R.string.feb), getString(R.string.mar),
+            getString(R.string.apr), getString(R.string.may), getString(R.string.jun),
+            getString(R.string.jul), getString(R.string.aug), getString(R.string.sep),
+            getString(R.string.oct), getString(R.string.nov), getString(R.string.dec)
+        )
 
         yearPicker.minValue = 1900
         yearPicker.maxValue = 2100
@@ -85,12 +90,12 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.date_hint))
             .setView(dialogView)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(android.R.string.ok) { _, _ ->
                 currentCalendar.set(Calendar.MONTH, monthPicker.value)
                 currentCalendar.set(Calendar.YEAR, yearPicker.value)
                 updateCalendar()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 

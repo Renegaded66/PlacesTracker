@@ -116,7 +116,7 @@
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Freunde"
+                        android:text="@string/friends"
                         app:icon="@drawable/ic_friends" />
 
                 </LinearLayout>
@@ -154,7 +154,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginEnd="8dp"
                         android:background="@null"
-                        android:hint="Suchen..."
+                        android:hint="@string/search_hint"
                         android:imeOptions="actionSearch"
                         android:paddingHorizontal="4dp"
                         android:paddingVertical="8dp"
@@ -175,7 +175,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Typ"
+                        android:text="@string/filter_type"
                         app:chipIcon="@drawable/ic_feed" />
 
                     <com.google.android.material.chip.Chip
@@ -184,7 +184,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="Datum"
+                        android:text="@string/filter_date"
                         app:chipIcon="@drawable/ic_calendar" />
 
                     <com.google.android.material.chip.Chip
@@ -193,7 +193,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="Standort"
+                        android:text="@string/filter_location"
                         app:chipIcon="@drawable/ic_marker" />
 
                     <com.google.android.material.button.MaterialButton
@@ -202,7 +202,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="Reset"
+                        android:text="@string/filter_reset"
                         android:visibility="gone"
                         app:icon="@android:drawable/ic_menu_revert" />
 
@@ -270,7 +270,7 @@
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/rounded_corners"
                 android:padding="4dp"
-                android:text="Hilfe"
+                android:text="@string/help"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -324,7 +324,7 @@
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/rounded_corners"
                 android:padding="4dp"
-                android:text="Trip"
+                android:text="@string/trip"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -350,7 +350,7 @@
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/rounded_corners"
                 android:padding="4dp"
-                android:text="Auto Trip"
+                android:text="@string/auto_trip"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
 
@@ -366,7 +366,7 @@
             android:id="@+id/fabAdd"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:contentDescription="Hinzufügen"
+            android:contentDescription="@string/add"
             app:srcCompat="@drawable/ic_add" />
 
     </LinearLayout>

@@ -2,6 +2,7 @@ package com.d_drostes_apps.placestracker.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "entries")
 data class Entry(
@@ -13,5 +14,8 @@ data class Entry(
     val media: List<String>,
     val coverImage: String? = null,
     val isDraft: Boolean = false,
-    val friendId: String? = null // Verknüpfung zum Freund (Sender)
+    val friendId: String? = null, // Verknüpfung zum Freund (Sender)
+    val lastModified: Long = System.currentTimeMillis(),
+    val supabaseId: String = UUID.randomUUID().toString(),
+    val isPublic: Boolean = false
 )

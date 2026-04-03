@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="Profil bearbeiten" />
+            app:title="@string/profile_edit" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
@@ -41,8 +41,7 @@
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivProfilePic"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
+                android:layout_height="match_parent" android:scaleType="centerCrop"
                 android:src="@drawable/placeholder"
                 android:background="#EEE"
                 app:shapeAppearanceOverlay="@style/CircleImage"
@@ -62,6 +61,7 @@
                     android:layout_height="20dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_add"
+                    android:contentDescription="@string/add"
                     app:tint="@android:color/white" />
             </com.google.android.material.card.MaterialCardView>
         </FrameLayout>
@@ -71,7 +71,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="32dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-            android:hint="Benutzername">
+            android:hint="@string/username_hint">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/inputUsername"
@@ -86,7 +86,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
-            android:hint="Heimatland">
+            android:hint="@string/home_country_hint">
 
             <AutoCompleteTextView
                 android:id="@+id/countrySelector"
@@ -100,7 +100,7 @@
             android:layout_width="match_parent"
             android:layout_height="64dp"
             android:layout_marginTop="32dp"
-            android:text="Speichern"
+            android:text="@string/save"
             app:cornerRadius="16dp" />
 
     </LinearLayout>

@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="Backup" />
+            app:title="@string/backup" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <LinearLayout
@@ -33,7 +33,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Sichere deine Reisen, Bilder und Einstellungen in einer Datei, um sie später wiederherzustellen oder auf ein anderes Gerät zu übertragen."
+            android:text="@string/backup_instruction"
             android:textSize="16sp"
             android:alpha="0.7"
             android:layout_marginBottom="32dp"/>
@@ -42,7 +42,7 @@
             android:id="@+id/btnCreateBackup"
             android:layout_width="match_parent"
             android:layout_height="64dp"
-            android:text="Backup erstellen"
+            android:text="@string/create_backup"
             app:icon="@drawable/ic_backup"
             app:cornerRadius="16dp"
             android:layout_marginBottom="16dp" />
@@ -52,7 +52,7 @@
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
             android:layout_height="64dp"
-            android:text="Backup hochladen"
+            android:text="@string/upload_backup"
             app:icon="@drawable/ic_add_circle"
             app:cornerRadius="16dp" />
 

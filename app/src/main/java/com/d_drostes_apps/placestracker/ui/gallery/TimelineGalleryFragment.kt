@@ -27,12 +27,13 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.R
-import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.datepicker.MaterialDatePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -53,6 +54,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
     private var filterDateEnd: Long? = null
     private var isMapLoaded = false
     private var loadingJob: Job? = null
+    private var mapUpdateJob: Job? = null
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -97,7 +99,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     recyclerView.visibility = View.GONE
                     mapWebView.visibility = View.VISIBLE
                     dateFilterLayout.visibility = View.VISIBLE
-                    if (isMapLoaded) updateMapData()
+                    if (isMapLoaded) startMapUpdateStream()
                 }
             }
         }
@@ -109,7 +111,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                 filterDateEnd = selection.second
                 val sdf = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
                 btnDateRange.text = "${sdf.format(Date(filterDateStart!!))} - ${sdf.format(Date(filterDateEnd!!))}"
-                updateMapData()
+                startMapUpdateStream()
             }
             picker.show(parentFragmentManager, "date_picker")
         }
@@ -118,7 +120,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
             filterDateStart = null
             filterDateEnd = null
             btnDateRange.text = "Zeitraum wählen"
-            updateMapData()
+            startMapUpdateStream()
         }
 
         setupMap()
@@ -181,7 +183,6 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     val id = cursor.getLong(idColumn)
                     val date = cursor.getLong(dateColumn)
                     
-                    // Wir laden erst mal nur die MediaStore-Daten (schnell)
                     var lat = if (cursor.isNull(latColumn)) null else cursor.getDouble(latColumn)
                     var lon = if (cursor.isNull(lonColumn)) null else cursor.getDouble(lonColumn)
                     
@@ -189,7 +190,6 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     photos.add(GalleryItem.Photo(id, contentUri.toString(), date, lat, lon))
                     count++
 
-                    // Alle 50 Bilder ein Update an die UI senden
                     if (count % 50 == 0 || count == 10) {
                         val currentList = ArrayList(photos)
                         withContext(Dispatchers.Main) {
@@ -197,6 +197,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                                 allPhotos = currentList
                                 adapter.updateItems(groupPhotosByDate(currentList))
                                 progressBar.visibility = View.GONE
+                                if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                             }
                         }
                     }
@@ -209,8 +210,6 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     allPhotos = finalPhotos
                     adapter.updateItems(groupPhotosByDate(finalPhotos))
                     progressBar.visibility = View.GONE
-                    
-                    // Nachdem die Liste da ist, laden wir im Hintergrund die EXIF-Daten für fehlende Standorte
                     loadMissingExifLocations()
                 }
             }
@@ -241,10 +240,9 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     } catch (e: Exception) { /* Ignorieren */ }
                 }
                 
-                // Alle 100 EXIF-Scans die Karte aktualisieren, falls sie offen ist
                 if (index % 100 == 0 && changed && isAdded) {
                     withContext(Dispatchers.Main) {
-                        if (mapWebView.visibility == View.VISIBLE) updateMapData()
+                        if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                     }
                     changed = false
                 }
@@ -252,7 +250,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
             
             if (changed && isAdded) {
                 withContext(Dispatchers.Main) {
-                    if (mapWebView.visibility == View.VISIBLE) updateMapData()
+                    if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                 }
             }
         }
@@ -283,7 +281,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
         mapWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 isMapLoaded = true
-                if (mapWebView.visibility == View.VISIBLE) updateMapData()
+                if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
             }
         }
         mapWebView.addJavascriptInterface(object {
@@ -299,49 +297,55 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                 }
             }
             @JavascriptInterface
-            fun checkAndMarkSpun(): Boolean {
-                val alreadySpun = FeedFragment.GlobeAnimationState.hasSpunThisSession
-                FeedFragment.GlobeAnimationState.hasSpunThisSession = true
-                return alreadySpun
-            }
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
         }, "Android")
 
         val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
         mapWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
-    private fun updateMapData() {
-        if (!isMapLoaded || !isAdded) return
-        
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
+    private fun startMapUpdateStream() {
+        mapUpdateJob?.cancel()
+        mapUpdateJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
             val context = context ?: return@launch
+            if (!isMapLoaded) return@launch
+
             val filtered = if (filterDateStart != null && filterDateEnd != null) {
                 allPhotos.filter { it.date in filterDateStart!!..filterDateEnd!! }
             } else {
                 allPhotos
             }.filter { it.latitude != null && it.longitude != null && it.latitude != 0.0 }
 
-            val jsonArray = JSONArray()
-            filtered.take(100).forEach { photo ->
-                val obj = JSONObject()
-                obj.put("type", "experience") 
-                obj.put("id", "photo_${photo.id}")
-                obj.put("lat", photo.latitude)
-                obj.put("lon", photo.longitude)
-                
-                val thumb = getBase64Thumbnail(context, Uri.parse(photo.uri))
-                if (thumb != null) obj.put("image", thumb)
-                
-                jsonArray.put(obj)
-            }
-            
-            withContext(Dispatchers.Main) {
-                if (isAdded) mapWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData('${jsonArray}');", null)
+            // Streamweise senden: erst 50, dann immer mehr
+            val chunkSizes = listOf(50, 150, 300, 500, 1000, 2000)
+            for (size in chunkSizes) {
+                val currentChunk = filtered.take(size)
+                sendToMap(context, currentChunk)
+                if (size >= filtered.size) break
+                delay(300) // Kurze Pause für UI
             }
         }
     }
 
-    private fun getBase64Thumbnail(context: Context, uri: Uri): String? {
+    private suspend fun sendToMap(context: Context, photos: List<GalleryItem.Photo>) {
+        val jsonArray = JSONArray()
+        photos.forEach { photo ->
+            val obj = JSONObject()
+            obj.put("type", "experience") 
+            obj.put("id", "photo_${photo.id}")
+            obj.put("lat", photo.latitude)
+            obj.put("lon", photo.longitude)
+            val thumb = getBase64ThumbnailForGallery(context, Uri.parse(photo.uri))
+            if (thumb != null) obj.put("image", thumb)
+            jsonArray.put(obj)
+        }
+        
+        withContext(Dispatchers.Main) {
+            if (isAdded) mapWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData(${jsonArray.toString()});", null)
+        }
+    }
+
+    private fun getBase64ThumbnailForGallery(context: Context, uri: Uri): String? {
         return try {
             val inputStream = context.contentResolver.openInputStream(uri)
             val options = BitmapFactory.Options().apply { inSampleSize = 8 }
@@ -350,9 +354,9 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
             
             if (bitmap == null) return null
             
-            val resized = Bitmap.createScaledBitmap(bitmap, 80, 80, true)
+            val resized = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
             val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 50, outputStream)
+            resized.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
             val bytes = outputStream.toByteArray()
             "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
         } catch (e: Exception) {

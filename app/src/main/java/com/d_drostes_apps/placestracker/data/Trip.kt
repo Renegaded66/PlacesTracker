@@ -2,6 +2,7 @@ package com.d_drostes_apps.placestracker.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "trips")
 data class Trip(
@@ -11,7 +12,11 @@ data class Trip(
     val notes: String? = null,
     val coverImage: String? = null,
     val isTrackingActive: Boolean = false,
-    val friendId: String? = null // Verknüpfung zum Freund (Sender)
+    val friendId: String? = null, // Verknüpfung zum Freund (Sender)
+    val isAutoTrip: Boolean = false,
+    val lastModified: Long = System.currentTimeMillis(),
+    val supabaseId: String = UUID.randomUUID().toString(),
+    val isPublic: Boolean = false
 )
 
 @Entity(tableName = "trip_stops")
@@ -24,5 +29,8 @@ data class TripStop(
     val media: List<String>,
     val notes: String? = null,
     val coverImage: String? = null,
-    val isDraft: Boolean = false
+    val isDraft: Boolean = false,
+    val transportMode: String? = null, // Mode of transport TO this stop
+    val lastModified: Long = System.currentTimeMillis(),
+    val supabaseId: String = UUID.randomUUID().toString()
 )

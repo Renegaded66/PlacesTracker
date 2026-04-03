@@ -7,6 +7,7 @@ import androidx.core.content.FileProvider
 import com.d_drostes_apps.placestracker.data.*
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import java.io.*
 import java.util.*
@@ -20,6 +21,7 @@ class SharingManager(private val context: Context, private val database: AppData
 
     suspend fun shareEntry(entry: Entry, userProfile: UserProfile) = withContext(Dispatchers.IO) {
         val sharedData = SharedData(
+            senderId = userProfile.supabaseUserId,
             senderUsername = userProfile.username,
             senderProfilePicture = if (userProfile.profilePicturePath != null) "sender_profile.jpg" else null,
             senderCountryCode = userProfile.countryCode,
@@ -27,24 +29,20 @@ class SharingManager(private val context: Context, private val database: AppData
             entry = entry
         )
         val filesToPack = mutableMapOf<String, File>()
-        
-        // Add entry media
         entry.media.forEach { path ->
             val file = File(path)
             if (file.exists()) filesToPack[file.name] = file
         }
-        
-        // Add sender profile picture
         userProfile.profilePicturePath?.let { path ->
             val file = File(path)
             if (file.exists()) filesToPack["sender_profile.jpg"] = file
         }
-
         createAndShareZip(sharedData, filesToPack, "Entry_${entry.title.replace(" ", "_")}.ptshare")
     }
 
     suspend fun shareTrip(trip: Trip, stops: List<TripStop>, locations: List<TripLocation>, userProfile: UserProfile) = withContext(Dispatchers.IO) {
         val sharedData = SharedData(
+            senderId = userProfile.supabaseUserId,
             senderUsername = userProfile.username,
             senderProfilePicture = if (userProfile.profilePicturePath != null) "sender_profile.jpg" else null,
             senderCountryCode = userProfile.countryCode,
@@ -54,14 +52,10 @@ class SharingManager(private val context: Context, private val database: AppData
             tripLocations = locations
         )
         val filesToPack = mutableMapOf<String, File>()
-        
-        // Add trip cover
         trip.coverImage?.let { path ->
             val file = File(path)
             if (file.exists()) filesToPack[file.name] = file
         }
-
-        // Add stops media
         stops.forEach { stop ->
             stop.media.forEach { path ->
                 val file = File(path)
@@ -72,26 +66,20 @@ class SharingManager(private val context: Context, private val database: AppData
                 if (file.exists()) filesToPack[file.name] = file
             }
         }
-        
-        // Add sender profile picture
         userProfile.profilePicturePath?.let { path ->
             val file = File(path)
             if (file.exists()) filesToPack["sender_profile.jpg"] = file
         }
-
         createAndShareZip(sharedData, filesToPack, "Trip_${trip.title.replace(" ", "_")}.ptshare")
     }
 
     private fun createAndShareZip(sharedData: SharedData, files: Map<String, File>, fileName: String) {
         val cacheFile = File(context.cacheDir, fileName)
         ZipOutputStream(BufferedOutputStream(FileOutputStream(cacheFile))).use { out ->
-            // Write JSON metadata
             val json = gson.toJson(sharedData)
             out.putNextEntry(ZipEntry("metadata.json"))
             out.write(json.toByteArray())
             out.closeEntry()
-
-            // Write files
             files.forEach { (name, file) ->
                 FileInputStream(file).use { input ->
                     out.putNextEntry(ZipEntry(name))
@@ -100,7 +88,6 @@ class SharingManager(private val context: Context, private val database: AppData
                 }
             }
         }
-
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", cacheFile)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = "application/octet-stream"
@@ -116,7 +103,6 @@ class SharingManager(private val context: Context, private val database: AppData
         try {
             val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
             tempDir.mkdirs()
-
             context.contentResolver.openInputStream(uri)?.use { input ->
                 ZipInputStream(BufferedInputStream(input)).use { zipIn ->
                     var entry = zipIn.nextEntry
@@ -128,14 +114,13 @@ class SharingManager(private val context: Context, private val database: AppData
                     }
                 }
             }
-
             val metadataFile = File(tempDir, "metadata.json")
             if (!metadataFile.exists()) return@withContext null
-
             val sharedData = gson.fromJson(FileReader(metadataFile), SharedData::class.java)
             
-            // Create or update friend
-            val friendId = "${sharedData.senderUsername}_${sharedData.senderCountryCode}"
+            // WICHTIG: Die friendId ist jetzt die Supabase-UUID (falls vorhanden)
+            val friendId = sharedData.senderId ?: "${sharedData.senderUsername}_${sharedData.senderCountryCode}"
+            
             var senderProfilePath: String? = null
             File(tempDir, "sender_profile.jpg").let { file ->
                 if (file.exists()) {
@@ -169,8 +154,6 @@ class SharingManager(private val context: Context, private val database: AppData
                         dest.absolutePath
                     } else null
                 }
-                
-                // Check if entry already exists for this friend
                 val existingEntry = database.entryDao().getEntryByFriendAndTitle(friendId, entry.title)
                 if (existingEntry != null) {
                     database.entryDao().update(entry.copy(id = existingEntry.id, friendId = friendId, media = newMedia, coverImage = newCover ?: existingEntry.coverImage))
@@ -188,19 +171,15 @@ class SharingManager(private val context: Context, private val database: AppData
                         dest.absolutePath
                     } else null
                 }
-                
-                // Check if trip already exists for this friend
                 val existingTrip = database.tripDao().getTripByFriendAndTitle(friendId, trip.title)
                 val newTripId = if (existingTrip != null) {
                     database.tripDao().updateTrip(trip.copy(id = existingTrip.id, friendId = friendId, coverImage = tripCover ?: existingTrip.coverImage))
-                    // Clear existing stops and locations to overwrite them
                     database.tripDao().deleteStopsForTrip(existingTrip.id)
                     database.tripDao().deleteLocationsForTrip(existingTrip.id)
                     existingTrip.id
                 } else {
                     database.tripDao().insertTrip(trip.copy(id = 0, friendId = friendId, coverImage = tripCover)).toInt()
                 }
-                
                 sharedData.tripStops?.forEach { stop ->
                     val newMedia = stop.media.map { oldPath ->
                         val fileName = File(oldPath).name
@@ -222,12 +201,10 @@ class SharingManager(private val context: Context, private val database: AppData
                     }
                     database.tripDao().insertStop(stop.copy(id = 0, tripId = newTripId, media = newMedia, coverImage = stopCover))
                 }
-
                 sharedData.tripLocations?.forEach { loc ->
                     database.tripDao().insertLocation(loc.copy(id = 0, tripId = newTripId))
                 }
             }
-
             tempDir.deleteRecursively()
             friendId
         } catch (e: Exception) {

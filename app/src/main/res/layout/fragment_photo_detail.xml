@@ -54,7 +54,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bild-Details"
+                android:text="@string/photo_details"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="16dp"/>
@@ -63,7 +63,7 @@
                 android:id="@+id/tvPhotoDate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Datum: -"
+                android:text="@string/date_label"
                 android:textSize="16sp"
                 android:layout_marginBottom="8dp"/>
 
@@ -71,7 +71,7 @@
                 android:id="@+id/tvPhotoLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Standort: -"
+                android:text="@string/location_label"
                 android:textSize="16sp"
                 android:layout_marginBottom="24dp"/>
 
@@ -89,6 +89,7 @@
                     android:id="@+id/detailMapWebView"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
+
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>

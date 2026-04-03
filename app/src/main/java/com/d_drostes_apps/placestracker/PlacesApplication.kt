@@ -8,7 +8,7 @@ import com.d_drostes_apps.placestracker.data.UserDao
 
 class PlacesApplication : Application() {
     val database by lazy { AppDatabase.getDatabase(this) }
-    val repository by lazy { EntryRepository(database.entryDao()) }
-    val tripRepository by lazy { TripRepository(database.tripDao()) }
+    val repository by lazy { EntryRepository(database.entryDao(), this) }
+    val tripRepository by lazy { TripRepository(database.tripDao(), this) }
     val userDao: UserDao by lazy { database.userDao() }
 }

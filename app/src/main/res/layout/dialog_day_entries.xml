@@ -43,6 +43,7 @@
                     android:layout_marginTop="-24dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:contentDescription="@string/toggle_fullscreen_map"
                     app:tint="?attr/colorOnSurface" />
             </FrameLayout>
 
@@ -51,7 +52,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:padding="40dp"
-                android:text="Keine Einträge vorhanden"
+                android:text="@string/no_entries_available"
                 android:textAlignment="center"
                 android:textSize="16sp"
                 android:visibility="gone" />

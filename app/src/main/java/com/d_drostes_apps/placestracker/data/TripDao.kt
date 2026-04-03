@@ -8,6 +8,9 @@ interface TripDao {
     @Query("SELECT * FROM trips WHERE friendId IS NULL ORDER BY date DESC")
     fun getAllTrips(): Flow<List<Trip>>
 
+    @Query("SELECT * FROM trips WHERE friendId IS NULL ORDER BY date DESC")
+    suspend fun getAllTripsSync(): List<Trip>
+
     @Query("SELECT * FROM trips WHERE friendId = :friendId ORDER BY date DESC")
     fun getTripsByFriend(friendId: String): Flow<List<Trip>>
 
@@ -52,6 +55,12 @@ interface TripDao {
     
     @Query("DELETE FROM trip_stops WHERE tripId = :tripId")
     suspend fun deleteStopsForTrip(tripId: Int)
+
+    @Query("UPDATE trip_stops SET transportMode = :mode WHERE id = :stopId")
+    suspend fun updateTransportMode(stopId: Int, mode: String?)
+
+    @Query("UPDATE trip_stops SET transportMode = :mode WHERE tripId = :tripId")
+    suspend fun updateAllTransportModes(tripId: Int, mode: String?)
 
     // TripLocation methods
     @Insert(onConflict = OnConflictStrategy.REPLACE)

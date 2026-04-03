@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
+import android.webkit.JavascriptInterface
 import android.webkit.MimeTypeMap
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -33,8 +34,10 @@ import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.newentry.LocationPickerDialog
 import com.d_drostes_apps.placestracker.ui.newentry.MediaAdapter
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -52,9 +55,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
     private var currentMediaAdapter: MediaAdapter? = null
     private var currentMediaList: MutableList<String>? = null
-    private lateinit var mapWebView: WebView // NEU
+    private lateinit var mapWebView: WebView 
 
-    private var lastZoomedStopIndex: Int = -1 // Speichert, wo wir auf der Karte gerade sind
+    private var lastZoomedStopIndex: Int = -1 
     
     private val stopMediaPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { uri ->
@@ -69,7 +72,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             val file = copyToInternalStorage(it)
             tripCoverImagePath = file.absolutePath
             val ivPreview = view?.findViewById<ImageView>(R.id.ivTripCoverPreview)
-            ivPreview?.let { Glide.with(this).load(file).centerCrop().into(it) }
+            ivPreview?.let { Glide.with(this).load(file).override(400,400).centerCrop().into(it) }
         }
     }
 
@@ -80,6 +83,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
         
         val inputTitle = view.findViewById<TextInputEditText>(R.id.inputTripTitle)
+        val inputNotes = view.findViewById<TextInputEditText>(R.id.inputTripNotes)
+        val switchAutoTrip = view.findViewById<SwitchMaterial>(R.id.switchAutoTrip)
+        val switchPublicTrip = view.findViewById<SwitchMaterial>(R.id.switchPublicTrip)
         val rvStops = view.findViewById<RecyclerView>(R.id.rvTripStops)
         val btnAddStop = view.findViewById<MaterialButton>(R.id.btnAddStop)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveTrip)
@@ -87,12 +93,13 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         val ivCoverPreview = view.findViewById<ImageView>(R.id.ivTripCoverPreview)
         val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarNewTrip)
 
+
         toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.tripScrollView)
 
         mapWebView = view.findViewById(R.id.tripMapPreview)
-        setupMapboxWebView(mapWebView, null)
+        setupCesiumWebView(mapWebView, null)
 
         mapWebView.setOnTouchListener { v, event ->
             when (event.action) {
@@ -102,56 +109,57 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             false
         }
 
-        // --- NEU: Hier überwachen wir das Scrollen und zoomen zur aktuellen Karte ---
         scrollView.setOnScrollChangeListener(androidx.core.widget.NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
             if (stops.isEmpty()) return@OnScrollChangeListener
 
             val childCount = rvStops.childCount
             for (i in 0 until childCount) {
                 val child = rvStops.getChildAt(i)
-                // Berechnet die absolute Y-Position des Stopps relativ zum ScrollView
                 val absoluteTop = rvStops.top + child.top
                 val absoluteBottom = rvStops.top + child.bottom
 
-                // Schaut, ob der aktuelle Stopp oben am Rand kratzt (mit einem kleinen Offset von 100 Pixeln)
                 if (absoluteTop <= scrollY + 100 && absoluteBottom > scrollY) {
                     val position = rvStops.getChildAdapterPosition(child)
                     if (position != RecyclerView.NO_POSITION && position != lastZoomedStopIndex) {
-                        lastZoomedStopIndex = position
-                        zoomToStop(position)
+                        val item = adapter.getItemAt(position)
+                        if (item is TripItem.Stop) {
+                            lastZoomedStopIndex = position
+                            zoomToStop(position)
+                        }
                     }
                     break
                 }
             }
 
-            // Wenn der Nutzer ganz nach oben scrollt, zentrieren wir die gesamte Route wieder
             if (scrollY <= 10 && lastZoomedStopIndex != -1) {
                 lastZoomedStopIndex = -1
                 mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
             }
         })
-        // --- ENDE NEU ---
 
         adapter = TripStopsAdapter(
             items = stops.map { TripItem.Stop(it) },
             onStopClick = { stop -> showAddStopDialog(stop) },
             onMiniStopClick = { /* No mini stops in creation mode */ },
             onDeleteMiniStop = { /* No mini stops in creation mode */ },
-            onToggleExpand = { /* Not needed in creation mode */ }
+            onToggleExpand = { /* Not needed in creation mode */ },
+            onTransportClick = { _, _ -> /* Transport not editable in basic creation mode yet */ },
+            scope = lifecycleScope
         )
         rvStops.layoutManager = LinearLayoutManager(requireContext())
         rvStops.adapter = adapter
-
-
 
         if (editingTripId != -1) {
             lifecycleScope.launch {
                 val trip = tripDao.getTripById(editingTripId)
                 trip?.let {
                     inputTitle.setText(it.title)
+                    inputNotes.setText(it.notes)
+                    switchAutoTrip.isChecked = it.isAutoTrip
+                    switchPublicTrip.isChecked = it.isPublic
                     tripCoverImagePath = it.coverImage
                     if (it.coverImage != null) {
-                        Glide.with(this@NewTripFragment).load(File(it.coverImage)).centerCrop().into(ivCoverPreview)
+                        Glide.with(this@NewTripFragment).load(File(it.coverImage)).override(400,400).centerCrop().into(ivCoverPreview)
                     }
                     btnSave.text = getString(R.string.save)
                 }
@@ -159,10 +167,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 val dbStops = tripDao.getStopsForTrip(editingTripId).first()
                 stops.clear()
                 stops.addAll(dbStops)
-                adapter.updateItems(stops.map { TripItem.Stop(it) })
+                updateAdapterItems()
                 updateTripMap()
 
-                // Check for direct add stop (from Mini Stop conversion)
                 if (arguments?.getBoolean("directAddStop") == true) {
                     val preLat = arguments?.getFloat("preLat") ?: 0.0f
                     val preLon = arguments?.getFloat("preLon") ?: 0.0f
@@ -170,22 +177,19 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     val preLocationId = arguments?.getLong("preLocationId") ?: -1L
                     
                     showAddStopDialog(initialLat = preLat.toDouble(), initialLon = preLon.toDouble(), initialTime = preTime, miniStopIdToDelete = preLocationId)
-                    // Clear the argument so it doesn't open again on config change
                     arguments?.remove("directAddStop")
                 }
             }
         }
 
         btnAddCover.setOnClickListener { tripCoverPicker.launch("image/*") }
-
-        btnAddStop.setOnClickListener {
-            showAddStopDialog()
-        }
+        btnAddStop.setOnClickListener { showAddStopDialog() }
 
         btnSave.setOnClickListener {
             val title = inputTitle.text.toString()
+            val notes = inputNotes.text.toString()
             if (title.isBlank()) {
-                Toast.makeText(requireContext(), "Titel erforderlich", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.title_required), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -193,11 +197,14 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 val trip = Trip(
                     id = if (editingTripId != -1) editingTripId else 0,
                     title = title, 
+                    notes = if (notes.isBlank()) null else notes,
                     date = stops.minByOrNull { it.date }?.date ?: System.currentTimeMillis(),
                     coverImage = tripCoverImagePath,
                     isTrackingActive = if (editingTripId != -1) {
                         tripDao.getTripById(editingTripId)?.isTrackingActive ?: false
-                    } else false
+                    } else false,
+                    isAutoTrip = switchAutoTrip.isChecked,
+                    isPublic = switchPublicTrip.isChecked
                 )
                 
                 val finalTripId = if (editingTripId != -1) {
@@ -219,15 +226,26 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         }
     }
 
+    private fun updateAdapterItems() {
+        val items = mutableListOf<TripItem>()
+        stops.sortedBy { it.date }.forEachIndexed { index, stop ->
+            items.add(TripItem.Stop(stop))
+            if (index < stops.size - 1) {
+                val nextStop = stops[index + 1]
+                items.add(TripItem.Transport(stop.id, nextStop.id, nextStop.transportMode))
+            }
+        }
+        adapter.updateItems(items)
+    }
+
     private fun zoomToStop(position: Int) {
-        if (position >= 0 && position < stops.size) {
-            val stop = stops[position]
-            stop.location?.split(",")?.let { coords ->
+        val item = adapter.getItemAt(position)
+        if (item is TripItem.Stop) {
+            item.stop.location?.split(",")?.let { coords ->
                 if (coords.size == 2) {
                     val lat = coords[0].toDoubleOrNull()
                     val lon = coords[1].toDoubleOrNull()
                     if (lat != null && lon != null) {
-                        // Sagt der Karte: Flieg zu diesem Stopp!
                         mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
                     }
                 }
@@ -239,18 +257,22 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         if (!::mapWebView.isInitialized) return
 
         val jsonArray = org.json.JSONArray()
-        stops.forEach { stop ->
+        val sortedStops = stops.sortedBy { it.date }
+        sortedStops.forEach { stop ->
             stop.location?.split(",")?.let { coords ->
                 if (coords.size == 2) {
                     val obj = org.json.JSONObject()
                     obj.put("lat", coords[0].toDoubleOrNull() ?: 0.0)
                     obj.put("lon", coords[1].toDoubleOrNull() ?: 0.0)
+                    val stopImg = stop.coverImage ?: stop.media.firstOrNull()
+                    obj.put("image", GlobeUtils.getBase64Thumbnail(stopImg))
                     obj.put("isMini", false)
+                    obj.put("transportMode", stop.transportMode ?: "")
                     jsonArray.put(obj)
                 }
             }
         }
-        val script = "javascript:if(window.setTripPath) window.setTripPath('${jsonArray}');"
+        val script = "javascript:if(window.setTripPath) window.setTripPath('${jsonArray.toString()}');"
         mapWebView.evaluateJavascript(script, null)
     }
 
@@ -268,6 +290,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
         val inputStopTitle = dialog.findViewById<TextInputEditText>(R.id.inputStopTitle)
+        val inputStopNotes = dialog.findViewById<TextInputEditText>(R.id.inputStopNotes)
         val tvDate = dialog.findViewById<TextView>(R.id.tvStopDateDisplay)
         val tvTime = dialog.findViewById<TextView>(R.id.tvStopTimeDisplay)
         val tvCoords = dialog.findViewById<TextView>(R.id.tvStopCoordinates)
@@ -284,10 +307,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         var selectedLocation: String? = null
         var selectedCoverImage: String? = null
 
-        // Handle pre-filled data (Mini-Stop conversion)
         if (initialLat != null && initialLon != null) {
             selectedLocation = "$initialLat,$initialLon"
-            tvCoords.text = "Lat: ${String.format("%.4f", initialLat)}, Lon: ${String.format("%.4f", initialLon)}"
+            tvCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", initialLat, initialLon)
             cardMap.visibility = View.VISIBLE
         }
         if (initialTime != null) {
@@ -296,9 +318,8 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             tvTime.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(initialTime)
         }
 
-        setupMapboxWebView(webView, selectedLocation ?: existingStop?.location)
+        setupCesiumWebView(webView, selectedLocation ?: existingStop?.location)
 
-        // Fix scrolling behavior for WebView in dialog
         webView.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
@@ -309,6 +330,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
         existingStop?.let {
             inputStopTitle.setText(it.title)
+            inputStopNotes.setText(it.notes)
             selectedDate.timeInMillis = it.date
             tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(it.date)
             tvTime.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(it.date)
@@ -321,7 +343,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             if (!it.location.isNullOrBlank()) {
                 val coords = it.location.split(",")
                 if (coords.size == 2) {
-                    tvCoords.text = "Lat: ${String.format("%.4f", coords[0].toDouble())}, Lon: ${String.format("%.4f", coords[1].toDouble())}"
+                    tvCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", coords[0].toDouble(), coords[1].toDouble())
                     cardMap.visibility = View.VISIBLE
                 }
             }
@@ -340,9 +362,10 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             onMediaClick = { path ->
                 showMediaOptionsForStop(path, tempMediaFiles, rvMedia.adapter as MediaAdapter, { lat, lon ->
                     selectedLocation = "$lat,$lon"
-                    tvCoords.text = "Lat: ${String.format("%.4f", lat)}, Lon: ${String.format("%.4f", lon)}"
+                    tvCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", lat, lon)
                     cardMap.visibility = View.VISIBLE
-                    webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '')", null)
+                    val base64 = GlobeUtils.getBase64Thumbnail(selectedCoverImage)
+                    webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '${base64 ?: ""}');", null)
                 }, { date ->
                     selectedDate.time = date
                     tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(selectedDate.time)
@@ -383,38 +406,39 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         btnLocation.setOnClickListener {
             LocationPickerDialog { lat, lon ->
                 selectedLocation = "$lat,$lon"
-                tvCoords.text = "Lat: ${String.format("%.4f", lat)}, Lon: ${String.format("%.4f", lon)}"
+                tvCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", lat, lon)
                 cardMap.visibility = View.VISIBLE
-                webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '')", null)
+                val base64 = GlobeUtils.getBase64Thumbnail(selectedCoverImage)
+                webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '${base64 ?: ""}');", null)
             }.show(parentFragmentManager, "StopLocation")
         }
 
         btnDelete.setOnClickListener {
             AlertDialog.Builder(requireContext())
-                .setTitle("Stopp löschen")
-                .setMessage("Möchtest du diesen Stopp wirklich löschen?")
-                .setPositiveButton("Löschen") { _, _ ->
+                .setTitle(R.string.stop_delete_confirm_title)
+                .setMessage(R.string.stop_delete_confirm_msg)
+                .setPositiveButton(R.string.delete) { _, _ ->
                     lifecycleScope.launch {
                         val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
                         existingStop?.let { tripDao.deleteStop(it) }
                         
-                        // Update UI
                         val dbStops = tripDao.getStopsForTrip(editingTripId).first()
                         stops.clear()
                         stops.addAll(dbStops)
-                        adapter.updateItems(stops.map { TripItem.Stop(it) })
+                        updateAdapterItems()
                         updateTripMap()
                         dialog.dismiss()
                     }
                 }
-                .setNegativeButton("Abbrechen", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show()
         }
 
         btnConfirm.setOnClickListener {
             val titleStr = inputStopTitle.text.toString()
+            val notesStr = inputStopNotes.text.toString()
             if (titleStr.isBlank()) {
-                Toast.makeText(requireContext(), "Titel erforderlich", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.title_required), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             
@@ -423,10 +447,12 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     id = existingStop?.id ?: 0,
                     tripId = editingTripId,
                     title = titleStr,
+                    notes = if (notesStr.isBlank()) null else notesStr,
                     date = selectedDate.timeInMillis,
                     location = selectedLocation,
                     media = tempMediaFiles.toList(),
-                    coverImage = selectedCoverImage ?: tempMediaFiles.firstOrNull()
+                    coverImage = selectedCoverImage ?: tempMediaFiles.firstOrNull(),
+                    transportMode = existingStop?.transportMode
                 )
                 
                 val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
@@ -436,21 +462,20 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     tripDao.deleteLocationById(miniStopIdToDelete)
                 }
 
-                // Update UI and dismiss
                 val dbStops = tripDao.getStopsForTrip(editingTripId).first()
                 stops.clear()
                 stops.addAll(dbStops)
-                adapter.updateItems(stops.map { TripItem.Stop(it) })
+                updateAdapterItems()
                 updateTripMap()
                 dialog.dismiss()
 
-                Toast.makeText(requireContext(), "Stopp gespeichert", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.stop_saved), Toast.LENGTH_SHORT).show()
             }
         }
         dialog.show()
     }
 
-    private fun setupMapboxWebView(webView: WebView, initialLocation: String?) {
+    private fun setupCesiumWebView(webView: WebView, initialLocation: String?) {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -459,11 +484,16 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
+        webView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
+        }, "Android")
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 initialLocation?.split(",")?.let { coords ->
                     if (coords.size == 2) {
-                        webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${coords[0]}, ${coords[1]}, '')", null)
+                        val base64 = GlobeUtils.getBase64Thumbnail(null) // Or get from existing if editing
+                        webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${coords[0]}, ${coords[1]}, '${base64 ?: ""}');", null)
                     }
                     if (webView == mapWebView) {
                         updateTripMap()
@@ -471,7 +501,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 }
             }
         }
-        val html = requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
+        val html = requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         webView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 

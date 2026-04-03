@@ -161,7 +161,7 @@ class FeedAdapter(
             if (otherMedia.isNotEmpty()) {
                 holder.extraMediaContainer.visibility = View.VISIBLE
                 holder.image2.visibility = View.VISIBLE
-                Glide.with(context).load(File(otherMedia[0])).centerCrop().into(holder.image2)
+                Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(holder.image2)
                 if (otherMedia.size > 1) {
                     holder.image3.visibility = View.VISIBLE
                     Glide.with(context).load(File(otherMedia[1])).centerCrop().into(holder.image3)

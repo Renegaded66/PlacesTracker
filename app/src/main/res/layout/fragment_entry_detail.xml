@@ -5,23 +5,28 @@
     android:id="@+id/detailRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground"
-    android:fitsSystemWindows="true">
+    android:background="?android:attr/windowBackground">
+
+    <!-- Drag Handle für das BottomSheet -->
+    <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+        android:id="@+id/drag_handle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
         android:background="@android:color/transparent"
-        app:elevation="0dp"
-        android:theme="@style/ThemeOverlay.MaterialComponents.ActionBar">
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="Eigenschaften"
+            app:title="@string/stop_details"
             app:titleTextColor="?attr/colorOnSurface"/>
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -31,7 +36,7 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+    <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -111,10 +116,10 @@
                         android:layout_height="40dp"
                         android:layout_gravity="top|end"
                         android:layout_margin="12dp"
-                        android:background="@drawable/circle_background"
+                        android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_fullscreen"
                         android:elevation="4dp"
-                        android:contentDescription="Vollbild"
+                        android:contentDescription="@string/fullscreen"
                         app:tint="?attr/colorOnSurface" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -131,7 +136,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Medien"
+                android:text="@string/media"
                 android:textStyle="bold" />
 
             <androidx.recyclerview.widget.RecyclerView

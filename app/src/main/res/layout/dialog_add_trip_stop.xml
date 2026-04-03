@@ -30,13 +30,14 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_arrow_back"
+                    android:contentDescription="@string/toggle_fullscreen_map"
                     app:tint="?attr/colorOnSurface" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:text="Zeitpunkt hinzufügen"
+                    android:text="@string/add_timepoint"
                     android:textSize="22sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -45,11 +46,26 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:hint="Titel dieses Stopps">
+                android:hint="@string/stop_title_hint">
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/inputStopTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:hint="@string/notes_hint">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputStopNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:minLines="3" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
@@ -70,7 +86,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Datum wählen" />
+                    android:text="@string/date_hint" />
                 <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1" />
                 <ImageView
                     android:id="@+id/ivStopTime"
@@ -84,7 +100,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Uhrzeit (optional)" />
+                    android:text="@string/time_hint" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
@@ -92,7 +108,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:text="Standort auswählen"
+                android:text="@string/location_hint"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 app:icon="@drawable/ic_marker" />
 
@@ -118,7 +134,7 @@
                 android:layout_height="wrap_content"
                 android:textAlignment="center"
                 android:textColor="?android:attr/textColorSecondary"
-                android:text="Kein Standort gewählt" />
+                android:text="@string/no_location_selected" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvStopMedia"
@@ -131,7 +147,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="32dp"
-                android:text="Stopp hinzufügen"
+                android:text="@string/add_stop_confirm"
                 app:cornerRadius="16dp" />
 
             <com.google.android.material.button.MaterialButton
@@ -139,7 +155,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Stopp löschen"
+                android:text="@string/delete_stop"
                 android:textColor="?attr/colorError"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:visibility="gone" />

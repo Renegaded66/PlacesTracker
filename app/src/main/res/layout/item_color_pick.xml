@@ -3,6 +3,6 @@
     android:layout_width="48dp"
     android:layout_height="48dp"
     android:layout_margin="8dp"
-    android:background="@drawable/circle_background"
+    android:background="@drawable/bg_color_circle"
     android:clickable="true"
     android:focusable="true" />

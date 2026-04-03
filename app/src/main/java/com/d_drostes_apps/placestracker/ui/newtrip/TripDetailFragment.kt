@@ -5,16 +5,15 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.location.Address
 import android.location.Geocoder
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
-import android.util.Base64
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -28,9 +27,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -40,15 +37,14 @@ import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripLocation
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.service.TrackingService
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -58,21 +54,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.util.*
 
 class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
     private lateinit var mapboxWebView: WebView
-    private lateinit var cardMap: MaterialCardView
     private lateinit var tvNoLocation: View
     private lateinit var llFlags: LinearLayout
     private lateinit var cvCountryName: MaterialCardView
     private lateinit var tvCountryNamePopup: TextView
-    private lateinit var switchTracking: SwitchMaterial
-    private lateinit var cbShowMiniStops: MaterialCheckBox
     private lateinit var rvStops: RecyclerView
+    private lateinit var tvTripNotes: TextView
+    
+    private lateinit var cvDayIndicator: MaterialCardView
+    private lateinit var tvDayNumber: TextView
+    private lateinit var nestedScroll: NestedScrollView
+    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     
     private var currentTrip: Trip? = null
     private var allStops: List<TripStop> = emptyList()
@@ -94,8 +91,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             startTrackingService()
             startUserLocationUpdates()
         } else {
-            switchTracking.isChecked = false
-            Toast.makeText(requireContext(), "Location permission required", Toast.LENGTH_SHORT).show()
+            context?.let {
+                Toast.makeText(it, "Location permission required", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -111,15 +109,15 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbarTrip)
         val tvTitle = view.findViewById<TextView>(R.id.tvTripDetailTitle)
+        val btnDeleteStop = view.findViewById<ImageButton>(R.id.btnDeleteStop)
+        tvTripNotes = view.findViewById(R.id.tvTripDetailNotes)
         rvStops = view.findViewById(R.id.rvTripDetailStops)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
-        val appBar = view.findViewById<AppBarLayout>(R.id.appBarLayout)
-        val nestedScroll = view.findViewById<NestedScrollView>(R.id.tripNestedScroll)
+        nestedScroll = view.findViewById(R.id.tripNestedScroll)
         
-        switchTracking = view.findViewById(R.id.switchTracking)
-        cbShowMiniStops = view.findViewById(R.id.cbShowMiniStops)
+        cvDayIndicator = view.findViewById(R.id.cvDayIndicator)
+        tvDayNumber = view.findViewById(R.id.tvDayNumber)
 
-        cardMap = view.findViewById(R.id.cardTripMap)
         mapboxWebView = view.findViewById(R.id.tripCesiumWebView)
         mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         tvNoLocation = view.findViewById(R.id.tvNoLocation)
@@ -127,7 +125,86 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         cvCountryName = view.findViewById(R.id.cvTripCountryName)
         tvCountryNamePopup = view.findViewById(R.id.tvTripCountryNamePopup)
 
-        setupMapboxWebView()
+        // Setup BottomSheet
+        val bottomSheet = view.findViewById<View>(R.id.bottomSheetTrip)
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+
+        bottomSheetBehavior.isFitToContents = false
+        // 🌟 NEU: Mittlere Position (60% des Bildschirms)
+        bottomSheetBehavior.halfExpandedRatio = 0.6f
+        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+
+        val tripSheetHeader = view.findViewById<View>(R.id.tripSheetHeader)
+
+        // =================================================================
+        // 🌟 FIX: Kugel verkleinern + Liste unabhängig scrollen
+        // =================================================================
+
+        // 1. Größe der Weltkugel beim Wischen anpassen
+        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {}
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                val sheetTop = bottomSheet.top
+
+                // A) Die Weltkugel verkleinern
+                val layoutParams = mapboxWebView.layoutParams
+                layoutParams.height = sheetTop
+                mapboxWebView.layoutParams = layoutParams
+
+                // B) 🌟 FIX: Den unsichtbaren Teil unten durch Padding ausgleichen!
+                // So kann man den untersten Stopp komplett ins sichtbare Fenster hochziehen.
+                rvStops.setPadding(
+                    rvStops.paddingLeft,
+                    rvStops.paddingTop,
+                    rvStops.paddingRight,
+                    sheetTop + 150 // +150 Pixel Puffer, damit es nicht exakt am Rand klebt
+                )
+            }
+        })
+
+        // 2. Initiale Größe der Weltkugel beim Start festlegen
+        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val sheetTop = bottomSheet.top
+                if (sheetTop > 0) {
+                    view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                    val layoutParams = mapboxWebView.layoutParams
+                    layoutParams.height = sheetTop
+                    mapboxWebView.layoutParams = layoutParams
+
+                    // Auch hier direkt beim Start das Padding setzen
+                    rvStops.setPadding(
+                        rvStops.paddingLeft,
+                        rvStops.paddingTop,
+                        rvStops.paddingRight,
+                        sheetTop + 150
+                    )
+                }
+            }
+        })
+
+        // 3. Touch-Logik: Liste scrollt, Header zieht das Sheet
+        nestedScroll.setOnTouchListener { _, event ->
+            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
+                bottomSheetBehavior.isDraggable = false
+                if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+                    bottomSheetBehavior.isDraggable = true
+                }
+            } else if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
+                // Wenn ganz oben: Sheet darf erst gezogen werden, wenn Liste ganz oben am Anschlag ist
+                bottomSheetBehavior.isDraggable = !nestedScroll.canScrollVertically(-1)
+            }
+            false
+        }
+
+        tripSheetHeader.setOnTouchListener { _, _ ->
+            bottomSheetBehavior.isDraggable = true
+            false
+        }
+        // =================================================================
+        
+        setupCesiumWebView()
 
         mapboxWebView.setOnTouchListener { v, event ->
             when (event.action) {
@@ -138,8 +215,10 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         }
 
         btnFullscreen.setOnClickListener {
-            toggleFullscreen(appBar, btnFullscreen, nestedScroll)
+            toggleFullscreen()
         }
+
+
 
         toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
@@ -174,6 +253,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val current = expandedSections.value
                 expandedSections.value = if (current.contains(sectionId)) current - sectionId else current + sectionId
             },
+            onTransportClick = { stopId, currentMode ->
+                showTransportSelection(stopId, currentMode)
+            },
             onConfirmDraft = { stop ->
                 val bundle = Bundle().apply {
                     putInt("tripId", tripId)
@@ -181,19 +263,20 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     putInt("stopId", stop.id) 
                 }
                 findNavController().navigate(R.id.action_tripDetailFragment_to_newTripFragment, bundle)
-            }
+            },
+            scope = viewLifecycleOwner.lifecycleScope
         )
         rvStops.layoutManager = LinearLayoutManager(requireContext())
         rvStops.adapter = tripAdapter
 
-        // Scroll-Listener for Auto-Zoom
-        // Scroll-Listener for Auto-Zoom
         nestedScroll.setOnScrollChangeListener(NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
-            // Wenn der Nutzer ganz nach oben scrollt, zentrieren wir die gesamte Route wieder
+            updateDayIndicatorPosition()
+            
             if (scrollY <= 10) {
                 if (lastFocusedStopId != null) {
                     lastFocusedStopId = null
-                    mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
+                    // Reset to overview path instead of full reset
+                    mapboxWebView.evaluateJavascript("javascript:if(window.setTripPath) window.setTripPath(window.lastPathData);", null)
                 }
                 return@OnScrollChangeListener
             }
@@ -201,23 +284,23 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             val childCount = rvStops.childCount
             for (i in 0 until childCount) {
                 val child = rvStops.getChildAt(i)
-
-                // Absolute Y-Position des Elements relativ zur ScrollView berechnen
                 val absoluteTop = rvStops.top + child.top
                 val absoluteBottom = rvStops.top + child.bottom
 
-                // Prüfen, ob das Element gerade oben an der Kante anliegt (mit 150px Puffer)
                 if (absoluteTop <= scrollY + 150 && absoluteBottom > scrollY) {
                     val position = rvStops.getChildAdapterPosition(child)
                     if (position != RecyclerView.NO_POSITION) {
-                        val item = tripAdapter?.getItemAt(position)
 
+                        // 🌟 FIX: Fragt die neue Logik nach dem Datum (mit Fallback nach oben!)
+                        val visibleDate = getDateForPosition(position)
+                        if (visibleDate != null) {
+                            updateCurrentDay(visibleDate)
+                        }
+
+                        val item = tripAdapter?.getItemAt(position)
                         if (item is TripItem.Stop) {
                             if (lastFocusedStopId != item.stop.id) {
-                                // ID sofort speichern, damit es nicht pro Pixel feuert
                                 lastFocusedStopId = item.stop.id
-
-                                // Nur an die Karte senden, wenn ein Standort da ist
                                 item.stop.location?.split(",")?.let { coords ->
                                     if (coords.size == 2) {
                                         val lat = coords[0].toDoubleOrNull()
@@ -229,15 +312,15 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                                 }
                             }
                         } else if (item is TripItem.MiniStop) {
-                            // Bonus: Wenn du Mini-Stopps eingeblendet hast, zoomt die Karte nun auch dorthin!
-                            val miniId = -(item.location.id.toInt()) // Minus, um ID-Kollisionen mit normalen Stopps zu vermeiden
+                            updateCurrentDay(item.location.timestamp)
+                            val miniId = -(item.location.id.toInt())
                             if (lastFocusedStopId != miniId) {
                                 lastFocusedStopId = miniId
                                 mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${item.location.latitude}, ${item.location.longitude});", null)
                             }
                         }
                     }
-                    break // Element gefunden, Schleife abbrechen
+                    break
                 }
             }
         })
@@ -255,13 +338,21 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             trip?.let { t ->
                 currentTrip = t
                 tvTitle.text = t.title
-                switchTracking.isChecked = t.isTrackingActive
+                
+                if (!t.notes.isNullOrBlank()) {
+                    tvTripNotes.text = t.notes
+                    tvTripNotes.visibility = View.VISIBLE
+                } else {
+                    tvTripNotes.visibility = View.GONE
+                }
                 
                 val isShared = t.friendId != null
                 toolbar.menu.findItem(R.id.action_edit)?.isVisible = !isShared
-                toolbar.menu.findItem(R.id.action_delete)?.isVisible = !isShared
-                switchTracking.visibility = if (isShared) View.GONE else View.VISIBLE
+                toolbar.menu.findItem(R.id.action_add_shared)?.isVisible = isShared
                 
+                // Show delete also for shared trips (removes them from local DB)
+                toolbar.menu.findItem(R.id.action_delete)?.isVisible = true
+
                 toolbar.menu.add(0, R.id.action_share, 0, "Teilen").apply {
                     setIcon(R.drawable.ic_share)
                     setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
@@ -269,24 +360,20 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 }
             }
 
-            switchTracking.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) checkPermissionsAndStartService() else stopTrackingService()
-            }
-
             combine(
                 tripDao.getStopsForTrip(tripId),
                 tripDao.getLocationsForTrip(tripId),
-                expandedSections,
-                showMiniStopsList
-            ) { stops, locations, expanded, showMini ->
+                expandedSections
+            ) { stops, locations, expanded ->
                 allStops = stops.sortedBy { it.date }
                 allLocations = locations.filter { !it.isConvertedToStop }.sortedBy { it.timestamp }
                 
                 val items = mutableListOf<TripItem>()
-                if (!showMini) {
-                    items.addAll(allStops.map { TripItem.Stop(it) })
+                
+                if (allStops.isEmpty()) {
+                    items.addAll(allLocations.map { TripItem.MiniStop(it) })
                 } else {
-                    val beforeFirst = allLocations.filter { allStops.isEmpty() || it.timestamp < allStops.first().date }
+                    val beforeFirst = allLocations.filter { it.timestamp < allStops.first().date }
                     if (beforeFirst.isNotEmpty()) {
                         items.add(TripItem.MiniStopExpand(expanded.contains("start"), beforeFirst.size, "start"))
                         if (expanded.contains("start")) items.addAll(beforeFirst.map { TripItem.MiniStop(it) })
@@ -294,12 +381,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
                     allStops.forEachIndexed { index, stop ->
                         items.add(TripItem.Stop(stop))
-                        val nextStopDate = if (index < allStops.size - 1) allStops[index + 1].date else Long.MAX_VALUE
-                        val between = allLocations.filter { it.timestamp > stop.date && it.timestamp < nextStopDate }
-                        if (between.isNotEmpty()) {
-                            val sectionId = "after_${stop.id}"
-                            items.add(TripItem.MiniStopExpand(expanded.contains(sectionId), between.size, sectionId))
-                            if (expanded.contains(sectionId)) items.addAll(between.map { TripItem.MiniStop(it) })
+                        
+                        if (index < allStops.size - 1) {
+                            val nextStop = allStops[index + 1]
+                            items.add(TripItem.Transport(stop.id, nextStop.id, nextStop.transportMode))
+                            
+                            val between = allLocations.filter { it.timestamp > stop.date && it.timestamp < nextStop.date }
+                            if (between.isNotEmpty()) {
+                                val sectionId = "after_${stop.id}"
+                                items.add(TripItem.MiniStopExpand(expanded.contains(sectionId), between.size, sectionId))
+                                if (expanded.contains(sectionId)) items.addAll(between.map { TripItem.MiniStop(it) })
+                            }
+                        } else {
+                            // 🌟 NEU: Mini-Stopps NACH dem letzten Stopp hinzufügen
+                            val afterLast = allLocations.filter { it.timestamp > stop.date }
+                            if (afterLast.isNotEmpty()) {
+                                val sectionId = "after_last"
+                                items.add(TripItem.MiniStopExpand(expanded.contains(sectionId), afterLast.size, sectionId))
+                                if (expanded.contains(sectionId)) items.addAll(afterLast.map { TripItem.MiniStop(it) })
+                            }
                         }
                     }
                 }
@@ -329,68 +429,214 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     handleShare()
                     true
                 }
+                R.id.action_add_shared -> {
+                    showAddSharedTripConfirmation()
+                    true
+                }
                 else -> false
             }
-        }
-
-        cbShowMiniStops.setOnCheckedChangeListener { _, isChecked ->
-            showMiniStopsList.value = isChecked
         }
         
         checkPermissionsAndStartUserLocation()
     }
 
+    private fun showAddSharedTripConfirmation() {
+        val trip = currentTrip ?: return
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.add_to_my_feed)
+            .setMessage(R.string.add_to_my_feed_confirm_trip)
+            .setPositiveButton(R.string.save) { _, _ ->
+                lifecycleScope.launch {
+                    val app = (requireActivity().application as PlacesApplication)
+                    val tripDao = app.database.tripDao()
+                    
+                    // 1. Copy the trip
+                    val newTrip = trip.copy(id = 0, friendId = null)
+                    val newTripId = tripDao.insertTrip(newTrip).toInt()
+                    
+                    // 2. Copy all stops
+                    val stops = tripDao.getStopsForTripSync(tripId)
+                    stops.forEach { stop ->
+                        val newStop = stop.copy(id = 0, tripId = newTripId)
+                        tripDao.insertStop(newStop)
+                    }
+                    
+                    // 3. Copy all locations
+                    val locations = tripDao.getLocationsForTripSync(tripId)
+                    locations.forEach { location ->
+                        val newLocation = location.copy(id = 0, tripId = newTripId)
+                        tripDao.insertLocation(newLocation)
+                    }
+                    
+                    Toast.makeText(requireContext(), R.string.added_to_my_feed_success, Toast.LENGTH_SHORT).show()
+                    findNavController().navigateUp()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun updateDayIndicatorPosition() {
+        // Wie weit kann die Liste maximal scrollen?
+        val scrollMax = nestedScroll.getChildAt(0).height - nestedScroll.height
+        if (scrollMax <= 0) return
+
+        // Wie viel Prozent haben wir aktuell gescrollt? (0.0 bis 1.0)
+        val percent = nestedScroll.scrollY.toFloat() / scrollMax
+
+        // 🌟 FIX: Wir holen uns den Container, in dem der Kreis und die Linie stecken
+        val parentContainer = cvDayIndicator.parent as View
+
+        // Die maximale Strecke, die der Kreis nach unten rutschen darf:
+        // Höhe des Containers MINUS die Höhe des Kreises selbst!
+        val maxTravelDistance = parentContainer.height - cvDayIndicator.height
+
+        // Neue Position berechnen
+        var targetY = percent * maxTravelDistance
+
+        // Sicherheits-Check: Der Kreis darf nie oben oder unten aus dem Container ausbrechen
+        if (targetY < 0f) targetY = 0f
+        if (targetY > maxTravelDistance.toFloat()) targetY = maxTravelDistance.toFloat()
+
+        cvDayIndicator.translationY = targetY
+    }
+
+    private fun showDeleteStopConfirmation(stop: TripStop) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Stopp löschen")
+            .setMessage("Möchtest du '${stop.title}' wirklich aus diesem Trip entfernen? Diese Aktion kann nicht rückgängig gemacht werden.")
+            .setPositiveButton("Löschen") { _, _ ->
+                lifecycleScope.launch {
+                    val app = requireActivity().application as PlacesApplication
+                    app.database.tripDao().deleteStop(stop)
+                    Toast.makeText(requireContext(), "Stopp gelöscht", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Abbrechen", null)
+            .show()
+    }
+
+    private fun updateCurrentDay(timestamp: Long) {
+        val firstDate = getFirstItemDate()
+        if (firstDate == 0L) return
+
+        // Tag 1 beginnt um 00:00 Uhr des allerersten Stopps
+        val calStart = Calendar.getInstance().apply {
+            timeInMillis = firstDate
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        // Der aktuell in der Liste betrachtete Tag
+        val calCurrent = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+
+        // Differenz in Tagen berechnen (+1, weil der Starttag "Tag 1" ist)
+        val diff = calCurrent.timeInMillis - calStart.timeInMillis
+        val day = (diff / (1000 * 60 * 60 * 24)).toInt() + 1
+        tvDayNumber.text = day.toString()
+    }
+
+    private fun showTransportSelection(stopId: Int, currentMode: String?) {
+        val modes = arrayOf("Auto", "Fahrrad", "Flugzeug", "Zug", "Zu Fuß", "Keines")
+        val modeKeys = arrayOf("car", "bike", "plane", "train", "walk", null)
+        
+        AlertDialog.Builder(requireContext())
+            .setTitle("Transportmittel wählen")
+            .setItems(modes) { _, which ->
+                val selectedMode = modeKeys[which]
+                
+                // Only ask to apply to all if NO mode is set yet in any stop
+                val hasAnyModeSet = allStops.any { it.transportMode != null }
+                if (!hasAnyModeSet) {
+                    askApplyToAll(stopId, selectedMode)
+                } else {
+                    lifecycleScope.launch {
+                        (requireActivity().application as PlacesApplication).database.tripDao()
+                            .updateTransportMode(stopId, selectedMode)
+                        updateTripRoute()
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun askApplyToAll(stopId: Int, mode: String?) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Transportmittel anwenden")
+            .setMessage("Soll dieses Transportmittel für den gesamten Trip übernommen werden?")
+            .setPositiveButton("Ja") { _, _ ->
+                lifecycleScope.launch {
+                    val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
+                    tripDao.updateAllTransportModes(tripId, mode)
+                    updateTripRoute()
+                }
+            }
+            .setNegativeButton("Nein") { _, _ ->
+                lifecycleScope.launch {
+                    val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
+                    tripDao.updateTransportMode(stopId, mode)
+                    updateTripRoute()
+                }
+            }
+            .show()
+    }
+
     private fun handleShare() {
         val trip = currentTrip ?: return
-        val app = (requireActivity().application as PlacesApplication)
+        val activity = activity ?: return
+        val app = (activity.application as PlacesApplication)
         lifecycleScope.launch {
             val profile = app.database.userDao().getUserProfile().first()
+            val currentContext = context ?: return@launch
             if (profile != null) {
-                val sharingManager = SharingManager(requireContext(), app.database)
+                val sharingManager = SharingManager(currentContext, app.database)
                 val locations = app.database.tripDao().getLocationsForTripSync(tripId)
                 sharingManager.shareTrip(trip, allStops, locations, profile)
             } else {
-                Toast.makeText(requireContext(), "Bitte erstelle zuerst ein Profil", Toast.LENGTH_SHORT).show()
+                Toast.makeText(currentContext, "Bitte erstelle zuerst ein Profil", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun toggleFullscreen(appBar: AppBarLayout, btn: ImageButton, nestedScroll: NestedScrollView) {
+    private fun toggleFullscreen() {
         isMapFullscreen = !isMapFullscreen
-        val params = cardMap.layoutParams as AppBarLayout.LayoutParams
+        val container = view?.findViewById<View>(R.id.mapContainer) ?: return
         if (isMapFullscreen) {
             view?.findViewById<View>(R.id.toolbarTrip)?.visibility = View.GONE
-            view?.findViewById<View>(R.id.tvNoLocation)?.visibility = View.GONE
-            nestedScroll.visibility = View.GONE
+            view?.findViewById<View>(R.id.bottomSheetTrip)?.visibility = View.GONE
             
-            params.height = resources.displayMetrics.heightPixels
-            params.setMargins(8, 8, 8, 8)
-            btn.setImageResource(R.drawable.ic_fullscreen_exit)
+            val params = container.layoutParams as ViewGroup.MarginLayoutParams
+            params.bottomMargin = 0
+            container.layoutParams = params
+            
+            view?.findViewById<ImageButton>(R.id.btnFullscreenMap)?.setImageResource(R.drawable.ic_fullscreen_exit)
         } else {
             view?.findViewById<View>(R.id.toolbarTrip)?.visibility = View.VISIBLE
-            nestedScroll.visibility = View.VISIBLE
+            view?.findViewById<View>(R.id.bottomSheetTrip)?.visibility = View.VISIBLE
             
-            params.height = (250 * resources.displayMetrics.density).toInt()
-            params.setMargins((16 * resources.displayMetrics.density).toInt(), 
-                             (8 * resources.displayMetrics.density).toInt(), 
-                             (16 * resources.displayMetrics.density).toInt(), 
-                             (12 * resources.displayMetrics.density).toInt())
-            btn.setImageResource(R.drawable.ic_fullscreen)
+            val params = container.layoutParams as ViewGroup.MarginLayoutParams
+            params.bottomMargin = (120 * resources.displayMetrics.density).toInt()
+            container.layoutParams = params
+            
+            view?.findViewById<ImageButton>(R.id.btnFullscreenMap)?.setImageResource(R.drawable.ic_fullscreen)
         }
-        cardMap.layoutParams = params
     }
 
     private fun checkPermissionsAndStartUserLocation() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        val currentContext = context ?: return
+        if (ContextCompat.checkSelfPermission(currentContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             startUserLocationUpdates()
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun startUserLocationUpdates() {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext())
+        val currentContext = context ?: return
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(currentContext)
         fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { location: Location? ->
+                if (!isAdded) return@addOnSuccessListener
                 location?.let {
                     mapboxWebView.evaluateJavascript("javascript:if(window.setUserLocation) window.setUserLocation(${it.latitude}, ${it.longitude});", null)
                 }
@@ -399,12 +645,13 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun checkPermissionsAndStartService() {
+        val currentContext = context ?: return
         val permissions = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
         val missingPermissions = permissions.filter {
-            ContextCompat.checkSelfPermission(requireContext(), it) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(currentContext, it) != PackageManager.PERMISSION_GRANTED
         }
         if (missingPermissions.isEmpty()) {
             startTrackingService()
@@ -417,53 +664,66 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun startTrackingService() {
         lifecycleScope.launch {
-            val app = (requireActivity().application as PlacesApplication)
+            val activity = activity ?: return@launch
+            val app = (activity.application as PlacesApplication)
             app.database.tripDao().updateTrackingStatus(tripId, true)
-            val intent = Intent(requireContext(), TrackingService::class.java).apply {
+            val currentContext = context ?: return@launch
+            val intent = Intent(currentContext, TrackingService::class.java).apply {
                 action = TrackingService.ACTION_START_TRACKING
                 putExtra(TrackingService.EXTRA_TRIP_ID, tripId)
             }
-            requireContext().startForegroundService(intent)
+            currentContext.startForegroundService(intent)
         }
     }
 
     private fun stopTrackingService() {
         lifecycleScope.launch {
-            val app = (requireActivity().application as PlacesApplication)
+            val activity = activity ?: return@launch
+            val app = (activity.application as PlacesApplication)
             app.database.tripDao().updateTrackingStatus(tripId, false)
-            val intent = Intent(requireContext(), TrackingService::class.java).apply {
+            val currentContext = context ?: return@launch
+            val intent = Intent(currentContext, TrackingService::class.java).apply {
                 action = TrackingService.ACTION_STOP_TRACKING
             }
-            requireContext().startService(intent)
+            currentContext.startService(intent)
         }
     }
 
-    private fun setupMapboxWebView() {
-        mapboxWebView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            allowFileAccessFromFileURLs = true
-            allowUniversalAccessFromFileURLs = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        }
+    private fun setupCesiumWebView() {        mapboxWebView.settings.apply {
+        javaScriptEnabled = true
+        domStorageEnabled = true
+        allowFileAccess = true
+        allowFileAccessFromFileURLs = true
+        allowUniversalAccessFromFileURLs = true
+        mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+    }
+        mapboxWebView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
+        }, "Android")
         mapboxWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
+                if (!isAdded) return
                 updateTripRoute()
                 startUserLocationUpdates()
             }
         }
+        val currentContext = context ?: return
         val html = try {
-            requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
+            currentContext.assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         } catch (e: Exception) { "" }
         mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
     private fun updateTripRoute() {
         lifecycleScope.launch {
+            val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
+            val stopsFromDb = tripDao.getStopsForTripSync(tripId)
+            val locationsFromDb = tripDao.getLocationsForTripSync(tripId).filter { !it.isConvertedToStop }
+            
             val jsonArray = withContext(Dispatchers.Default) {
                 val array = JSONArray()
-                val allPoints = (allStops.map { it.date to it } + allLocations.map { it.timestamp to it })
+                val allPoints = (stopsFromDb.map { it.date to it } + locationsFromDb.map { it.timestamp to it })
                     .sortedBy { it.first }
 
                 allPoints.forEach { (_, item) ->
@@ -475,8 +735,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                                     point.put("lat", coords[0].toDouble())
                                     point.put("lon", coords[1].toDouble())
                                     val stopImg = item.coverImage ?: item.media.firstOrNull()
-                                    point.put("image", stopImg?.let { getBase64Thumbnail(it) })
+                                    point.put("image", GlobeUtils.getBase64Thumbnail(stopImg))
                                     point.put("isMini", false)
+                                    point.put("transportMode", item.transportMode ?: "")
                                     array.put(point)
                                 }
                             }
@@ -493,45 +754,34 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             }
 
             if (jsonArray.length() == 0) {
-                cardMap.visibility = View.GONE
+                mapboxWebView.visibility = View.GONE
                 tvNoLocation.visibility = View.VISIBLE
             } else {
-                cardMap.visibility = View.VISIBLE
+                mapboxWebView.visibility = View.VISIBLE
                 tvNoLocation.visibility = View.GONE
-                mapboxWebView.evaluateJavascript("javascript:if(window.setTripPath) window.setTripPath(${jsonArray.toString()});", null)
+                val pathData = jsonArray.toString()
+                mapboxWebView.evaluateJavascript("javascript:window.lastPathData = '$pathData'; if(window.setTripPath) window.setTripPath('$pathData');", null)
             }
         }
     }
 
-    private fun getBase64Thumbnail(path: String): String? {
-        return try {
-            val file = File(path)
-            if (!file.exists()) return null
-            val options = BitmapFactory.Options().apply { inSampleSize = 8 }
-            val bitmap = BitmapFactory.decodeFile(path, options) ?: return null
-            val resized = Bitmap.createScaledBitmap(bitmap, 80, 80, true)
-            val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
-            val bytes = outputStream.toByteArray()
-            "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-        } catch (e: Exception) { null }
-    }
-
     private fun loadCountryFlags(stops: List<TripStop>) {
         lifecycleScope.launch {
+            val currentContext = context ?: return@launch
             val countryCodes = mutableSetOf<String>()
             val countryNames = mutableMapOf<String, String>()
             stops.forEach { stop ->
                 stop.location?.let { loc ->
-                    getCountryInfo(requireContext(), loc)?.let { info ->
+                    getCountryInfo(currentContext, loc)?.let { info ->
                         countryCodes.add(info.first)
                         countryNames[info.first] = info.second
                     }
                 }
             }
+            if (!isAdded) return@launch
             llFlags.removeAllViews()
             countryCodes.forEach { code ->
-                val flagView = TextView(requireContext()).apply {
+                val flagView = TextView(currentContext).apply {
                     text = getFlagEmoji(code)
                     textSize = 24f
                     setPadding(0, 0, 16, 0)
@@ -551,26 +801,49 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             val geocoder = Geocoder(context, Locale.getDefault())
             @Suppress("DEPRECATION")
             val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1)
-            val addr = addresses?.firstOrNull()
-            if (addr?.countryCode != null && addr.countryName != null) addr.countryCode to addr.countryName else null
+            val addr: Address? = addresses?.firstOrNull()
+            if (addr?.countryCode != null && addr.countryName != null) addr.countryCode!! to addr.countryName!! else null
         } catch (e: Exception) { null }
     }
 
     private fun getFlagEmoji(countryCode: String): String {
+        if (countryCode.length != 2) return ""
         val firstLetter = Character.codePointAt(countryCode, 0) - 0x41 + 0x1F1E6
         val secondLetter = Character.codePointAt(countryCode, 1) - 0x41 + 0x1F1E6
         return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
     }
 
+    // Sucht das absolut früheste Datum in der gesamten Liste
+    private fun getFirstItemDate(): Long {
+        val firstStopDate = allStops.firstOrNull()?.date ?: Long.MAX_VALUE
+        val firstLocDate = allLocations.firstOrNull()?.timestamp ?: Long.MAX_VALUE
+        val minDate = minOf(firstStopDate, firstLocDate)
+        return if (minDate != Long.MAX_VALUE) minDate else (currentTrip?.date ?: 0L)
+    }
+
+    // Sucht das Datum des aktuellen Items. Wenn es keins hat, klettert es nach oben!
+    private fun getDateForPosition(position: Int): Long? {
+        for (i in position downTo 0) {
+            val item = tripAdapter?.getItemAt(i)
+            when (item) {
+                is TripItem.Stop -> return item.stop.date
+                is TripItem.MiniStop -> return item.location.timestamp
+                else -> continue // Transport oder Header? Überspringen und weiter oben suchen!
+            }
+        }
+        return null
+    }
+
     private fun showDeleteConfirmation(app: PlacesApplication) {
-        AlertDialog.Builder(requireContext())
+        val currentContext = context ?: return
+        AlertDialog.Builder(currentContext)
             .setTitle(R.string.delete_entry)
             .setMessage(R.string.delete_confirm)
             .setPositiveButton(R.string.save) { _, _ ->
                 lifecycleScope.launch {
                     val trip = app.database.tripDao().getTripById(tripId)
                     trip?.let { app.database.tripDao().deleteTrip(it) }
-                    findNavController().navigateUp()
+                    if (isAdded) findNavController().navigateUp()
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

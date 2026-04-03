@@ -36,6 +36,7 @@ class FriendsAdapter(private val onFriendClick: (Friend) -> Unit) :
             
             Glide.with(itemView.context)
                 .load(friend.profilePicturePath)
+                .override(400,400)
                 .placeholder(R.drawable.placeholder)
                 .into(ivAvatar)
 

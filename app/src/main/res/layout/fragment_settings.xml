@@ -123,14 +123,14 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Automatische Erkennung"
+                            android:text="@string/auto_detection"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Galerie-Scan &amp; Heimatstandort"
+                            android:text="@string/auto_detection_desc"
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 
@@ -177,14 +177,14 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Backup"
+                            android:text="@string/backup"
                             android:textSize="16sp"
                             android:textStyle="bold" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Daten sichern &amp; wiederherstellen"
+                            android:text="@string/backup_desc"
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 
@@ -249,13 +249,22 @@
                         app:tint="?android:attr/textColorSecondary" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
-            <ImageView
-                android:id="@+id/btnBuyMeACoffee"
-                android:layout_width="150dp"
-                android:layout_height="150dp"
-                android:src="@drawable/buymeacoffee"
-                android:layout_margin="16dp"
-                android:contentDescription="Buy Me a Coffee"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHelp"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/help"
+                app:icon="@android:drawable/ic_menu_help" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSupport"
+                android:layout_marginTop="12dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/support_developer" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

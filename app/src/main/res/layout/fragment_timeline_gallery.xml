@@ -20,7 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="Timeline Gallerie" />
+            app:title="@string/enable_timeline_gallery" />
 
         <LinearLayout
             android:id="@+id/controlMenu"
@@ -45,7 +45,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Gallerie" />
+                    android:text="@string/gallery" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnViewMap"
@@ -53,7 +53,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Karte" />
+                    android:text="@string/map" />
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -71,7 +71,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Zeitraum wählen"
+                    android:text="@string/select_period"
                     app:icon="@drawable/ic_calendar" />
 
                 <ImageButton
@@ -80,6 +80,7 @@
                     android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@android:drawable/ic_menu_close_clear_cancel"
+                    android:contentDescription="@string/filter_reset"
                     app:tint="?attr/colorError" />
             </LinearLayout>
         </LinearLayout>

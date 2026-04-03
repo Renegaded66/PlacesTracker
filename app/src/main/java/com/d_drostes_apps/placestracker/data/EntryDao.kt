@@ -8,6 +8,9 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE friendId IS NULL ORDER BY date DESC")
     fun getAllEntries(): Flow<List<Entry>>
 
+    @Query("SELECT * FROM entries WHERE friendId IS NULL ORDER BY date DESC")
+    suspend fun getAllEntriesSync(): List<Entry>
+
     @Query("SELECT * FROM entries WHERE friendId = :friendId ORDER BY date DESC")
     fun getEntriesByFriend(friendId: String): Flow<List<Entry>>
 

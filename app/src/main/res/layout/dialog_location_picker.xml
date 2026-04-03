@@ -22,7 +22,7 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_margin="16dp"
-            android:background="@drawable/circle_background"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:elevation="4dp"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
             app:layout_constraintEnd_toEndOf="parent"

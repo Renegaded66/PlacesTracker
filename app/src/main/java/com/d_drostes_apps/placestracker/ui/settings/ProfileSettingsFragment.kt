@@ -93,7 +93,7 @@ class ProfileSettingsFragment : Fragment(R.layout.fragment_profile_settings) {
         btnSave.setOnClickListener {
             val name = inputUsername.text.toString()
             if (name.isBlank()) {
-                Toast.makeText(requireContext(), "Bitte gib einen Namen ein", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.enter_name_error, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -103,7 +103,7 @@ class ProfileSettingsFragment : Fragment(R.layout.fragment_profile_settings) {
                     profilePicturePath = selectedProfilePicPath,
                     countryCode = selectedCountryCode
                 ))
-                Toast.makeText(requireContext(), "Profil gespeichert", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), R.string.profile_saved, Toast.LENGTH_SHORT).show()
                 findNavController().navigateUp()
             }
         }

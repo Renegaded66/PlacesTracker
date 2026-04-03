@@ -2,14 +2,12 @@ package com.d_drostes_apps.placestracker.ui.feed
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.location.Geocoder
 import android.os.Bundle
-import android.util.Base64
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -28,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.appbar.AppBarLayout
@@ -38,8 +37,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -114,10 +111,10 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 tvTitle.text = e.title
                 tvNotes.text = e.notes ?: ""
                 
-                // Hide edit/delete if it's a shared entry
+                // Hide edit if it's a shared entry, show add button instead
                 val isShared = e.friendId != null
                 toolbar.menu.findItem(R.id.action_edit)?.isVisible = !isShared
-                // toolbar.menu.findItem(R.id.action_delete)?.isVisible = !isShared // Commented out to allow deletion of shared entries
+                toolbar.menu.findItem(R.id.action_add_shared)?.isVisible = isShared
                 
                 // Add share button to menu
                 toolbar.menu.add(0, R.id.action_share, 0, "Teilen").apply {
@@ -164,9 +161,31 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                     handleShare()
                     true
                 }
+                R.id.action_add_shared -> {
+                    showAddSharedConfirmation()
+                    true
+                }
                 else -> false
             }
         }
+    }
+
+    private fun showAddSharedConfirmation() {
+        val currentEntry = entry ?: return
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.add_to_my_feed)
+            .setMessage(R.string.add_to_my_feed_confirm_entry)
+            .setPositiveButton(R.string.save) { _, _ ->
+                lifecycleScope.launch {
+                    val app = (requireActivity().application as PlacesApplication)
+                    val newEntry = currentEntry.copy(id = 0, friendId = null)
+                    app.database.entryDao().insert(newEntry)
+                    Toast.makeText(requireContext(), R.string.added_to_my_feed_success, Toast.LENGTH_SHORT).show()
+                    findNavController().navigateUp()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun handleShare() {
@@ -286,13 +305,17 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
+        mapboxWebView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
+        }, "Android")
         mapboxWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 updateGlobePosition()
             }
         }
         val html = try {
-            requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
+            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         } catch (e: Exception) { "" }
         mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
@@ -306,25 +329,11 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 val lon = coords[1].toDouble()
                 val imgPath = currentEntry.coverImage ?: currentEntry.media.firstOrNull()
                 val base64 = withContext(Dispatchers.Default) {
-                    imgPath?.let { getBase64Thumbnail(it) }
+                    GlobeUtils.getBase64Thumbnail(imgPath)
                 }
                 mapboxWebView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '${base64 ?: ""}');", null)
             }
         }
-    }
-
-    private fun getBase64Thumbnail(path: String): String? {
-        return try {
-            val file = File(path)
-            if (!file.exists()) return null
-            val options = BitmapFactory.Options().apply { inSampleSize = 4 }
-            val bitmap = BitmapFactory.decodeFile(path, options) ?: return null
-            val resized = Bitmap.createScaledBitmap(bitmap, 120, 120, true)
-            val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            val bytes = outputStream.toByteArray()
-            "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-        } catch (e: Exception) { null }
     }
 
     private fun showDeleteConfirmation(entry: Entry?, repository: com.d_drostes_apps.placestracker.data.EntryRepository) {

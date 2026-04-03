@@ -21,7 +21,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Reise-Statistik"
+            android:text="@string/travel_stats"
             android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
             android:textStyle="bold" />
 
@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="32dp"
-            android:text="Jahresrückblick"
+            android:text="@string/year_summary"
             app:icon="@drawable/ic_calendar"
             app:iconSize="20dp"
             android:insetTop="0dp"
@@ -57,7 +57,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Länder"
+                    android:text="@string/countries"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
                 <LinearLayout
@@ -107,7 +107,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Besuchte Länder:"
+                    android:text="@string/visited_countries"
                     android:layout_marginTop="16dp"
                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
@@ -142,7 +142,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Aktivitäten"
+                    android:text="@string/activities"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                     android:layout_marginBottom="16dp"/>
 
@@ -168,7 +168,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Trips"
+                            android:text="@string/trips"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
 
@@ -188,7 +188,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Erlebnisse"
+                            android:text="@string/experiences"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
 
@@ -208,7 +208,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Stopps"
+                            android:text="@string/stops"
                             android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
                     </LinearLayout>
                 </GridLayout>
@@ -233,7 +233,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Distanz"
+                    android:text="@string/distance"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
                 <LinearLayout
@@ -264,7 +264,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Insgesamt zurückgelegte Strecke in deinen Trips"
+                    android:text="@string/total_distance_desc"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:layout_marginTop="4dp" />
 

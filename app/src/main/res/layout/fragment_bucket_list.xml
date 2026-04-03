@@ -6,9 +6,9 @@
     android:layout_height="match_parent">
 
     <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="12dp"
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
@@ -16,51 +16,25 @@
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            app:title="Bucket List"
+            android:layout_marginTop="25dp"
+            app:title="@string/bucket_list"
             app:titleCentered="true" />
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupFilter"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/tabLayoutBucket"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
-            android:paddingBottom="8dp"
-            app:singleSelection="true"
-            app:selectionRequired="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterAll"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Alle"
-                android:checked="true" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterActive"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Nicht erledigt" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipFilterCompleted"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Erledigt" />
-        </com.google.android.material.chip.ChipGroup>
+            app:tabIndicatorFullWidth="false"
+            app:tabRippleColor="@android:color/transparent"
+            app:tabSelectedTextColor="?attr/colorPrimary"
+            app:tabTextColor="?android:attr/textColorSecondary" />
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvBucketList"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/viewPagerBucket"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="8dp"
-        android:clipToPadding="false"
-        android:paddingBottom="100dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/item_bucket" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddBucketItem"
@@ -70,6 +44,7 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="32dp"
         android:src="@drawable/ic_add"
+        android:contentDescription="@string/add"
         app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

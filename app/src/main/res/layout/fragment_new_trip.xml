@@ -28,7 +28,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 app:navigationIcon="@drawable/ic_arrow_back"
-                app:title="Trip"
+                app:title="@string/trip"
                 app:titleTextColor="?attr/colorOnSurface" />
 
             <com.google.android.material.card.MaterialCardView
@@ -55,7 +55,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
-                        android:text="Reisebild hinzufügen"
+                        android:text="@string/add_trip_cover"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
                         app:icon="@drawable/ic_add" />
                 </FrameLayout>
@@ -72,8 +72,42 @@
                     android:id="@+id/inputTripTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Titel des Trips" />
+                    android:hint="@string/trip_title_hint" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/inputTripNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/notes_hint"
+                    android:gravity="top"
+                    android:inputType="textMultiLine"
+                    android:minLines="3" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchPublicTrip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="Öffentlich teilen (Weltkugel)"
+                android:textSize="16sp" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchAutoTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/auto_trip_switch" />
 
             <View
                 android:layout_width="match_parent"
@@ -99,7 +133,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp"
-            android:text="Zeitpunkte / Stationen"
+            android:text="@string/timepoints_stations"
             android:textStyle="bold"
             android:textSize="18sp" />
 
@@ -128,7 +162,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_marginTop="16dp"
-                android:text="Weiteren Zeitpunkt hinzufügen"
+                android:text="@string/add_another_timepoint"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 app:icon="@drawable/ic_add" />
 
@@ -144,7 +178,7 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_gravity="bottom"
-        android:text="Trip speichern"
+        android:text="@string/save_trip"
         android:layout_marginHorizontal="16dp"
         android:layout_marginBottom="32dp"
         app:cornerRadius="16dp" />

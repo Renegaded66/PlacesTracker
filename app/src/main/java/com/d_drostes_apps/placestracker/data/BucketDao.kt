@@ -8,6 +8,9 @@ interface BucketDao {
     @Query("SELECT * FROM bucket_items ORDER BY isCompleted ASC, date ASC")
     fun getAllBucketItems(): Flow<List<BucketItem>>
 
+    @Query("SELECT * FROM bucket_items ORDER BY isCompleted ASC, date ASC")
+    suspend fun getAllBucketItemsSync(): List<BucketItem>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBucketItem(item: BucketItem)
 

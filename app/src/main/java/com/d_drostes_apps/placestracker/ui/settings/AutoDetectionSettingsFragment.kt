@@ -222,12 +222,12 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
             fun onMarkerClicked(id: String) {
                 // Not needed here but interface expects it
             }
-            @JavascriptInterface
-            fun checkAndMarkSpun(): Boolean {
-                val alreadySpun = FeedFragment.GlobeAnimationState.hasSpunThisSession
-                FeedFragment.GlobeAnimationState.hasSpunThisSession = true
-                return alreadySpun
-            }
+            //@JavascriptInterface
+            //fun checkAndMarkSpun(): Boolean {
+            //    val alreadySpun = FeedFragment.GlobeAnimationState.hasSpunThisSession
+            //    FeedFragment.GlobeAnimationState.hasSpunThisSession = true
+            //    return alreadySpun
+            //}
         }, "Android")
 
         webView.webViewClient = object : WebViewClient() {

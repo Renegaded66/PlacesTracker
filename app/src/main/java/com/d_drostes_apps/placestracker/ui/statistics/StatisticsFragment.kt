@@ -96,7 +96,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             val flagsText = countries.entries.joinToString(", ") { (code, name) ->
                 "${getFlagEmoji(code)} $name"
             }
-            tvFlagList.text = if (flagsText.isEmpty()) "Noch keine Länder besucht" else flagsText
+            tvFlagList.text = if (flagsText.isEmpty()) getString(R.string.no_countries_visited) else flagsText
         }
 
         lifecycleScope.launch {
@@ -131,7 +131,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             val years = (currentYear downTo 2020).map { it.toString() }.toTypedArray()
             
             AlertDialog.Builder(requireContext())
-                .setTitle("Jahr auswählen")
+                .setTitle(R.string.select_year)
                 .setItems(years) { _, which ->
                     val selectedYear = years[which].toInt()
                     loadYearSummary(selectedYear, listContainer, tvYearTitle, statsGrid, tvYearTrips, tvYearEntries, tvYearDistance, tvYearCountries, tvYearFlags, tvPhotosTitle, tvNoData)
@@ -178,7 +178,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                 return@launch
             }
 
-            tvTitle.text = "Dein Jahr $year"
+            tvTitle.text = getString(R.string.your_year, year)
             tvTitle.visibility = View.VISIBLE
             statsGrid.visibility = View.VISIBLE
             tvNoData.visibility = View.GONE

@@ -20,4 +20,222 @@
     <string name="german">German</string>
     <string name="english">English</string>
     <string name="toggle_fullscreen_map">Toggle fullscreen map</string>
+    <string name="help">Help</string>
+    <string name="help_title">Explanations</string>
+    <string name="help_content">• Experience: A single location with photos and notes.\n\n• Trip: A journey with multiple stops that you plan manually.\n\n• Auto Trip: Select multiple photos from your gallery, and the app will automatically create a trip with stops based on the photo dates.</string>
+    <string name="add_to_my_feed">Add to my feed</string>
+    <string name="add_to_my_feed_confirm_entry">Do you want to add this experience as your own to your feed?</string>
+    <string name="add_to_my_feed_confirm_trip">Do you want to add this trip as your own to your feed?</string>
+    <string name="added_to_my_feed_success">Successfully added to your feed</string>
+
+    <!-- UI Strings -->
+    <string name="friends">Friends</string>
+    <string name="search_hint">Search...</string>
+    <string name="filter_type">Type</string>
+    <string name="filter_date">Date</string>
+    <string name="filter_location">Location</string>
+    <string name="filter_reset">Reset</string>
+    <string name="trip">Trip</string>
+    <string name="auto_trip">Auto Trip</string>
+    <string name="add">Add</string>
+    <string name="auto_detection">Automatic Detection</string>
+    <string name="auto_detection_desc">Gallery scan &amp; home location</string>
+    <string name="backup">Backup</string>
+    <string name="backup_desc">Back up &amp; restore data</string>
+    <string name="support_developer">Support developer</string>
+    <string name="no_coordinates">No coordinates</string>
+    <string name="media">Media</string>
+    <string name="add_trip_cover">Add trip cover</string>
+    <string name="trip_title_hint">Trip title</string>
+    <string name="auto_trip_switch">Automatic trip</string>
+    <string name="timepoints_stations">Timepoints / Stations</string>
+    <string name="add_another_timepoint">Add another timepoint</string>
+    <string name="save_trip">Save trip</string>
+    <string name="travel_stats">Travel Statistics</string>
+    <string name="year_summary">Year Summary</string>
+    <string name="countries">Countries</string>
+    <string name="visited_countries">Visited countries:</string>
+    <string name="activities">Activities</string>
+    <string name="trips">Trips</string>
+    <string name="experiences">Experiences</string>
+    <string name="stops">Stops</string>
+    <string name="distance">Distance</string>
+    <string name="total_distance_desc">Total distance traveled in your trips</string>
+    <string name="bucket_list">Bucket List</string>
+    <string name="add_timepoint">Add timepoint</string>
+    <string name="stop_title_hint">Stop title</string>
+    <string name="no_location_selected">No location selected</string>
+    <string name="add_stop_confirm">Add stop</string>
+    <string name="delete_stop">Delete stop</string>
+    <string name="app_color">App color</string>
+    <string name="pick_color">Pick color</string>
+    <string name="enable_timeline_gallery">Enable timeline gallery</string>
+    <string name="username_hint">Username</string>
+    <string name="home_country_hint">Home country</string>
+    <string name="backup_instruction">Back up your trips, images and settings to a file to restore them later or transfer them to another device.</string>
+    <string name="create_backup">Create backup</string>
+    <string name="upload_backup">Upload backup</string>
+    <string name="add_new_entry_empty">Add new entry</string>
+    <string name="home_location">Home location</string>
+    <string name="home_location_instruction">Tap on the map to mark your home</string>
+    <string name="auto_scan_gallery">Auto scan gallery</string>
+    <string name="home_radius">Home radius (km)</string>
+    <string name="home_distance_hint">Distance to home location</string>
+    <string name="home_radius_desc">The app creates drafts for new locations when you take photos outside your home radius. At 0 km, every photo is counted as an experience.</string>
+    <string name="feed">Feed</string>
+    <string name="calendar">Calendar</string>
+    <string name="statistics">Statistics</string>
+    <string name="options">Options</string>
+    <string name="share">Share</string>
+    <string name="details">Details</string>
+    <string name="stop_details">Stop Details</string>
+    <string name="trip_details">Trip Details</string>
+    <string name="fullscreen">Fullscreen</string>
+    <string name="no_location_available">No location available</string>
+    <string name="draft_badge">DRAFT - Automatically detected</string>
+    <string name="live">LIVE</string>
+    <string name="remove">Remove</string>
+    <string name="confirm">Confirm</string>
+    <string name="import_text">Import</string>
+    <string name="add_bucket_item_title">Add Bucket Item</string>
+    <string name="bucket_title_hint">What do you want to experience?</string>
+    <string name="bucket_desc_hint">Description (optional)</string>
+    <string name="bucket_date_hint">Select date (optional)</string>
+    <string name="is_trip_checkbox">It is a trip</string>
+    <string name="select_photo_from_gallery">Select photo from gallery</string>
+    <string name="add_to_bucket_list_btn">Add to Bucket List</string>
+    <string name="no_entries_available">No entries available</string>
+
+    <string name="select_year">Select Year</string>
+    <string name="memories">Memories</string>
+    <string name="km_distance">km distance</string>
+    <string name="no_data_for_year">No data available for this year.</string>
+    <string name="media_options">Media Options</string>
+    <string name="remove_media">Remove medium</string>
+    <string name="use_location_from_image">Use location from this image</string>
+    <string name="set_as_cover">Set as cover image</string>
+    <string name="take_date_time">Take over date &amp; time</string>
+    <string name="map">Map</string>
+    <string name="gallery">Gallery</string>
+    <string name="select_period">Select period</string>
+    <string name="title">Title</string>
+    <string name="date">Date</string>
+    <string name="delete_mini_stop">Delete mini-stop</string>
+    <string name="mini_stop">Mini-stop</string>
+    <string name="draft">DRAFT</string>
+    <string name="photo_details">Photo details</string>
+    <string name="close">Close</string>
+
+    <string name="mon">Mon</string>
+    <string name="tue">Tue</string>
+    <string name="wed">Wed</string>
+    <string name="thu">Thu</string>
+    <string name="fri">Fri</string>
+    <string name="sat">Sat</string>
+    <string name="sun">Sun</string>
+    <string name="date_label">Date:</string>
+    <string name="location_label">Location:</string>
+
+    <string name="auto_trip_confirm_msg">Do you want to automatically create a trip from the %1$d selected images? Images will be grouped by location (radius 1km).</string>
+    <string name="processing_images">Processing images...</string>
+    <string name="no_valid_images_found">No valid images found.</string>
+    <string name="auto_trip_default_title">Automatic Trip</string>
+    <string name="stop_at_date">Stop at %1$s</string>
+    <string name="error_message">Error: %1$s</string>
+    <string name="filter_all">All</string>
+    <string name="filter_experiences">Experiences</string>
+    <string name="filter_trips">Trips</string>
+    <string name="select_type">Select Type</string>
+    <string name="no_locations_available_yet">No locations available yet.</string>
+    <string name="select_countries">Select Countries</string>
+    <string name="filter">Filter</string>
+    <string name="deselect_all">Deselect All</string>
+    <string name="understood">Understood</string>
+    <string name="edit_auto_trip">Edit Automatic Trip</string>
+    <string name="no_countries_visited">No countries visited yet</string>
+    <string name="your_year">Your year %1$d</string>
+    <string name="import_success">Import of %1$s successful</string>
+    <string name="import_error_invalid">Import error: Invalid file</string>
+
+    <string name="confirm_draft">Confirm draft</string>
+    <string name="save_changes">Save changes</string>
+    <string name="enter_title_error">Please enter a title</string>
+    <string name="location_from_image_taken">Location taken from image</string>
+    <string name="date_time_taken">Date &amp; time taken</string>
+    <string name="error_reading_date">Error reading date</string>
+    <string name="cover_image_set">Cover image set</string>
+
+    <string name="title_required">Title required</string>
+    <string name="stop_delete_confirm_title">Delete stop</string>
+    <string name="stop_delete_confirm_msg">Do you really want to delete this stop?</string>
+    <string name="delete">Delete</string>
+    <string name="stop_saved">Stop saved</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="yes_create">Yes, create</string>
+    <string name="pick_color_title">Pick color</string>
+
+    <string name="all">All</string>
+    <string name="open">Open</string>
+    <string name="completed">Completed</string>
+    <string name="delete_item_title">Delete item</string>
+    <string name="delete_item_msg">Do you really want to remove \'%1$s\' from the Bucket List?</string>
+    <string name="bucket_type_experience">EXPERIENCE</string>
+    <string name="bucket_type_trip">TRIP</string>
+
+    <string name="creating_backup">Creating backup...</string>
+    <string name="backup_success">Backup created successfully</string>
+    <string name="backup_error">Error during backup: %1$s</string>
+    <string name="restoring_data">Restoring data...</string>
+    <string name="restore_success">Restoration successful. App will restart...</string>
+    <string name="restore_error">Error during restoration: %1$s</string>
+
+    <string name="create_profile_first">Please create a profile first</string>
+    <string name="feed_from">Feed from %1$s</string>
+    <string name="shared_experiences_count">%1$d shared experiences</string>
+    <string name="friend">Friend</string>
+
+    <string name="gallery_permissions_required">Permissions for gallery access required</string>
+    <string name="location_permission_required">Location permission required.</string>
+    <string name="mark_home_instruction">Please mark your home on the map first!</string>
+    <string name="settings_saved">Settings saved</string>
+    <string name="location_error_gps">Location could not be determined. Is GPS enabled?</string>
+    <string name="no_location_set">No location set</string>
+    <string name="profile_saved">Profile saved</string>
+    <string name="enter_name_error">Please enter a name</string>
+
+    <!-- Help Dialog Content -->
+    <string name="help_local_title">100% Local &amp; Private</string>
+    <string name="help_local_desc">Your data belongs to you. PlacesTracker stores all experiences, images, and GPS data exclusively locally on your device. There is no communication with a server, and no personal data is uploaded to the cloud.</string>
+
+    <string name="help_types_title">Experience vs. Trip</string>
+    <string name="help_types_desc">An experience is a single point on the map, e.g., a nice restaurant or a view. A trip, on the other hand, is an entire journey with multiple stops. During an active trip, the app records \"Mini-Stops\" (waypoints) in the background so you can precisely retrace your route later.</string>
+
+    <string name="help_auto_trip_title">Auto Trip</string>
+    <string name="help_auto_trip_desc">Don\'t want to create every stop manually? Use the automatic feature! Simply select multiple images from your gallery. A smart algorithm analyzes the shooting locations and times, bundles images at the same locations into stops, and creates a finished itinerary for you, including city names.</string>
+
+    <string name="help_friends_title">Friends System</string>
+    <string name="help_friends_desc">You can share your trips and experiences with friends by sending a share file. Imported experiences from your friends appear in a separate feed. The best part: Were you on a trip together? With the plus icon at the top right, you can directly copy a shared trip or experience into your own feed.</string>
+
+    <string name="help_calendar_title">Calendar View</string>
+    <string name="help_calendar_desc">In the calendar view, you have the perfect temporal overview. Days on which you had experiences or were traveling are marked. This way, you can quickly find out what you did on a specific day last year.</string>
+
+    <string name="help_stats_title">Statistics</string>
+    <string name="help_stats_desc">How many kilometers did you travel this year? How many countries have you already visited? The statistics view evaluates your trips and experiences and shows you exciting facts about your travel behavior.</string>
+
+    <string name="help_bucket_title">Bucket List</string>
+    <string name="help_bucket_desc">Plan your dreams! In the bucket list, you can save places you absolutely want to visit. As soon as you set a date for an entry, it is automatically added to your feed as a planned experience.</string>
+
+    <string name="help_auto_detect_title">Automatic Detection</string>
+    <string name="help_auto_detect_desc">The app can regularly scan your gallery in the background for new images. If you take photos that are more than X kilometers away from your home location, PlacesTracker automatically suggests creating a new experience from them.</string>
+
+    <string name="help_backup_title">Backup System</string>
+    <string name="help_backup_desc">Safety first! Using the backup system, you can export your entire database, including all links, into a file. This way, you can easily take your data with you when changing devices or back it up regularly.</string>
+
+    <string name="help_personalize_title">Personalization &amp; Timeline</string>
+    <string name="help_personalize_desc">Choose your own theme and language. The timeline gallery also scans your entire local photo collection, showing each image at its capture location on the interactive 3D globe, letting you travel visually through your past.</string>
+
+    <string name="help_donate_title">Support Development</string>
+    <string name="help_donate_desc">PlacesTracker is a passion project and completely ad-free. If you like the app, feel free to support its further development with a small donation. Thank you!</string>
+    <string name="btn_donate_kofi">Support on Ko-fi</string>
 </resources>

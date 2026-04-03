@@ -2,13 +2,19 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_add_shared"
+        android:icon="@drawable/ic_add_circle"
+        android:title="@string/add_to_my_feed"
+        android:visible="false"
+        app:showAsAction="always" />
+    <item
         android:id="@+id/action_edit"
         android:icon="@android:drawable/ic_menu_edit"
-        android:title="Bearbeiten"
+        android:title="@string/edit_entry"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_delete"
         android:icon="@android:drawable/ic_menu_delete"
-        android:title="Löschen"
+        android:title="@string/delete_entry"
         app:showAsAction="ifRoom" />
 </menu>

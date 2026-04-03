@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -12,14 +13,22 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
+import com.d_drostes_apps.placestracker.data.Friend
+import com.d_drostes_apps.placestracker.data.SupabaseManager
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class FriendsFragment : Fragment(R.layout.fragment_friends) {
+
+    private lateinit var supabaseManager: SupabaseManager
+    private var searchJob: Job? = null
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { handleManualImport(it) }
@@ -28,9 +37,12 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        supabaseManager = SupabaseManager(requireContext())
+
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
 
+        val etSearchUser = view.findViewById<TextInputEditText>(R.id.etSearchUser)
         val recycler = view.findViewById<RecyclerView>(R.id.friendsRecycler)
         recycler.layoutManager = LinearLayoutManager(requireContext())
         
@@ -38,6 +50,7 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
             val bundle = Bundle().apply {
                 putString("friendId", friend.id)
                 putString("username", friend.username)
+                putBoolean("isFromSupabase", friend.profilePicturePath == "SUPABASE")
             }
             findNavController().navigate(R.id.action_friendsFragment_to_friendFeedFragment, bundle)
         }
@@ -55,9 +68,41 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
             }
         }
 
+        // Lokale Freunde anzeigen
         viewLifecycleOwner.lifecycleScope.launch {
             friendDao.getAllFriends().collectLatest { friends ->
-                adapter.submitList(friends)
+                if (etSearchUser.text.isNullOrBlank()) {
+                    adapter.submitList(friends)
+                }
+            }
+        }
+
+        // Suchfunktion
+        etSearchUser.addTextChangedListener { text ->
+            val query = text.toString().trim()
+            searchJob?.cancel()
+            
+            if (query.length >= 3) {
+                searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                    delay(500) // Debounce
+                    val results = supabaseManager.searchUsers(query)
+                    val searchFriends = results.map { 
+                        Friend(
+                            id = it.id, 
+                            username = it.name, 
+                            profilePicturePath = "SUPABASE",
+                            countryCode = null
+                        )
+                    }
+                    adapter.submitList(searchFriends)
+                }
+            } else if (query.isEmpty()) {
+                // Zurück zu lokalen Freunden
+                viewLifecycleOwner.lifecycleScope.launch {
+                    friendDao.getAllFriends().collectLatest { friends ->
+                        adapter.submitList(friends)
+                    }
+                }
             }
         }
 
@@ -74,16 +119,15 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
             val friendId = sharingManager.handleImport(uri)
             if (friendId != null) {
                 val friend = app.database.friendDao().getFriendById(friendId)
-                Toast.makeText(requireContext(), "Import von ${friend?.username} erfolgreich", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.import_success, friend?.username), Toast.LENGTH_LONG).show()
                 
-                // Refresh list or navigate
                 val bundle = Bundle().apply {
                     putString("friendId", friendId)
                     putString("username", friend?.username)
                 }
                 findNavController().navigate(R.id.friendFeedFragment, bundle)
             } else {
-                Toast.makeText(requireContext(), "Fehler beim Import: Ungültige Datei", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.import_error_invalid), Toast.LENGTH_SHORT).show()
             }
         }
     }

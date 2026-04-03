@@ -2,13 +2,11 @@ package com.d_drostes_apps.placestracker.ui.newentry
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.util.Base64
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.JavascriptInterface
 import android.webkit.MimeTypeMap
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -30,15 +28,16 @@ import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.ui.themes.newentry.MediaAdapter
+import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -62,6 +61,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
     private lateinit var tvCoordinates: TextView
     private lateinit var mapboxWebView: WebView
     private lateinit var cardMap: MaterialCardView
+    private lateinit var switchPublic: SwitchMaterial
 
     val mediaPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { uri ->
@@ -84,6 +84,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
         val inputTitle = view.findViewById<TextInputEditText>(R.id.inputTitle)
         val inputNotes = view.findViewById<TextInputEditText>(R.id.inputNotes)
+        switchPublic = view.findViewById(R.id.switchPublic)
         val btnLocation = view.findViewById<MaterialButton>(R.id.btnLocation)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
@@ -131,6 +132,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 entry?.let {
                     inputTitle.setText(it.title)
                     inputNotes.setText(it.notes)
+                    switchPublic.isChecked = it.isPublic
                     selectedDate.timeInMillis = it.date
                     isTimeSet = !(selectedDate.get(Calendar.HOUR_OF_DAY) == 0 && 
                                  selectedDate.get(Calendar.MINUTE) == 0)
@@ -153,9 +155,9 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     mediaAdapter.notifyDataSetChanged()
                     
                     if (it.isDraft) {
-                        btnSave.text = "Entwurf bestätigen"
+                        btnSave.text = getString(R.string.confirm_draft)
                     } else {
-                        btnSave.text = "Änderungen speichern"
+                        btnSave.text = getString(R.string.save_changes)
                     }
                 }
             }
@@ -188,7 +190,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
         btnSave.setOnClickListener {
             if (inputTitle.text.isNullOrBlank()) {
-                Toast.makeText(requireContext(), "Bitte gib einen Titel ein", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.enter_title_error), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -207,7 +209,8 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 location = selectedLocation?.let { "${it.first},${it.second}" },
                 media = mediaFiles.toList(),
                 coverImage = selectedCoverImage ?: mediaFiles.firstOrNull(),
-                isDraft = false // Always set to false when saved by user
+                isDraft = false,
+                isPublic = switchPublic.isChecked
             )
 
             lifecycleScope.launch {
@@ -224,7 +227,6 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         val btnSave = view?.findViewById<View>(R.id.btnSave)
 
         if (isMapFullscreen) {
-            // Alle anderen Elemente im LinearLayout verstecken
             for (i in 0 until linearLayout.childCount) {
                 val child = linearLayout.getChildAt(i)
                 if (child != cardMap) child.visibility = View.GONE
@@ -281,6 +283,10 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
+        mapboxWebView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
+        }, "Android")
         mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         mapboxWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -288,7 +294,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             }
         }
         val html = try {
-            requireContext().assets.open("mapbox_globe.html").bufferedReader().use { it.readText() }
+            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         } catch (e: Exception) { "" }
         mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
@@ -307,7 +313,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
     private fun updateMapPreview() {
         lifecycleScope.launch {
             val base64 = withContext(Dispatchers.Default) {
-                selectedCoverImage?.let { getBase64Thumbnail(it) }
+                GlobeUtils.getBase64Thumbnail(selectedCoverImage)
             }
             selectedLocation?.let {
                 mapboxWebView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${it.first}, ${it.second}, '${base64 ?: ""}');", null)
@@ -343,7 +349,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         btnUseLocation.setOnClickListener {
             if (hasLocation) {
                 updateLocation(latLong[0].toDouble(), latLong[1].toDouble())
-                Toast.makeText(requireContext(), "Standort aus Bild übernommen", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.location_from_image_taken), Toast.LENGTH_SHORT).show()
             }
             bottomSheet.dismiss()
         }
@@ -358,10 +364,10 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                         isTimeSet = true
                         updateDateDisplay()
                         updateTimeDisplay()
-                        Toast.makeText(requireContext(), "Datum & Uhrzeit übernommen", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.date_time_taken), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(requireContext(), "Fehler beim Lesen des Datums", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.error_reading_date), Toast.LENGTH_SHORT).show()
                 }
             }
             bottomSheet.dismiss()
@@ -379,7 +385,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         selectedCoverImage = path
         mediaAdapter.updateCoverImage(path)
         updateMapPreview()
-        Toast.makeText(requireContext(), "Titelbild festgelegt", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.cover_image_set), Toast.LENGTH_SHORT).show()
     }
 
     private fun removeMedia(path: String) {
@@ -402,23 +408,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
             tvTimeDisplay.text = sdf.format(selectedDate.time)
         } else {
-            tvTimeDisplay.text = "Uhrzeit (optional)"
-        }
-    }
-
-    private fun getBase64Thumbnail(path: String): String? {
-        return try {
-            val file = File(path)
-            if (!file.exists()) return null
-            val options = BitmapFactory.Options().apply { inSampleSize = 4 }
-            val bitmap = BitmapFactory.decodeFile(path, options) ?: return null
-            val resized = Bitmap.createScaledBitmap(bitmap, 120, 120, true)
-            val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            val bytes = outputStream.toByteArray()
-            "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
-        } catch (e: Exception) {
-            null
+            tvTimeDisplay.text = getString(R.string.time_hint)
         }
     }
 

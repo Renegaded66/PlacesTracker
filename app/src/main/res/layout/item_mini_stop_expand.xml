@@ -15,7 +15,8 @@
         android:layout_height="24dp"
         android:src="@drawable/ic_add_circle"
         app:tint="?attr/colorPrimary"
-        xmlns:app="http://schemas.android.com/apk/res-auto"/>
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:contentDescription="@string/mini_stop" />
 
     <TextView
         android:id="@+id/tvExpandInfo"

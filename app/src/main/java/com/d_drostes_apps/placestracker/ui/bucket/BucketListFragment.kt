@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
@@ -23,8 +24,9 @@ import com.d_drostes_apps.placestracker.data.BucketItem
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -35,11 +37,13 @@ import java.util.*
 
 class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
-    private lateinit var adapter: BucketAdapter
+    private lateinit var viewPager: ViewPager2
+    private lateinit var tabLayout: TabLayout
+    private lateinit var pagerAdapter: BucketPagerAdapter
+    
     private var selectedMedia: String? = null
     private var ivPreview: ImageView? = null
     private var allItems: List<BucketItem> = emptyList()
-    private var currentFilter = "ALL"
 
     private val mediaPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
@@ -63,42 +67,39 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
             userDao.getUserProfile().collectLatest { profile ->
                 profile?.themeColor?.let { color ->
                     ThemeHelper.applyThemeColor(view, color)
+                    tabLayout.setSelectedTabIndicatorColor(color)
                 }
             }
         }
 
-        val rvBucket = view.findViewById<RecyclerView>(R.id.rvBucketList)
-        rvBucket.layoutManager = LinearLayoutManager(requireContext())
-        
-        adapter = BucketAdapter(
+        viewPager = view.findViewById(R.id.viewPagerBucket)
+        tabLayout = view.findViewById(R.id.tabLayoutBucket)
+
+        pagerAdapter = BucketPagerAdapter(
             onToggle = { item ->
                 lifecycleScope.launch {
                     bucketDao.updateBucketItem(item.copy(isCompleted = !item.isCompleted))
                 }
             },
-            onEdit = { item ->
-                showEditItemDialog(item)
-            },
-            onDelete = { item ->
-                showDeleteConfirmation(item)
-            }
+            onEdit = { item -> showEditItemDialog(item) },
+            onDelete = { item -> showDeleteConfirmation(item) }
         )
-        rvBucket.adapter = adapter
+        viewPager.adapter = pagerAdapter
+
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = when (position) {
+                0 -> getString(R.string.all)
+                1 -> getString(R.string.open)
+                2 -> getString(R.string.completed)
+                else -> ""
+            }
+        }.attach()
 
         viewLifecycleOwner.lifecycleScope.launch {
             bucketDao.getAllBucketItems().collectLatest { items ->
-                allItems = items
-                applyFilter()
+                allItems = sortBucketItems(items)
+                updatePager()
             }
-        }
-
-        view.findViewById<ChipGroup>(R.id.chipGroupFilter).setOnCheckedStateChangeListener { _, checkedIds ->
-            currentFilter = when (checkedIds.firstOrNull()) {
-                R.id.chipFilterActive -> "ACTIVE"
-                R.id.chipFilterCompleted -> "COMPLETED"
-                else -> "ALL"
-            }
-            applyFilter()
         }
 
         view.findViewById<FloatingActionButton>(R.id.fabAddBucketItem).setOnClickListener {
@@ -106,26 +107,50 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
         }
     }
 
-    private fun applyFilter() {
-        val filtered = when (currentFilter) {
-            "ACTIVE" -> allItems.filter { !it.isCompleted }
-            "COMPLETED" -> allItems.filter { it.isCompleted }
-            else -> allItems
+    private fun sortBucketItems(items: List<BucketItem>): List<BucketItem> {
+        val now = System.currentTimeMillis()
+        return items.sortedWith { a, b ->
+            val catA = when {
+                a.date == null -> 0
+                a.date > now -> 1
+                else -> 2
+            }
+            val catB = when {
+                b.date == null -> 0
+                b.date > now -> 1
+                else -> 2
+            }
+
+            if (catA != catB) {
+                catA.compareTo(catB)
+            } else {
+                when (catA) {
+                    0 -> a.title.compareTo(b.title) // Both null, sort by title
+                    1 -> a.date!!.compareTo(b.date!!) // Future: closest first (ascending)
+                    2 -> b.date!!.compareTo(a.date!!) // Past: latest first (descending)
+                    else -> 0
+                }
+            }
         }
-        adapter.submitList(filtered)
+    }
+
+    private fun updatePager() {
+        val active = allItems.filter { !it.isCompleted }
+        val completed = allItems.filter { it.isCompleted }
+        pagerAdapter.setData(allItems, active, completed)
     }
 
     private fun showDeleteConfirmation(item: BucketItem) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Element löschen")
-            .setMessage("Möchtest du '${item.title}' wirklich von der Bucket List entfernen?")
-            .setPositiveButton("Löschen") { _, _ ->
+            .setTitle(R.string.delete_item_title)
+            .setMessage(getString(R.string.delete_item_msg, item.title))
+            .setPositiveButton(R.string.delete) { _, _ ->
                 lifecycleScope.launch {
                     val bucketDao = (requireActivity().application as PlacesApplication).database.bucketDao()
                     bucketDao.deleteBucketItem(item)
                 }
             }
-            .setNegativeButton("Abbrechen", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -196,6 +221,44 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
     private fun showEditItemDialog(item: BucketItem) {
         showAddItemDialog(item)
     }
+
+    inner class BucketPagerAdapter(
+        private val onToggle: (BucketItem) -> Unit,
+        private val onEdit: (BucketItem) -> Unit,
+        private val onDelete: (BucketItem) -> Unit
+    ) : RecyclerView.Adapter<BucketPagerAdapter.PageViewHolder>() {
+
+        private var lists = listOf<List<BucketItem>>(emptyList(), emptyList(), emptyList())
+
+        fun setData(all: List<BucketItem>, active: List<BucketItem>, completed: List<BucketItem>) {
+            lists = listOf(all, active, completed)
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageViewHolder {
+            val rv = RecyclerView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                layoutManager = LinearLayoutManager(context)
+                setPadding(16, 16, 16, 200)
+                clipToPadding = false
+            }
+            return PageViewHolder(rv)
+        }
+
+        override fun onBindViewHolder(holder: PageViewHolder, position: Int) {
+            holder.bind(lists[position])
+        }
+
+        override fun getItemCount() = 3
+
+        inner class PageViewHolder(private val rv: RecyclerView) : RecyclerView.ViewHolder(rv) {
+            private val adapter = BucketAdapter(onToggle, onEdit, onDelete)
+            init { rv.adapter = adapter }
+            fun bind(data: List<BucketItem>) {
+                adapter.submitList(data)
+            }
+        }
+    }
 }
 
 class BucketAdapter(
@@ -236,7 +299,7 @@ class BucketAdapter(
 
         fun bind(item: BucketItem) {
             tvTitle.text = item.title
-            tvType.text = if (item.isTrip) "TRIP" else "EXPERIENCE"
+            tvType.text = if (item.isTrip) itemView.context.getString(R.string.bucket_type_trip) else itemView.context.getString(R.string.bucket_type_experience)
             
             if (item.date != null) {
                 tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(item.date))
