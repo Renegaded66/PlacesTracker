@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000">
@@ -22,22 +23,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="?attr/actionBarSize"
-            android:paddingTop="80dp"
+            android:paddingTop="40dp"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:navigationIconTint="#FFFFFF" />
+            app:navigationIconTint="#FFFFFF">
+
+            <ImageButton
+                android:id="@+id/btnPhotoInfo"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="end"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_more_vert"
+                android:contentDescription="Info"
+                app:tint="#FFFFFF" />
+
+        </com.google.android.material.appbar.MaterialToolbar>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- Bottom Sheet for Details -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/detailsBottomSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/bg_feed_bottom_sheet"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-        app:behavior_peekHeight="180dp"
-        app:behavior_hideable="false">
+        app:behavior_peekHeight="0dp"
+        app:behavior_hideable="true">
 
         <LinearLayout
+            android:id="@+id/llPhotoDetailContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -47,43 +60,92 @@
                 android:layout_width="40dp"
                 android:layout_height="4dp"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="24dp"
                 android:background="@drawable/ic_drag_handle"
-                android:backgroundTint="#80000000" />
+                android:backgroundTint="?attr/colorOutlineVariant" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/photo_details"
-                android:textSize="22sp"
+                android:textSize="24sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="16dp"/>
+                android:textColor="?attr/colorOnSurface"
+                android:layout_marginBottom="20dp"/>
 
-            <TextView
-                android:id="@+id/tvPhotoDate"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/date_label"
-                android:textSize="16sp"
-                android:layout_marginBottom="8dp"/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                android:layout_marginBottom="12dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_calendar"
+                        android:contentDescription="@null"
+                        app:tint="?attr/colorPrimary"/>
+                    <TextView
+                        android:id="@+id/tvPhotoDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="12. Mai 2024, 14:30"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/tvPhotoLocation"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvPhotoLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/location_label"
-                android:textSize="16sp"
-                android:layout_marginBottom="24dp"/>
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_marker"
+                        android:contentDescription="@null"
+                        app:tint="?attr/colorPrimary"/>
+                    <TextView
+                        android:id="@+id/tvPhotoLocation"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="Berlin, Deutschland"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/mapCard"
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="#1A000000"
-                android:layout_marginBottom="32dp">
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
+                app:strokeWidth="1.5dp"
+                app:strokeColor="?attr/colorOutlineVariant">
 
                 <WebView
                     android:id="@+id/detailMapWebView"

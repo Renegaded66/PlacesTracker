@@ -19,7 +19,6 @@ import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.UserProfile
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
-import com.d_drostes_apps.placestracker.worker.SyncWorker
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.textfield.TextInputEditText
@@ -85,9 +84,9 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
                 selectedLanguageCode = it.language
                 selectedColor = it.themeColor
                 switchTimelineGallery.isChecked = it.isTimelineGalleryEnabled
-                switchSync.isChecked = it.isSyncEnabled
+                switchSync.isChecked = false // Force off
                 etSyncUsername.setText(it.username)
-                layoutSyncUsername.visibility = if (it.isSyncEnabled) View.VISIBLE else View.GONE
+                layoutSyncUsername.visibility = View.GONE // Force hidden
                 
                 val lang = languages.find { l -> l.code == it.language }
                 languageSelector.setText(lang?.name ?: getString(R.string.german), false)
@@ -110,10 +109,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
 
         btnSave.setOnClickListener {
             val newUsername = etSyncUsername.text.toString().trim()
-            if (switchSync.isChecked && newUsername.isEmpty()) {
-                etSyncUsername.error = "Bitte Benutzername eingeben"
-                return@setOnClickListener
-            }
+            // Sync logic disabled
 
             lifecycleScope.launch {
                 val currentProfile = userDao.getUserProfile().firstOrNull()
@@ -123,7 +119,7 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
                         language = selectedLanguageCode, 
                         themeColor = selectedColor,
                         isTimelineGalleryEnabled = switchTimelineGallery.isChecked,
-                        isSyncEnabled = switchSync.isChecked
+                        isSyncEnabled = false // Always false
                     )
                 } else {
                     UserProfile(
@@ -132,18 +128,11 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
                         language = selectedLanguageCode, 
                         themeColor = selectedColor,
                         isTimelineGalleryEnabled = switchTimelineGallery.isChecked,
-                        isSyncEnabled = switchSync.isChecked
+                        isSyncEnabled = false // Always false
                     )
                 }
                 
                 userDao.insertOrUpdate(updatedProfile)
-                
-                // Tatsächlicher Start der Synchronisation
-                if (updatedProfile.isSyncEnabled) {
-                    SyncWorker.startImmediateSync(requireContext())
-                    SyncWorker.schedulePeriodicSync(requireContext())
-                    Toast.makeText(requireContext(), "Synchronisation gestartet...", Toast.LENGTH_SHORT).show()
-                }
                 
                 val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(selectedLanguageCode)
                 AppCompatDelegate.setApplicationLocales(appLocale)

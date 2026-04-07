@@ -1,155 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
-
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:elevation="0dp">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            app:layout_scrollFlags="scroll">
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="24dp" />
-
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/toolbarNewTrip"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                app:navigationIcon="@drawable/ic_arrow_back"
-                app:title="@string/trip"
-                app:titleTextColor="?attr/colorOnSurface" />
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp">
-
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-
-                    <ImageView
-                        android:id="@+id/ivTripCoverPreview"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:scaleType="centerCrop"
-                        android:background="#EEE" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAddTripCover"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:text="@string/add_trip_cover"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        app:icon="@drawable/ic_add" />
-                </FrameLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="16dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/inputTripTitle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/trip_title_hint" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/inputTripNotes"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="@string/notes_hint"
-                    android:gravity="top"
-                    android:inputType="textMultiLine"
-                    android:minLines="3" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switchPublicTrip"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                android:text="Öffentlich teilen (Weltkugel)"
-                android:textSize="16sp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switchAutoTrip"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="16dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/auto_trip_switch" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="16dp" />
-        </LinearLayout>
-
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:layout_marginHorizontal="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
-
-            <WebView
-                android:id="@+id/tripMapPreview"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="8dp"
-            android:text="@string/timepoints_stations"
-            android:textStyle="bold"
-            android:textSize="18sp" />
-
-    </com.google.android.material.appbar.AppBarLayout>
+    android:background="#121212">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/tripScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:clipToPadding="false"
+        android:paddingBottom="100dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp">
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/tvHeaderTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Deine Reise"
+                android:textColor="#E0E0E0"
+                android:textSize="34sp"
+                android:fontFamily="serif"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <View
+                android:layout_width="60dp"
+                android:layout_height="4dp"
+                android:background="?attr/colorPrimary"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="32dp"/>
+
+            <!-- Titel Input -->
+            <EditText
+                android:id="@+id/inputTripTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Name der Reise..."
+                android:background="@null"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#66FFFFFF"
+                android:textSize="22sp"
+                android:fontFamily="serif-medium"
+                android:inputType="textCapSentences"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Cover Image -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="20dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="32dp">
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+                    <ImageView
+                        android:id="@+id/ivTripCoverPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/vorschaubild"/>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#66000000"/>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddTripCover"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="Cover wählen"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:textColor="#FFFFFF"
+                        app:icon="@drawable/ic_add"
+                        app:iconTint="#FFFFFF" />
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Map Preview -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="20dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="32dp">
+                <android.webkit.WebView
+                    android:id="@+id/tripMapPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Stations Header -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Stationen &amp; Zeitpunkte"
+                android:textColor="#BDBDBD"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvTripStops"
@@ -160,15 +118,39 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAddStop"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="16dp"
-                android:text="@string/add_another_timepoint"
+                android:layout_height="wrap_content"
+                android:text="Station hinzufügen"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                app:icon="@drawable/ic_add" />
+                app:strokeColor="#33FFFFFF"
+                android:textColor="#FFFFFF"
+                app:icon="@drawable/ic_add"
+                app:iconTint="?attr/colorPrimary"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"/>
 
-            <View
+            <!-- Notizen -->
+            <EditText
+                android:id="@+id/inputTripNotes"
                 android:layout_width="match_parent"
-                android:layout_height="120dp" />
+                android:layout_height="wrap_content"
+                android:hint="Beschreibung der Reise..."
+                android:background="@drawable/bg_diary_input"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#44FFFFFF"
+                android:textSize="16sp"
+                android:fontFamily="serif"
+                android:gravity="top"
+                android:minLines="4"
+                android:padding="16dp"
+                android:layout_marginBottom="32dp"/>
+
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchAutoTrip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Automatische Reise"
+                android:textColor="#FFFFFF"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -178,9 +160,14 @@
         android:layout_width="match_parent"
         android:layout_height="64dp"
         android:layout_gravity="bottom"
-        android:text="@string/save_trip"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginBottom="32dp"
-        app:cornerRadius="16dp" />
+        android:layout_margin="24dp"
+        android:text="Reise speichern"
+        android:textAllCaps="false"
+        android:textSize="18sp"
+        android:fontFamily="serif-medium"
+        app:cornerRadius="16dp"
+        app:backgroundTint="?attr/colorPrimary"
+        android:textColor="?attr/colorOnPrimary"
+        app:elevation="8dp"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

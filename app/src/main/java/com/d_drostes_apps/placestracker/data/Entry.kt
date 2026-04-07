@@ -17,5 +17,8 @@ data class Entry(
     val friendId: String? = null, // Verknüpfung zum Freund (Sender)
     val lastModified: Long = System.currentTimeMillis(),
     val supabaseId: String = UUID.randomUUID().toString(),
-    val isPublic: Boolean = false
+    val isPublic: Boolean = false,
+    val rating: Float = 0f,
+    val people: List<String> = emptyList(),
+    val entryType: String = "experience" // "experience" or "diary"
 )

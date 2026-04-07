@@ -14,21 +14,17 @@ import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Friend
-import com.d_drostes_apps.placestracker.data.SupabaseManager
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class FriendsFragment : Fragment(R.layout.fragment_friends) {
 
-    private lateinit var supabaseManager: SupabaseManager
-    private var searchJob: Job? = null
+    private var allLocalFriends: List<Friend> = emptyList()
 
     private val importLauncher = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let { handleManualImport(it) }
@@ -36,8 +32,6 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        supabaseManager = SupabaseManager(requireContext())
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
@@ -68,47 +62,38 @@ class FriendsFragment : Fragment(R.layout.fragment_friends) {
             }
         }
 
-        // Lokale Freunde anzeigen
+        // Lokale Freunde anzeigen und für Suche speichern
         viewLifecycleOwner.lifecycleScope.launch {
             friendDao.getAllFriends().collectLatest { friends ->
+                allLocalFriends = friends
                 if (etSearchUser.text.isNullOrBlank()) {
                     adapter.submitList(friends)
+                } else {
+                    // Falls während des Ladens schon Text eingegeben wurde
+                    filterFriends(etSearchUser.text.toString(), adapter)
                 }
             }
         }
 
-        // Suchfunktion
+        // Suchfunktion (nur lokal)
         etSearchUser.addTextChangedListener { text ->
-            val query = text.toString().trim()
-            searchJob?.cancel()
-            
-            if (query.length >= 3) {
-                searchJob = viewLifecycleOwner.lifecycleScope.launch {
-                    delay(500) // Debounce
-                    val results = supabaseManager.searchUsers(query)
-                    val searchFriends = results.map { 
-                        Friend(
-                            id = it.id, 
-                            username = it.name, 
-                            profilePicturePath = "SUPABASE",
-                            countryCode = null
-                        )
-                    }
-                    adapter.submitList(searchFriends)
-                }
-            } else if (query.isEmpty()) {
-                // Zurück zu lokalen Freunden
-                viewLifecycleOwner.lifecycleScope.launch {
-                    friendDao.getAllFriends().collectLatest { friends ->
-                        adapter.submitList(friends)
-                    }
-                }
-            }
+            filterFriends(text.toString(), adapter)
         }
 
         view.findViewById<ExtendedFloatingActionButton>(R.id.fabImport).setOnClickListener {
             importLauncher.launch("*/*")
         }
+    }
+
+    private fun filterFriends(query: String, adapter: FriendsAdapter) {
+        val filtered = if (query.isBlank()) {
+            allLocalFriends
+        } else {
+            allLocalFriends.filter { 
+                it.username.contains(query, ignoreCase = true) 
+            }
+        }
+        adapter.submitList(filtered)
     }
 
     private fun handleManualImport(uri: Uri) {

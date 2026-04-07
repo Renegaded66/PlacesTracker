@@ -10,6 +10,7 @@
     <string name="edit_entry">Edit Entry</string>
     <string name="title_hint">Title</string>
     <string name="notes_hint">Notes (optional)</string>
+    <string name="notes">Notes</string>
     <string name="date_hint">Select Date</string>
     <string name="time_hint">Time (optional)</string>
     <string name="location_hint">Select Location</string>
@@ -238,4 +239,8 @@
     <string name="help_donate_title">Support Development</string>
     <string name="help_donate_desc">PlacesTracker is a passion project and completely ad-free. If you like the app, feel free to support its further development with a small donation. Thank you!</string>
     <string name="btn_donate_kofi">Support on Ko-fi</string>
+
+    <string name="visions">Visions</string>
+    <string name="visions_desc">What the app should still learn</string>
+    <string name="vision_item_1">Like and comment on trips</string>
 </resources>

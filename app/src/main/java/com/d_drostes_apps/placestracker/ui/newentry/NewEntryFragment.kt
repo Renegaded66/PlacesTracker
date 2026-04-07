@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
-import android.webkit.MimeTypeMap
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -34,7 +33,6 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -61,7 +59,9 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
     private lateinit var tvCoordinates: TextView
     private lateinit var mapboxWebView: WebView
     private lateinit var cardMap: MaterialCardView
-    private lateinit var switchPublic: SwitchMaterial
+    //private lateinit var switchPublic: SwitchMaterial
+    private lateinit var inputTitle: android.widget.EditText
+    private lateinit var inputNotes: android.widget.EditText
 
     val mediaPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { uri ->
@@ -79,12 +79,11 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         super.onViewCreated(view, savedInstanceState)
 
         editingEntryId = arguments?.getInt("entryId") ?: -1
-        val isFromDraft = arguments?.getBoolean("isFromDraft") ?: false
         val repository = (requireActivity().application as PlacesApplication).repository
 
-        val inputTitle = view.findViewById<TextInputEditText>(R.id.inputTitle)
-        val inputNotes = view.findViewById<TextInputEditText>(R.id.inputNotes)
-        switchPublic = view.findViewById(R.id.switchPublic)
+        inputTitle = view.findViewById(R.id.inputTitle)
+        inputNotes = view.findViewById(R.id.inputNotes)
+        //switchPublic = view.findViewById(R.id.switchPublic)
         val btnLocation = view.findViewById<MaterialButton>(R.id.btnLocation)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
@@ -92,18 +91,15 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         
         tvDateDisplay = view.findViewById(R.id.tvDateDisplay)
         tvTimeDisplay = view.findViewById(R.id.tvTimeDisplay)
-        val ivCalendar = view.findViewById<ImageView>(R.id.ivCalendar)
-        val ivTime = view.findViewById<ImageView>(R.id.ivTime)
 
         cardMap = view.findViewById(R.id.cardNewEntryMap)
         mapboxWebView = view.findViewById(R.id.newEntryCesiumWebView)
         setupMapboxWebView()
 
         updateDateDisplay()
+        updateTimeDisplay()
 
-        btnFullscreen.setOnClickListener {
-            toggleFullscreen(btnFullscreen)
-        }
+        btnFullscreen.setOnClickListener { toggleFullscreen(btnFullscreen) }
 
         recycler = view.findViewById(R.id.mediaRecycler)
         recycler.layoutManager = GridLayoutManager(requireContext(), 4)
@@ -111,18 +107,10 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         mediaAdapter = MediaAdapter(
             mediaPaths = mediaFiles,
             coverImagePath = selectedCoverImage,
-            onAddClick = {
-                mediaPicker.launch(arrayOf("image/*", "video/*"))
-            },
-            onMediaClick = { path ->
-                showMediaOptions(path)
-            },
-            onRemove = { removed ->
-                removeMedia(removed)
-            },
-            onSetCover = { path ->
-                setAsCover(path)
-            }
+            onAddClick = { mediaPicker.launch(arrayOf("image/*", "video/*")) },
+            onMediaClick = { path -> showMediaOptions(path) },
+            onRemove = { removed -> removeMedia(removed) },
+            onSetCover = { path -> setAsCover(path) }
         )
         recycler.adapter = mediaAdapter
 
@@ -132,10 +120,9 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 entry?.let {
                     inputTitle.setText(it.title)
                     inputNotes.setText(it.notes)
-                    switchPublic.isChecked = it.isPublic
+                    //switchPublic.isChecked = it.isPublic
                     selectedDate.timeInMillis = it.date
-                    isTimeSet = !(selectedDate.get(Calendar.HOUR_OF_DAY) == 0 && 
-                                 selectedDate.get(Calendar.MINUTE) == 0)
+                    isTimeSet = true
                     
                     selectedCoverImage = it.coverImage
                     updateDateDisplay()
@@ -143,9 +130,14 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     
                     it.location?.split(",")?.let { coords ->
                         if (coords.size == 2) {
-                            selectedLocation = coords[0].toDouble() to coords[1].toDouble()
-                            tvCoordinates.text = "Lat: ${coords[0]}, Lon: ${coords[1]}"
-                            showMapPreview()
+                            val lat = coords[0].trim().toDoubleOrNull()
+                            val lon = coords[1].trim().toDoubleOrNull()
+                            if (lat != null && lon != null) {
+                                selectedLocation = lat to lon
+                                tvCoordinates.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", lat, lon)
+                                cardMap.visibility = View.VISIBLE
+                                updateMapPreview()
+                            }
                         }
                     }
                     
@@ -154,16 +146,12 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     mediaAdapter.updateCoverImage(selectedCoverImage)
                     mediaAdapter.notifyDataSetChanged()
                     
-                    if (it.isDraft) {
-                        btnSave.text = getString(R.string.confirm_draft)
-                    } else {
-                        btnSave.text = getString(R.string.save_changes)
-                    }
+                    btnSave.text = "Änderungen speichern"
                 }
             }
         }
 
-        ivCalendar.setOnClickListener {
+        view.findViewById<View>(R.id.cardDate).setOnClickListener {
             DatePickerDialog(requireContext(), { _, y, m, d ->
                 selectedDate.set(Calendar.YEAR, y)
                 selectedDate.set(Calendar.MONTH, m)
@@ -172,7 +160,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             }, selectedDate.get(Calendar.YEAR), selectedDate.get(Calendar.MONTH), selectedDate.get(Calendar.DAY_OF_MONTH)).show()
         }
 
-        ivTime.setOnClickListener {
+        view.findViewById<View>(R.id.cardTime).setOnClickListener {
             TimePickerDialog(requireContext(), { _, h, min ->
                 selectedDate.set(Calendar.HOUR_OF_DAY, h)
                 selectedDate.set(Calendar.MINUTE, min)
@@ -189,28 +177,28 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         }
 
         btnSave.setOnClickListener {
-            if (inputTitle.text.isNullOrBlank()) {
-                Toast.makeText(requireContext(), getString(R.string.enter_title_error), Toast.LENGTH_SHORT).show()
+            val title = inputTitle.text.toString()
+            if (title.isBlank()) {
+                Toast.makeText(requireContext(), "Bitte Titel eingeben", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (!isTimeSet) {
                 selectedDate.set(Calendar.HOUR_OF_DAY, 0)
                 selectedDate.set(Calendar.MINUTE, 0)
-                selectedDate.set(Calendar.SECOND, 0)
-                selectedDate.set(Calendar.MILLISECOND, 0)
             }
 
             val entry = Entry(
                 id = if (editingEntryId != -1) editingEntryId else 0,
-                title = inputTitle.text.toString(),
+                title = title,
                 date = selectedDate.timeInMillis,
                 notes = inputNotes.text?.toString(),
                 location = selectedLocation?.let { "${it.first},${it.second}" },
                 media = mediaFiles.toList(),
                 coverImage = selectedCoverImage ?: mediaFiles.firstOrNull(),
                 isDraft = false,
-                isPublic = switchPublic.isChecked
+                isPublic = false, //switchPublic.isChecked,
+                entryType = "experience"
             )
 
             lifecycleScope.launch {
@@ -233,19 +221,11 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             }
             btnSave?.visibility = View.GONE
             linearLayout.setPadding(0, 0, 0, 0)
-            
             nestedScrollView?.isFillViewport = true
-            val nvParams = nestedScrollView?.layoutParams as? CoordinatorLayout.LayoutParams
-            nvParams?.behavior = null
-            nestedScrollView?.layoutParams = nvParams
             
-            val llParams = linearLayout.layoutParams
-            llParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-            linearLayout.layoutParams = llParams
-
             val params = cardMap.layoutParams as LinearLayout.LayoutParams
             params.height = ViewGroup.LayoutParams.MATCH_PARENT
-            params.setMargins(8, 8, 8, 8)
+            params.setMargins(0, 0, 0, 0)
             cardMap.layoutParams = params
             btn.setImageResource(R.drawable.ic_fullscreen_exit)
         } else {
@@ -253,22 +233,13 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 linearLayout.getChildAt(i).visibility = View.VISIBLE
             }
             btnSave?.visibility = View.VISIBLE
-            
-            val padding = (16 * resources.displayMetrics.density).toInt()
+            val padding = (24 * resources.displayMetrics.density).toInt()
             linearLayout.setPadding(padding, padding, padding, padding)
-            
             nestedScrollView?.isFillViewport = false
-            val nvParams = nestedScrollView?.layoutParams as? CoordinatorLayout.LayoutParams
-            nvParams?.behavior = AppBarLayout.ScrollingViewBehavior()
-            nestedScrollView?.layoutParams = nvParams
-
-            val llParams = linearLayout.layoutParams
-            llParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            linearLayout.layoutParams = llParams
 
             val params = cardMap.layoutParams as LinearLayout.LayoutParams
             params.height = (200 * resources.displayMetrics.density).toInt()
-            params.setMargins(0, (8 * resources.displayMetrics.density).toInt(), 0, 0)
+            params.setMargins(0, 0, 0, (32 * resources.displayMetrics.density).toInt())
             cardMap.layoutParams = params
             btn.setImageResource(R.drawable.ic_fullscreen)
         }
@@ -293,19 +264,13 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 selectedLocation?.let { updateMapPreview() }
             }
         }
-        val html = try {
-            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
-        } catch (e: Exception) { "" }
+        val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
         mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
     private fun updateLocation(lat: Double, lon: Double) {
         selectedLocation = lat to lon
         tvCoordinates.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", lat, lon)
-        showMapPreview()
-    }
-
-    private fun showMapPreview() {
         cardMap.visibility = View.VISIBLE
         updateMapPreview()
     }
@@ -349,7 +314,6 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         btnUseLocation.setOnClickListener {
             if (hasLocation) {
                 updateLocation(latLong[0].toDouble(), latLong[1].toDouble())
-                Toast.makeText(requireContext(), getString(R.string.location_from_image_taken), Toast.LENGTH_SHORT).show()
             }
             bottomSheet.dismiss()
         }
@@ -358,17 +322,13 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             dateTimeString?.let { dt ->
                 try {
                     val sdf = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault())
-                    val date = sdf.parse(dt)
-                    date?.let {
+                    sdf.parse(dt)?.let {
                         selectedDate.time = it
                         isTimeSet = true
                         updateDateDisplay()
                         updateTimeDisplay()
-                        Toast.makeText(requireContext(), getString(R.string.date_time_taken), Toast.LENGTH_SHORT).show()
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(requireContext(), getString(R.string.error_reading_date), Toast.LENGTH_SHORT).show()
-                }
+                } catch (e: Exception) { }
             }
             bottomSheet.dismiss()
         }
@@ -385,7 +345,6 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         selectedCoverImage = path
         mediaAdapter.updateCoverImage(path)
         updateMapPreview()
-        Toast.makeText(requireContext(), getString(R.string.cover_image_set), Toast.LENGTH_SHORT).show()
     }
 
     private fun removeMedia(path: String) {
@@ -399,25 +358,26 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
     }
 
     private fun updateDateDisplay() {
-        val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("dd. MMMM yyyy", Locale.getDefault())
         tvDateDisplay.text = sdf.format(selectedDate.time)
     }
 
     private fun updateTimeDisplay() {
         if (isTimeSet) {
-            val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val sdf = SimpleDateFormat("HH:mm 'Uhr'", Locale.getDefault())
             tvTimeDisplay.text = sdf.format(selectedDate.time)
         } else {
-            tvTimeDisplay.text = getString(R.string.time_hint)
+            tvTimeDisplay.text = "Uhrzeit hinzufügen"
         }
     }
 
     private fun copyToInternalStorage(uri: Uri): File {
-        val extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(requireContext().contentResolver.getType(uri))
+        val extension = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(requireContext().contentResolver.getType(uri))
         val fileName = "${UUID.randomUUID()}.${extension ?: "jpg"}"
-        val input = requireContext().contentResolver.openInputStream(uri)!!
         val file = File(requireContext().filesDir, fileName)
-        FileOutputStream(file).use { output -> input.copyTo(output) }
+        requireContext().contentResolver.openInputStream(uri)!!.use { input ->
+            FileOutputStream(file).use { output -> input.copyTo(output) }
+        }
         return file
     }
 }

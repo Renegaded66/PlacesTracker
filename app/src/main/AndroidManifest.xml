@@ -70,10 +70,10 @@
                 <data android:mimeType="application/zip" />
                 <data android:host="*" />
             </intent-filter>
-
+            <!--
             <meta-data
                 android:name="com.google.android.geo.API_KEY"
-                android:value="AIzaSyCajDCuM7x40CF3khhF8QJ3lROrV3iU7DE"/>
+                android:value="AIzaSyCajDCuM7x40CF3khhF8QJ3lROrV3iU7DE"/> -->
         </activity>
 
         <service

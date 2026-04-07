@@ -96,44 +96,51 @@
                 android:textSize="16sp"
                 android:layout_marginBottom="24dp" />
 
-            <!-- Sync Section -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="#20000000"
-                android:layout_marginBottom="24dp" />
-
-            <TextView
+            <!-- Sync Section (Hidden for now) -->
+            <LinearLayout
+                android:id="@+id/syncSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Synchronisation"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp"/>
+                android:orientation="vertical"
+                android:visibility="gone">
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="#20000000"
+                    android:layout_marginBottom="24dp" />
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switchSync"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Supabase Sync aktivieren"
-                android:textSize="16sp"
-                android:layout_marginBottom="16dp" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/layoutSyncUsername"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Benutzername für Sync"
-                android:visibility="gone"
-                android:layout_marginBottom="24dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etSyncUsername"
+                <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textPersonName" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:text="Synchronisation"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp"/>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switchSync"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Supabase Sync aktivieren"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="16dp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutSyncUsername"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Benutzername für Sync"
+                    android:visibility="gone"
+                    android:layout_marginBottom="24dp"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etSyncUsername"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPersonName" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSaveAppSettings"

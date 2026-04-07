@@ -60,15 +60,6 @@
                 android:textColor="?attr/colorOnSurface"
                 tools:text="Titel des Ortes" />
 
-            <!-- Sichtbarkeits-Icon (Weltkugel/Schloss) -->
-            <ImageView
-                android:id="@+id/ivVisibility"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:src="@android:drawable/ic_menu_myplaces"
-                app:tint="?attr/colorOnSurfaceVariant" />
-
             <TextView
                 android:id="@+id/tvTrackingActiveBadge"
                 android:layout_width="wrap_content"
@@ -102,6 +93,36 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop" />
+
+            <!-- Diary Info Overlay -->
+            <LinearLayout
+                android:id="@+id/layoutDiaryInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="#99000000"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <RatingBar
+                    android:id="@+id/feedRating"
+                    style="?android:attr/ratingBarStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:numStars="5"
+                    android:stepSize="1"
+                    android:progressTint="#FFD700"
+                    android:isIndicator="true" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/feedChipGroupPeople"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:chipSpacing="4dp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvFeedDateTime"

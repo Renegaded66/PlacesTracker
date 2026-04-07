@@ -28,4 +28,7 @@ interface EntryDao {
 
     @Delete
     suspend fun delete(entry: Entry)
+
+    @Query("SELECT people FROM entries")
+    suspend fun getAllPeopleRaw(): List<String>
 }

@@ -10,6 +10,7 @@
     <string name="edit_entry">Eintrag bearbeiten</string>
     <string name="title_hint">Titel</string>
     <string name="notes_hint">Notizen (optional)</string>
+    <string name="notes">Notizen</string>
     <string name="date_hint">Datum auswählen</string>
     <string name="time_hint">Uhrzeit (optional)</string>
     <string name="location_hint">Standort auswählen</string>
@@ -235,7 +236,7 @@
     <string name="help_local_desc">Deine Daten gehören dir. PlacesTracker speichert alle Erlebnisse, Bilder und GPS-Daten ausschließlich lokal auf deinem Gerät. Es findet keine Kommunikation mit einem Server statt und es werden keine persönlichen Daten in die Cloud geladen.</string>
 
     <string name="help_types_title">Erlebnis vs. Trip</string>
-    <string name="help_types_desc">Ein Erlebnis ist ein einzelner Punkt auf der Karte, z.B. ein schönes Restaurant oder eine Aussicht. Ein Trip hingegen ist eine ganze Reise mit mehreren Stopps. Während eines aktiven Trips zeichnet die App im Hintergrund \"Mini-Stopps\" (Wegpunkte) auf, damit du deine Route später genau nachvollziehen kannst.</string>
+    <string name="help_types_desc">Ein Erlebnis ist ein einzelner Ort mit Bildern und Notizen.\n\nEin Trip hingegen ist eine ganze Reise mit mehreren Stopps. Während eines aktiven Trips zeichnet die App im Hintergrund Wegpunkte auf, damit du deine Route später genau nachvollziehen kannst.</string>
 
     <string name="help_auto_trip_title">Automatischer Trip</string>
     <string name="help_auto_trip_desc">Keine Lust, jeden Stopp manuell anzulegen? Nutze die Automatik! Wähle einfach mehrere Bilder aus deiner Galerie aus. Ein schlauer Algorithmus analysiert die Aufnahmeorte und Zeiten, bündelt Bilder an den gleichen Standorten zu Stopps und erstellt für dich eine fertige Reiseroute inklusive Städtenamen.</string>
@@ -250,7 +251,7 @@
     <string name="help_stats_desc">Wie viele Kilometer hast du dieses Jahr zurückgelegt? Wie viele Länder hast du bereits besucht? Die Statistik-Ansicht wertet deine Trips und Erlebnisse aus und zeigt dir spannende Fakten über dein Reiseverhalten.</string>
 
     <string name="help_bucket_title">Bucket List</string>
-    <string name="help_bucket_desc">Plane deine Träume! In der Bucket List kannst du Orte speichern, die du unbedingt noch besuchen möâchten. Sobald du für einen Eintrag ein Datum festlegst, wird dieser automatisch in deinen Feed als geplantes Erlebnis übernommen.</string>
+    <string name="help_bucket_desc">Plane deine Träume! In der Bucket List kannst du Orte speichern, die du unbedingt noch besuchen möchten. Sobald du für einen Eintrag ein Datum festlegst, wird dieser automatisch in deinen Feed als geplantes Erlebnis übernommen.</string>
 
     <string name="help_auto_detect_title">Automatische Erkennung</string>
     <string name="help_auto_detect_desc">Die app kann deine Galerie regelmäßig im Hintergrund auf neue Bilder scannen. Wenn du Fotos machst, die mehr als X Kilometer von deinem Heimatstandort entfernt sind, schlägt dir PlacesTracker automatisch vor, daraus ein neues Erlebnis zu erstellen.</string>
@@ -264,4 +265,8 @@
     <string name="help_donate_title">Entwicklung unterstützen</string>
     <string name="help_donate_desc">PlacesTracker ist ein Herzensprojekt und komplett werbefrei. Wenn dir die App gefällt, kannst du die Weiterentwicklung gerne mit einer kleinen Spende unterstützen. Vielen Dank!</string>
     <string name="btn_donate_kofi">Support on Ko-fi</string>
+
+    <string name="visions">Visionen</string>
+    <string name="visions_desc">Was die App noch lernen soll</string>
+    <string name="vision_item_1">Trips liken und kommentieren</string>
 </resources>

@@ -28,6 +28,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -75,6 +76,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val tvTitle = view.findViewById<TextView>(R.id.tvDetailTitle)
         val tvDate = view.findViewById<TextView>(R.id.tvDetailDate)
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
+        val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
         val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
         
         llFlags = view.findViewById(R.id.llDetailFlags)
@@ -84,6 +86,13 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
         mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         setupCesiumWebView()
+
+        // Animation für den Content
+        view.findViewById<View>(R.id.llDetailContent)?.apply {
+            alpha = 0f
+            translationY = 40f
+            animate().alpha(1f).translationY(0f).setDuration(500).setStartDelay(100).start()
+        }
 
         mapboxWebView.setOnTouchListener { v, event ->
             when (event.action) {
@@ -107,9 +116,9 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                 
                 if (!it.notes.isNullOrBlank()) {
                     tvNotes.text = it.notes
-                    tvNotes.visibility = View.VISIBLE
+                    cvNotes.visibility = View.VISIBLE
                 } else {
-                    tvNotes.visibility = View.GONE
+                    cvNotes.visibility = View.GONE
                 }
                 
                 val sdf = java.text.SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())

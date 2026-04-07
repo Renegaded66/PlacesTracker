@@ -39,37 +39,70 @@ class FeedAdapter(
     private val adapterScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var currentThemeColor: Int? = null
 
+    // 🌟 NEU: Wir definieren Konstanten für die verschiedenen Layout-Arten
+    companion object {
+        private const val VIEW_TYPE_STANDARD = 1
+        private const val VIEW_TYPE_DIARY = 2
+    }
+
     fun setThemeColor(color: Int) {
         currentThemeColor = color
         notifyDataSetChanged()
     }
 
-    class FeedViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        // --- NEU: Die Haupt-Karte referenzieren ---
-        val cardView: com.google.android.material.card.MaterialCardView = view.findViewById(R.id.feedCard)
+    // 🌟 NEU: Diese Funktion sagt dem Adapter, welches XML-Layout er gleich laden soll!
+    override fun getItemViewType(position: Int): Int {
+        val item = items[position]
 
+        // 🚨 WICHTIG: Prüfe hier, wie genau du ein Tagebuch in deiner App erkennst!
+        // Ich habe hier "item.entry.type == "Tagebuch"" angenommen.
+        // Wenn deine Variable anders heißt (z.B. isDiary), passe das hier kurz an!
+        return if (item is FeedItem.Experience && item.entry.entryType == "diary") {
+            VIEW_TYPE_DIARY
+        } else {
+            VIEW_TYPE_STANDARD
+        }
+    }
+
+    class FeedViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val cardView: com.google.android.material.card.MaterialCardView = view.findViewById(R.id.feedCard)
         val title: TextView = view.findViewById(R.id.feedTitle)
         val image: ImageView = view.findViewById(R.id.feedImage)
-        val image2: ImageView = view.findViewById(R.id.feedImage2)
-        val image3: ImageView = view.findViewById(R.id.feedImage3)
-        val extraMediaContainer: View = view.findViewById(R.id.extraMediaContainer)
-        val tvMediaCount: TextView = view.findViewById(R.id.tvMediaCount)
         val tvFeedDateTime: TextView = view.findViewById(R.id.tvFeedDateTime)
-        val btnExpandTrip: ImageButton = view.findViewById(R.id.btnExpandTrip)
-        val rvStopsPreview: RecyclerView = view.findViewById(R.id.rvTripStopsPreview)
         val ivTypeIcon: ImageView = view.findViewById(R.id.ivTypeIcon)
         val tvLocationFlags: TextView = view.findViewById(R.id.tvLocationFlags)
-        val tvTrackingBadge: TextView = view.findViewById(R.id.tvTrackingActiveBadge)
 
-        val draftBadge: View = view.findViewById(R.id.draftBadge)
-        val draftOverlay: View = view.findViewById(R.id.draftOverlay)
-        val draftActions: View = view.findViewById(R.id.draftActions)
-        val btnConfirmDraft: Button = view.findViewById(R.id.btnConfirmDraft)
-        val btnRemoveDraft: Button = view.findViewById(R.id.btnRemoveDraft)
+        // 🌟 NEU: Da manche Views im Tagebuch nicht existieren (und umgekehrt),
+        // müssen wir sie nullable (?) machen, um Abstürze zu verhindern!
+        val draftBadge: View? = view.findViewById(R.id.draftBadge)
+        val draftOverlay: View? = view.findViewById(R.id.draftOverlay)
+        val draftActions: View? = view.findViewById(R.id.draftActions)
+        val btnConfirmDraft: Button? = view.findViewById(R.id.btnConfirmDraft)
+        val btnRemoveDraft: Button? = view.findViewById(R.id.btnRemoveDraft)
+
+        val image2: ImageView? = view.findViewById(R.id.feedImage2)
+        val image3: ImageView? = view.findViewById(R.id.feedImage3)
+        val extraMediaContainer: View? = view.findViewById(R.id.extraMediaContainer)
+        val tvMediaCount: TextView? = view.findViewById(R.id.tvMediaCount)
+        val btnExpandTrip: ImageButton? = view.findViewById(R.id.btnExpandTrip)
+        val rvStopsPreview: RecyclerView? = view.findViewById(R.id.rvTripStopsPreview)
+        val tvTrackingBadge: TextView? = view.findViewById(R.id.tvTrackingActiveBadge)
+
+        // Views, die nur im Tagebuch (item_feed_diary_entry.xml) existieren:
+        val feedRating: android.widget.RatingBar? = view.findViewById(R.id.feedRating)
+        val feedChipGroupPeople: com.google.android.material.chip.ChipGroup? = view.findViewById(R.id.feedChipGroupPeople)
+        val ivHasNotes: ImageView? = view.findViewById(R.id.ivHasNotes)
+        val ivHasPeople: ImageView? = view.findViewById(R.id.ivHasPeople)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FeedViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_feed_entry, parent, false)
+        // 🌟 NEU: Das richtige XML anhand des View-Typs aufblasen
+        val layoutId = if (viewType == VIEW_TYPE_DIARY) {
+            R.layout.item_feed_diary_entry
+        } else {
+            R.layout.item_feed_entry
+        }
+        val view = LayoutInflater.from(parent.context).inflate(layoutId, parent, false)
         return FeedViewHolder(view)
     }
 
@@ -88,12 +121,10 @@ class FeedAdapter(
         context.theme.resolveAttribute(MaterialR.attr.colorOnPrimary, typedValue, true)
         val activeColor = currentThemeColor ?: typedValue.data
 
-        // --- NEU: Shape-Design anwenden (Ticket vs. Karte) ---
         val radiusNormal = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, context.resources.displayMetrics)
         val radiusCut = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32f, context.resources.displayMetrics)
 
         if (item is FeedItem.TripItem) {
-            // Ticket-Design für Trips
             holder.cardView.shapeAppearanceModel = ShapeAppearanceModel.builder()
                 .setTopLeftCorner(CornerFamily.ROUNDED, radiusNormal)
                 .setTopRightCorner(CornerFamily.CUT, radiusCut)
@@ -101,36 +132,38 @@ class FeedAdapter(
                 .setBottomLeftCorner(CornerFamily.CUT, radiusCut)
                 .build()
 
-            val typedValue = TypedValue()
-            context.theme.resolveAttribute(MaterialR.attr.colorOnPrimary, typedValue, true)
             holder.cardView.strokeColor = activeColor
             holder.cardView.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2f, context.resources.displayMetrics).toInt()
         } else {
-            // Standard-Design für Erlebnisse
             holder.cardView.shapeAppearanceModel = ShapeAppearanceModel.builder()
                 .setAllCorners(CornerFamily.ROUNDED, radiusNormal)
                 .build()
             holder.cardView.strokeWidth = 0
         }
-        // --- ENDE NEU ---
 
         holder.title.text = item.title
 
         val isDraft = showDrafts && if (item is FeedItem.Experience) item.entry.isDraft else false
-        holder.draftBadge.visibility = if (isDraft) View.VISIBLE else View.GONE
-        holder.draftOverlay.visibility = if (isDraft) View.VISIBLE else View.GONE
-        holder.draftActions.visibility = if (isDraft) View.VISIBLE else View.GONE
+        holder.draftBadge?.visibility = if (isDraft) View.VISIBLE else View.GONE
+        holder.draftOverlay?.visibility = if (isDraft) View.VISIBLE else View.GONE
+        holder.draftActions?.visibility = if (isDraft) View.VISIBLE else View.GONE
 
-        holder.btnConfirmDraft.setOnClickListener { onConfirmDraft(item) }
-        holder.btnRemoveDraft.setOnClickListener { onRemoveDraft(item) }
+        holder.btnConfirmDraft?.setOnClickListener { onConfirmDraft(item) }
+        holder.btnRemoveDraft?.setOnClickListener { onRemoveDraft(item) }
+
         holder.ivTypeIcon.setColorFilter(activeColor)
+
         if (item is FeedItem.Experience) {
-            holder.ivTypeIcon.setImageResource(R.drawable.ic_feed)
-            holder.tvTrackingBadge.visibility = View.GONE
+            holder.ivTypeIcon.setImageResource(R.drawable.ic_feed) // oder ein Buch-Icon für Tagebücher!
+            holder.tvTrackingBadge?.visibility = View.GONE
+
+            // Tagebuch-spezifische Daten füllen, falls das Layout geladen wurde
+            holder.feedRating?.rating = item.entry.rating?.toFloat() ?: 0f
+            holder.ivHasNotes?.alpha = if (!item.entry.notes.isNullOrBlank()) 1.0f else 0.3f
         } else {
             holder.ivTypeIcon.setImageResource(R.drawable.ic_marker)
             if (item is FeedItem.TripItem) {
-                holder.tvTrackingBadge.visibility = if (item.trip.isTrackingActive) View.VISIBLE else View.GONE
+                holder.tvTrackingBadge?.visibility = if (item.trip.isTrackingActive) View.VISIBLE else View.GONE
             }
         }
 
@@ -144,12 +177,12 @@ class FeedAdapter(
         val sdfDateTime = SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
 
         holder.tvFeedDateTime.visibility = View.VISIBLE
-        holder.btnExpandTrip.visibility = View.GONE
-        holder.rvStopsPreview.visibility = View.GONE
-        holder.image2.visibility = View.GONE
-        holder.image3.visibility = View.GONE
-        holder.tvMediaCount.visibility = View.GONE
-        holder.extraMediaContainer.visibility = View.GONE
+        holder.btnExpandTrip?.visibility = View.GONE
+        holder.rvStopsPreview?.visibility = View.GONE
+        holder.image2?.visibility = View.GONE
+        holder.image3?.visibility = View.GONE
+        holder.tvMediaCount?.visibility = View.GONE
+        holder.extraMediaContainer?.visibility = View.GONE
 
         if (item is FeedItem.Experience) {
             holder.tvFeedDateTime.text = sdfDateTime.format(Date(item.date))
@@ -159,17 +192,18 @@ class FeedAdapter(
             val otherMedia = media.filter { it != coverPath }
 
             if (otherMedia.isNotEmpty()) {
-                holder.extraMediaContainer.visibility = View.VISIBLE
-                holder.image2.visibility = View.VISIBLE
-                Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(holder.image2)
+                holder.extraMediaContainer?.visibility = View.VISIBLE
+                holder.image2?.visibility = View.VISIBLE
+                holder.image2?.let { Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(it) }
+
                 if (otherMedia.size > 1) {
-                    holder.image3.visibility = View.VISIBLE
-                    Glide.with(context).load(File(otherMedia[1])).centerCrop().into(holder.image3)
+                    holder.image3?.visibility = View.VISIBLE
+                    holder.image3?.let { Glide.with(context).load(File(otherMedia[1])).override(400,400).centerCrop().into(it) }
                 }
                 val remaining = media.size - 3
                 if (remaining > 0) {
-                    holder.tvMediaCount.visibility = View.VISIBLE
-                    holder.tvMediaCount.text = "+$remaining"
+                    holder.tvMediaCount?.visibility = View.VISIBLE
+                    holder.tvMediaCount?.text = "+$remaining"
                 }
             }
         } else if (item is FeedItem.TripItem) {
@@ -187,23 +221,23 @@ class FeedAdapter(
                 val days = TimeUnit.MILLISECONDS.toDays(diffInMillis) + 1
                 tripInfo = "$dateStr | $days Tage"
 
-                // Trip Media Preview
                 val allMedia = item.stops.flatMap { it.media }.distinct()
                 val coverPath = item.coverImage
                 val otherMedia = allMedia.filter { it != coverPath }
 
                 if (otherMedia.isNotEmpty()) {
-                    holder.extraMediaContainer.visibility = View.VISIBLE
-                    holder.image2.visibility = View.VISIBLE
-                    Glide.with(context).load(File(otherMedia[0])).centerCrop().into(holder.image2)
+                    holder.extraMediaContainer?.visibility = View.VISIBLE
+                    holder.image2?.visibility = View.VISIBLE
+                    holder.image2?.let { Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(it) }
+
                     if (otherMedia.size > 1) {
-                        holder.image3.visibility = View.VISIBLE
-                        Glide.with(context).load(File(otherMedia[1])).centerCrop().into(holder.image3)
+                        holder.image3?.visibility = View.VISIBLE
+                        holder.image3?.let { Glide.with(context).load(File(otherMedia[1])).override(400,400).centerCrop().into(it) }
                     }
                     val totalMediaCount = allMedia.size
                     if (totalMediaCount > 3) {
-                        holder.tvMediaCount.visibility = View.VISIBLE
-                        holder.tvMediaCount.text = "+${totalMediaCount - 3}"
+                        holder.tvMediaCount?.visibility = View.VISIBLE
+                        holder.tvMediaCount?.text = "+${totalMediaCount - 3}"
                     }
                 }
             } else {
@@ -212,7 +246,6 @@ class FeedAdapter(
 
             holder.tvFeedDateTime.text = tripInfo
 
-            // Async distance calculation
             adapterScope.launch {
                 val app = (context.applicationContext as PlacesApplication)
                 val locations = app.database.tripDao().getLocationsForTripSync(item.id)
@@ -234,19 +267,19 @@ class FeedAdapter(
                 }
             }
 
-            holder.btnExpandTrip.visibility = View.VISIBLE
+            holder.btnExpandTrip?.visibility = View.VISIBLE
             val isExpanded = expandedTrips.contains(item.id)
-            holder.btnExpandTrip.rotation = if (isExpanded) 180f else 0f
-            holder.rvStopsPreview.visibility = if (isExpanded) View.VISIBLE else View.GONE
+            holder.btnExpandTrip?.rotation = if (isExpanded) 180f else 0f
+            holder.rvStopsPreview?.visibility = if (isExpanded) View.VISIBLE else View.GONE
 
             if (isExpanded) {
-                holder.rvStopsPreview.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-                holder.rvStopsPreview.adapter = TripStopPreviewAdapter(item.stops) { stop ->
+                holder.rvStopsPreview?.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
+                holder.rvStopsPreview?.adapter = TripStopPreviewAdapter(item.stops) { stop ->
                     onItemClick(item, stop.id)
                 }
             }
 
-            holder.btnExpandTrip.setOnClickListener {
+            holder.btnExpandTrip?.setOnClickListener {
                 if (expandedTrips.contains(item.id)) {
                     expandedTrips.remove(item.id)
                 } else {
@@ -260,6 +293,7 @@ class FeedAdapter(
         if (coverPath != null) {
             Glide.with(context)
                 .load(File(coverPath))
+                .override(800,800) // Schnelleres Laden
                 .centerCrop()
                 .placeholder(R.drawable.placeholder)
                 .into(holder.image)
@@ -343,6 +377,7 @@ class TripStopPreviewAdapter(
         if (coverPath != null) {
             Glide.with(holder.itemView.context)
                 .load(File(coverPath))
+                .override(300, 300) // Schnelleres Laden
                 .centerCrop()
                 .into(holder.ivPic)
         } else {

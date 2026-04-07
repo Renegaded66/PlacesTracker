@@ -68,41 +68,28 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                 withContext(Dispatchers.IO) {
                     val context = requireContext()
                     val dataDir = context.applicationInfo.dataDir
-                    val dbPath = context.getDatabasePath("places_tracker_db")
+                    val dbFolder = context.getDatabasePath("places_tracker_db").parentFile
                     val filesDir = context.filesDir
                     val prefsDir = File(dataDir, "shared_prefs")
 
-                    // Check if DB is open before closing
-                    val db = (context.applicationContext as PlacesApplication).database
-                    if (db.isOpen) {
-                        db.close()
-                    }
+                    // Datenbank schließen, um Konsistenz zu garantieren
+                    (context.applicationContext as PlacesApplication).database.close()
 
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         ZipOutputStream(BufferedOutputStream(outputStream)).use { zipOut ->
-                            // Backup Database
-                            if (dbPath.exists()) {
-                                addToZip(dbPath, "databases/${dbPath.name}", zipOut)
-                                val dbWal = File(dbPath.path + "-wal")
-                                if (dbWal.exists()) addToZip(dbWal, "databases/${dbWal.name}", zipOut)
-                                val dbShm = File(dbPath.path + "-shm")
-                                if (dbShm.exists()) addToZip(dbShm, "databases/${dbShm.name}", zipOut)
+                            // 1. Alle Datenbanken sichern (enthält Name, Land, Home, UUID, Freunde, Trips, Entries)
+                            if (dbFolder != null && dbFolder.exists()) {
+                                addFileOrDirectoryToZip(dbFolder, "databases/", zipOut)
                             }
 
-                            // Backup Media Files
-                            filesDir.listFiles()?.forEach { file ->
-                                if (file.isFile) {
-                                    addToZip(file, "files/${file.name}", zipOut)
-                                }
+                            // 2. Alle Mediendateien sichern (Profilbilder, Fotos der Erlebnisse)
+                            if (filesDir.exists()) {
+                                addFileOrDirectoryToZip(filesDir, "files/", zipOut)
                             }
 
-                            // Backup SharedPreferences
+                            // 3. Alle App-Einstellungen sichern
                             if (prefsDir.exists() && prefsDir.isDirectory) {
-                                prefsDir.listFiles()?.forEach { file ->
-                                    if (file.isFile) {
-                                        addToZip(file, "shared_prefs/${file.name}", zipOut)
-                                    }
-                                }
+                                addFileOrDirectoryToZip(prefsDir, "shared_prefs/", zipOut)
                             }
                         }
                     }
@@ -112,8 +99,6 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                 Toast.makeText(requireContext(), "Fehler beim Backup: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 showProgress(false, "")
-                // We don't need to restart the app after a simple backup.
-                // Room will automatically re-open the database on the next access.
             }
         }
     }
@@ -129,7 +114,7 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                     val filesDir = context.filesDir
                     val prefsDir = File(dataDir, "shared_prefs")
 
-                    // Close DB
+                    // DB schließen vor dem Überschreiben
                     (context.applicationContext as PlacesApplication).database.close()
 
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
@@ -137,18 +122,22 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                             var entry: ZipEntry? = zipIn.nextEntry
                             while (entry != null) {
                                 val destination = when {
-                                    entry.name.startsWith("databases/") -> 
+                                    entry.name.startsWith("databases/") ->
                                         File(dbFolder, entry.name.substringAfter("databases/"))
-                                    entry.name.startsWith("files/") -> 
+                                    entry.name.startsWith("files/") ->
                                         File(filesDir, entry.name.substringAfter("files/"))
-                                    entry.name.startsWith("shared_prefs/") -> 
+                                    entry.name.startsWith("shared_prefs/") ->
                                         File(prefsDir, entry.name.substringAfter("shared_prefs/"))
                                     else -> null
                                 }
 
                                 destination?.let {
-                                    it.parentFile?.mkdirs()
-                                    FileOutputStream(it).use { out -> zipIn.copyTo(out) }
+                                    if (entry!!.isDirectory) {
+                                        it.mkdirs()
+                                    } else {
+                                        it.parentFile?.mkdirs()
+                                        FileOutputStream(it).use { out -> zipIn.copyTo(out) }
+                                    }
                                 }
                                 zipIn.closeEntry()
                                 entry = zipIn.nextEntry
@@ -156,7 +145,7 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                         }
                     }
                 }
-                
+
                 Toast.makeText(requireContext(), "Wiederherstellung erfolgreich. App wird neu gestartet...", Toast.LENGTH_LONG).show()
                 restartApp()
             } catch (e: Exception) {
@@ -166,15 +155,24 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
         }
     }
 
-    private fun addToZip(file: File, zipPath: String, zipOut: ZipOutputStream) {
-        val buffer = ByteArray(1024)
-        FileInputStream(file).use { input ->
-            zipOut.putNextEntry(ZipEntry(zipPath))
-            var length: Int
-            while (input.read(buffer).also { length = it } > 0) {
-                zipOut.write(buffer, 0, length)
+    private fun addFileOrDirectoryToZip(file: File, path: String, zipOut: ZipOutputStream) {
+        if (file.isDirectory) {
+            val children = file.listFiles()
+            if (children != null) {
+                for (child in children) {
+                    addFileOrDirectoryToZip(child, "$path${child.name}${if (child.isDirectory) "/" else ""}", zipOut)
+                }
             }
-            zipOut.closeEntry()
+        } else {
+            val buffer = ByteArray(1024)
+            FileInputStream(file).use { input ->
+                zipOut.putNextEntry(ZipEntry(path))
+                var length: Int
+                while (input.read(buffer).also { length = it } > 0) {
+                    zipOut.write(buffer, 0, length)
+                }
+                zipOut.closeEntry()
+            }
         }
     }
 

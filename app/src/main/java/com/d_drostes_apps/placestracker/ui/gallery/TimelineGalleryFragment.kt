@@ -190,12 +190,14 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     photos.add(GalleryItem.Photo(id, contentUri.toString(), date, lat, lon))
                     count++
 
-                    if (count % 50 == 0 || count == 10) {
-                        val currentList = ArrayList(photos)
+                    // 🌟 FIX: Jedes Bild wird jetzt SOFORT angezeigt, sobald es geladen wurde
+                    // (In 10er Schritten am Anfang für Speed, dann einzeln)
+                    if (count <= 10 || count % 5 == 0) {
+                        val currentSnapshot = ArrayList(photos)
                         withContext(Dispatchers.Main) {
                             if (isAdded) {
-                                allPhotos = currentList
-                                adapter.updateItems(groupPhotosByDate(currentList))
+                                allPhotos = currentSnapshot
+                                adapter.updateItems(groupPhotosByDate(currentSnapshot))
                                 progressBar.visibility = View.GONE
                                 if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                             }
@@ -219,7 +221,6 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
     private fun loadMissingExifLocations() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val context = context ?: return@launch
-            var changed = false
             
             allPhotos.forEachIndexed { index, photo ->
                 if (photo.latitude == null || photo.latitude == 0.0) {
@@ -228,29 +229,29 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                         val inputUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                             try { MediaStore.setRequireOriginal(photoUri) } catch (e: Exception) { photoUri }
                         } else photoUri
-                        
+
                         context.contentResolver.openInputStream(inputUri)?.use { stream ->
                             val exif = androidx.exifinterface.media.ExifInterface(stream)
                             val latLong = FloatArray(2)
                             if (exif.getLatLong(latLong)) {
-                                allPhotos[index] = photo.copy(latitude = latLong[0].toDouble(), longitude = latLong[1].toDouble())
-                                changed = true
+                                val updatedPhoto = photo.copy(latitude = latLong[0].toDouble(), longitude = latLong[1].toDouble())
+                                allPhotos[index] = updatedPhoto
+
+                                // 🌟 FIX: Jedes gefundene EXIF-Datum wird jetzt SOFORT in die UI gepusht
+                                withContext(Dispatchers.Main) {
+                                    if (isAdded) {
+                                        // Wir updaten den Adapter (nur das eine Item für Performance)
+                                        adapter.notifyItemChanged(index) 
+                                        
+                                        // Wenn wir in der Kartenansicht sind, Marker direkt hinzufügen
+                                        if (mapWebView.visibility == View.VISIBLE && isMapLoaded) {
+                                            sendSinglePhotoToMap(context, updatedPhoto)
+                                        }
+                                    }
+                                }
                             }
                         }
                     } catch (e: Exception) { /* Ignorieren */ }
-                }
-                
-                if (index % 100 == 0 && changed && isAdded) {
-                    withContext(Dispatchers.Main) {
-                        if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
-                    }
-                    changed = false
-                }
-            }
-            
-            if (changed && isAdded) {
-                withContext(Dispatchers.Main) {
-                    if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                 }
             }
         }
@@ -310,55 +311,70 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
             val context = context ?: return@launch
             if (!isMapLoaded) return@launch
 
+            withContext(Dispatchers.Main) {
+                mapWebView.evaluateJavascript("javascript:if(window.clearMapMarkers) window.clearMapMarkers();", null)
+            }
+
             val filtered = if (filterDateStart != null && filterDateEnd != null) {
                 allPhotos.filter { it.date in filterDateStart!!..filterDateEnd!! }
             } else {
                 allPhotos
-            }.filter { it.latitude != null && it.longitude != null && it.latitude != 0.0 }
+            }.filter { it.latitude != null && it.longitude != null && (it.latitude != 0.0 || it.longitude != 0.0) }
 
-            // Streamweise senden: erst 50, dann immer mehr
-            val chunkSizes = listOf(50, 150, 300, 500, 1000, 2000)
-            for (size in chunkSizes) {
-                val currentChunk = filtered.take(size)
-                sendToMap(context, currentChunk)
-                if (size >= filtered.size) break
-                delay(300) // Kurze Pause für UI
+            // In winzigen Chunks senden für flüssige UI
+            filtered.chunked(10).forEach { chunk ->
+                sendToMapLive(context, chunk)
+                delay(20) 
             }
         }
     }
 
-    private suspend fun sendToMap(context: Context, photos: List<GalleryItem.Photo>) {
+    private suspend fun sendToMapLive(context: Context, photos: List<GalleryItem.Photo>) {
         val jsonArray = JSONArray()
         photos.forEach { photo ->
             val obj = JSONObject()
-            obj.put("type", "experience") 
-            obj.put("id", "photo_${photo.id}")
+            obj.put("id", photo.id)
             obj.put("lat", photo.latitude)
             obj.put("lon", photo.longitude)
-            val thumb = getBase64ThumbnailForGallery(context, Uri.parse(photo.uri))
+            val thumb = getBase64ThumbnailFast(context, photo.id, Uri.parse(photo.uri))
             if (thumb != null) obj.put("image", thumb)
             jsonArray.put(obj)
         }
-        
+
         withContext(Dispatchers.Main) {
-            if (isAdded) mapWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData(${jsonArray.toString()});", null)
+            if (isAdded) {
+                mapWebView.evaluateJavascript("javascript:if(window.appendPhotosToMap) window.appendPhotosToMap(${jsonArray.toString()});", null)
+            }
         }
     }
 
-    private fun getBase64ThumbnailForGallery(context: Context, uri: Uri): String? {
+    private suspend fun sendSinglePhotoToMap(context: Context, photo: GalleryItem.Photo) {
+        val obj = JSONObject().apply {
+            put("id", photo.id)
+            put("lat", photo.latitude)
+            put("lon", photo.longitude)
+            val thumb = withContext(Dispatchers.IO) { getBase64ThumbnailFast(context, photo.id, Uri.parse(photo.uri)) }
+            if (thumb != null) put("image", thumb)
+        }
+        val array = JSONArray().put(obj)
+        withContext(Dispatchers.Main) {
+            mapWebView.evaluateJavascript("javascript:if(window.appendPhotosToMap) window.appendPhotosToMap(${array.toString()});", null)
+        }
+    }
+
+    private fun getBase64ThumbnailFast(context: Context, id: Long, uri: Uri): String? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val options = BitmapFactory.Options().apply { inSampleSize = 8 }
-            val bitmap = BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream?.close()
-            
+            val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                context.contentResolver.loadThumbnail(uri, android.util.Size(120, 120), null)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaStore.Images.Thumbnails.getThumbnail(context.contentResolver, id, MediaStore.Images.Thumbnails.MICRO_KIND, null)
+            }
+
             if (bitmap == null) return null
-            
-            val resized = Bitmap.createScaledBitmap(bitmap, 100, 100, true)
             val outputStream = ByteArrayOutputStream()
-            resized.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-            val bytes = outputStream.toByteArray()
-            "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+            "data:image/jpeg;base64," + Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
         } catch (e: Exception) {
             null
         }

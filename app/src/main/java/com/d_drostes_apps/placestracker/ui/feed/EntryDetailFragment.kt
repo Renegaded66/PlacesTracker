@@ -62,6 +62,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         val tvTitle = view.findViewById<TextView>(R.id.tvDetailTitle)
         val tvDate = view.findViewById<TextView>(R.id.tvDetailDate)
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
+        val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
         val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
         val cardMap = view.findViewById<MaterialCardView>(R.id.cardDetailMap)
@@ -74,6 +75,13 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
         mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         setupMapboxWebView()
+
+        // Animation für den Content beim Laden
+        view.findViewById<View>(R.id.llDetailContent)?.apply {
+            alpha = 0f
+            translationY = 50f
+            animate().alpha(1f).translationY(0f).setDuration(500).setStartDelay(100).start()
+        }
 
         // Fix scrolling for WebView inside NestedScrollView
         mapboxWebView.setOnTouchListener { v, event ->
@@ -109,7 +117,13 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             dbEntry?.let { e ->
                 entry = e
                 tvTitle.text = e.title
-                tvNotes.text = e.notes ?: ""
+                
+                if (!e.notes.isNullOrBlank()) {
+                    tvNotes.text = e.notes
+                    cvNotes.visibility = View.VISIBLE
+                } else {
+                    cvNotes.visibility = View.GONE
+                }
                 
                 // Hide edit if it's a shared entry, show add button instead
                 val isShared = e.friendId != null

@@ -285,6 +285,34 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/layoutAddDiary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/rounded_corners"
+                android:padding="4dp"
+                android:text="Tagebuch"
+                android:textColor="?attr/colorOnSurface"
+                android:textStyle="bold" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fabDiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:fabSize="mini"
+                app:backgroundTint="#BB86FC"
+                app:srcCompat="@android:drawable/ic_menu_edit"
+                app:tint="#000000"/>
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/layoutAddExperience"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

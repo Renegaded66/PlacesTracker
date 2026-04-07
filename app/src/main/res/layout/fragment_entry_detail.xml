@@ -36,18 +36,19 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <LinearLayout
+        <LinearLayout
+            android:id="@+id/llDetailContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="16dp">
+            android:paddingBottom="100dp">
 
             <TextView
                 android:id="@+id/tvDetailTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="24sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
                 android:layout_marginTop="8dp"
                 tools:text="Titel des Ortes" />
@@ -55,7 +56,7 @@
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="12dp">
 
                 <LinearLayout
                     android:id="@+id/llDetailFlags"
@@ -83,21 +84,36 @@
                 </com.google.android.material.card.MaterialCardView>
             </RelativeLayout>
 
-            <TextView
-                android:id="@+id/tvDetailDate"
-                android:layout_width="match_parent"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvDetailDate"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="?android:attr/textColorSecondary"
-                tools:text="12.05.2024 - 14:30" />
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+
+                <TextView
+                    android:id="@+id/tvDetailDate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="6dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="12.05.2024 - 14:30" />
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardDetailMap"
                 android:layout_width="match_parent"
                 android:layout_height="250dp"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="4dp"
                 app:strokeWidth="1.5dp"
                 app:strokeColor="?attr/colorOutlineVariant">
 
@@ -116,34 +132,67 @@
                         android:layout_height="40dp"
                         android:layout_gravity="top|end"
                         android:layout_margin="12dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:background="@drawable/circle_background"
+                        android:backgroundTint="#80FFFFFF"
                         android:src="@drawable/ic_fullscreen"
                         android:elevation="4dp"
                         android:contentDescription="@string/fullscreen"
-                        app:tint="?attr/colorOnSurface" />
+                        app:tint="@android:color/black" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <TextView
-                android:id="@+id/tvDetailNotes"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cvDetailNotes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:textSize="16sp"
-                tools:text="Hier stehen die Notizen zum Ort..." />
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:cardBackgroundColor="?attr/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/notes"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:letterSpacing="0.1"
+                        android:textColor="?attr/colorPrimary"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/tvDetailNotes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp"
+                        android:lineSpacingExtra="4dp"
+                        tools:text="Hier stehen die Notizen zum Ort..." />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="28dp"
                 android:text="@string/media"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvDetailMedia"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
                 app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                 app:spanCount="3"
                 tools:listitem="@layout/item_media" />

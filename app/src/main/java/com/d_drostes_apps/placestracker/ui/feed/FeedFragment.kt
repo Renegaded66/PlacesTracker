@@ -175,7 +175,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         ivGlobalAvatar.setImageResource(R.drawable.placeholder)
                     }
                     profile?.countryCode?.let { tvGlobalFlag.text = getFlagEmoji(it) }
-                    
+
                     btnTimelineGallery.visibility = if (profile?.isTimelineGalleryEnabled == true) View.VISIBLE else View.GONE
                 }
             }
@@ -265,7 +265,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         val stops = allStops.filter { it.tripId == trip.id }
                         items.add(FeedItem.TripItem(trip, stops))
                     }
-                    
+
                     items.sortWith(compareByDescending<FeedItem> { it.isLive }.thenByDescending { it.sortDate })
                     items
                 }.collect { combinedItems ->
@@ -516,40 +516,40 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private fun removeDraft(item: FeedItem) { lifecycleScope.launch { if (item is FeedItem.Experience) (requireActivity().application as PlacesApplication).repository.delete(item.entry) else if (item is FeedItem.TripItem) item.stops.filter { it.isDraft }.forEach { (requireActivity().application as PlacesApplication).database.tripDao().deleteStop(it) } } }
 
     private fun setupCesiumWebView() {
-        cesiumWebView.settings.apply { 
+        cesiumWebView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             allowFileAccess = true
             allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW 
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
-        cesiumWebView.addJavascriptInterface(object { 
-            @JavascriptInterface 
-            fun onMarkerClicked(id: String) { 
-                activity?.runOnUiThread { 
-                    if (id.startsWith("exp_")) { 
+        cesiumWebView.addJavascriptInterface(object {
+            @JavascriptInterface
+            fun onMarkerClicked(id: String) {
+                activity?.runOnUiThread {
+                    if (id.startsWith("exp_")) {
                         val entryId = id.substring(4).toIntOrNull()
-                        lastItems.find { it is FeedItem.Experience && it.id == entryId }?.let { navigateToDetail(it) } 
-                    } else if (id.startsWith("stop_")) { 
+                        lastItems.find { it is FeedItem.Experience && it.id == entryId }?.let { navigateToDetail(it) }
+                    } else if (id.startsWith("stop_")) {
                         val parts = id.split("_")
-                        if (parts.size >= 3) { 
+                        if (parts.size >= 3) {
                             val tripId = parts[1].toIntOrNull()
                             val stopId = parts[2].toIntOrNull()
-                            lastItems.find { it is FeedItem.TripItem && it.id == tripId }?.let { navigateToDetail(it, stopId) } 
-                        } 
-                    } 
-                } 
+                            lastItems.find { it is FeedItem.TripItem && it.id == tripId }?.let { navigateToDetail(it, stopId) }
+                        }
+                    }
+                }
             }
             @JavascriptInterface
             fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
         }, "Android")
-        cesiumWebView.webViewClient = object : WebViewClient() { 
-            override fun onPageFinished(view: WebView?, url: String?) { 
-                updateGlobeData() 
+        cesiumWebView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                updateGlobeData()
                 // 🌍 Den Intro-Spin nur beim ersten Start der App triggern
                 cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
-            } 
+            }
         }
         val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
         cesiumWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
@@ -558,42 +558,53 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private fun updateGlobeData() {
         if (view == null) return
         viewLifecycleOwner.lifecycleScope.launch {
-            val jsonArray = withContext(Dispatchers.Default) { 
+            val jsonArray = withContext(Dispatchers.Default) {
                 val array = JSONArray()
-                lastItems.forEach { item -> 
-                    if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) { 
+                lastItems.forEach { item ->
+                    if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) {
                         val obj = JSONObject()
                         obj.put("type", "experience")
                         obj.put("id", item.id)
+                        obj.put("title", item.entry.title)
+                        val sdf = SimpleDateFormat("dd.MM.yy - HH:mm", Locale.getDefault())
+                        obj.put("date", sdf.format(Date(item.entry.date)))
+                        val extraImagesArray = JSONArray()
+                        item.entry.media.filter { it != item.coverImage }.take(2).forEach {
+                            extraImagesArray.put(GlobeUtils.getBase64Thumbnail(it))
+                        }
+                        if (extraImagesArray.length() > 0) obj.put("extraImages", extraImagesArray)
                         item.entry.location!!.split(",").let { coords ->
-                            if (coords.size == 2) { 
+                            if (coords.size == 2) {
                                 obj.put("lat", coords[0].toDouble())
                                 obj.put("lon", coords[1].toDouble())
                                 obj.put("image", GlobeUtils.getBase64Thumbnail(item.coverImage))
-                                array.put(obj) 
-                            } 
-                        } 
-                    } else if (item is FeedItem.TripItem) { 
+                                array.put(obj)
+                            }
+                        }
+                    } else if (item is FeedItem.TripItem) {
                         val obj = JSONObject()
                         obj.put("type", "trip")
                         obj.put("id", item.id)
+                        obj.put("title", item.trip.title)
+                        val sdf = SimpleDateFormat("dd.MM.yy - HH:mm", Locale.getDefault())
+                        obj.put("date", sdf.format(Date(item.date)))
                         val stopsArray = JSONArray()
-                        item.stops.forEach { stop -> 
-                            if (!stop.location.isNullOrBlank()) { 
+                        item.stops.forEach { stop ->
+                            if (!stop.location.isNullOrBlank()) {
                                 val sObj = JSONObject()
                                 sObj.put("id", stop.id)
-                                stop.location!!.split(",").let { coords ->
-                                    if (coords.size == 2) { 
+                                stop.location.split(",").let { coords ->
+                                    if (coords.size == 2) {
                                         sObj.put("lat", coords[0].toDouble())
                                         sObj.put("lon", coords[1].toDouble())
                                         sObj.put("image", GlobeUtils.getBase64Thumbnail(stop.coverImage ?: stop.media.firstOrNull()))
-                                        stopsArray.put(sObj) 
-                                    } 
-                                } 
-                            } 
-                        }; if (stopsArray.length() > 0) { obj.put("stops", stopsArray); array.put(obj) } 
-                    } 
-                }; array 
+                                        stopsArray.put(sObj)
+                                    }
+                                }
+                            }
+                        }; if (stopsArray.length() > 0) { obj.put("stops", stopsArray); array.put(obj) }
+                    }
+                }; array
             }
             cesiumWebView.evaluateJavascript("javascript:if(window.setGlobalData) window.setGlobalData('${jsonArray}');", null)
         }

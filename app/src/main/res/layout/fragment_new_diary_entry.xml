@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/diaryScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:animateLayoutChanges="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tagebuch"
+                android:textColor="#E0E0E0"
+                android:textSize="34sp"
+                android:fontFamily="serif"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <View
+                android:layout_width="60dp"
+                android:layout_height="4dp"
+                android:background="#BB86FC"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="32dp"/>
+
+            <!-- Titel Input -->
+            <EditText
+                android:id="@+id/etDiaryTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Titel deiner Geschichte..."
+                android:background="@null"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#66FFFFFF"
+                android:textSize="22sp"
+                android:fontFamily="serif-medium"
+                android:inputType="textCapSentences"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Datum & Uhrzeit Picker -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="32dp">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDiaryDate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="8dp"
+                    app:cardBackgroundColor="#1E1E1E"
+                    app:cardCornerRadius="12dp"
+                    app:strokeWidth="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="12dp"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_calendar"
+                            app:tint="#BB86FC"/>
+                        <TextView
+                            android:id="@+id/tvDiaryDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="24. Mai 2024"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardDiaryTime"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    app:cardBackgroundColor="#1E1E1E"
+                    app:cardCornerRadius="12dp"
+                    app:strokeWidth="0dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:padding="12dp"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@android:drawable/ic_menu_recent_history"
+                            app:tint="#BB86FC"/>
+                        <TextView
+                            android:id="@+id/tvDiaryTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Uhrzeit"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"/>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- Vorschaubild -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDiaryImage"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="20dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="32dp">
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+                    <ImageView
+                        android:id="@+id/ivDiaryCover"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/placeholder"/>
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#66000000"/>
+                    <LinearLayout
+                        android:id="@+id/layoutAddDiaryImage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <ImageView
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:src="@android:drawable/ic_menu_camera"
+                            app:tint="#FFFFFF"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Bild hinzufügen"
+                            android:textColor="#FFFFFF"
+                            android:layout_marginTop="8dp"/>
+                    </LinearLayout>
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Bewertung -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wie war dein Tag?"
+                android:textColor="#BDBDBD"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <RatingBar
+                android:id="@+id/ratingDiary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:numStars="5"
+                android:stepSize="1"
+                android:progressTint="#FFD700"
+                android:layout_marginBottom="32dp"
+                style="?android:attr/ratingBarStyleIndicator"
+                android:isIndicator="false"/>
+
+            <!-- Standort -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Wo warst du?"
+                android:textColor="#BDBDBD"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:hintEnabled="false"
+                app:startIconDrawable="@drawable/ic_marker"
+                app:startIconTint="#BB86FC"
+                android:layout_marginBottom="32dp">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etDiaryLocation"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Standort eingeben..."
+                    android:textColor="#FFFFFF"
+                    android:background="@null"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Personen -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mit wem warst du unterwegs?"
+                android:textColor="#BDBDBD"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:boxBackgroundColor="#1E1E1E"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:hintEnabled="false"
+                app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+                app:startIconTint="#BB86FC"
+                android:layout_marginBottom="16dp">
+                <AutoCompleteTextView
+                    android:id="@+id/etDiaryPeople"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Name eingeben..."
+                    android:textColor="#FFFFFF"
+                    android:background="@null"
+                    android:completionThreshold="1"
+                    android:inputType="textPersonName"
+                    android:imeOptions="actionDone"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupPeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="32dp"
+                app:chipSpacing="8dp"/>
+
+            <!-- Notizen / Tagebuchtext -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Deine Gedanken"
+                android:textColor="#BDBDBD"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="12dp"/>
+
+            <EditText
+                android:id="@+id/etDiaryNotes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Schreibe etwas über deinen Tag..."
+                android:background="@drawable/bg_diary_input"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#44FFFFFF"
+                android:textSize="16sp"
+                android:fontFamily="serif"
+                android:gravity="top"
+                android:minLines="8"
+                android:padding="16dp"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="40dp"/>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSaveDiary"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom"
+        android:layout_margin="24dp"
+        android:text="Eintrag verewigen"
+        android:textAllCaps="false"
+        android:textSize="18sp"
+        android:fontFamily="serif-medium"
+        app:cornerRadius="16dp"
+        app:backgroundTint="#BB86FC"
+        android:textColor="#000000"
+        app:elevation="8dp"/>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

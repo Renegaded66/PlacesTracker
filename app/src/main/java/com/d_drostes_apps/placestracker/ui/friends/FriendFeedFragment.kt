@@ -59,7 +59,7 @@ class FriendFeedFragment : Fragment(R.layout.fragment_friend_feed) {
 
         val recycler = view.findViewById<RecyclerView>(R.id.friendFeedRecycler)
         recycler.layoutManager = LinearLayoutManager(requireContext())
-        
+
         adapter = FeedAdapter(
             onItemClick = { item, stopId -> navigateToDetail(item, stopId) },
             showDrafts = false
@@ -78,9 +78,9 @@ class FriendFeedFragment : Fragment(R.layout.fragment_friend_feed) {
         viewLifecycleOwner.lifecycleScope.launch {
             val trips = supabaseManager.getFriendTrips(userId)
             val entries = supabaseManager.getFriendEntries(userId)
-            
+
             val feedItems = mutableListOf<FeedItem>()
-            
+
             entries.forEach { sEntry ->
                 feedItems.add(FeedItem.Experience(Entry(
                     id = 0, // Placeholder
@@ -92,7 +92,7 @@ class FriendFeedFragment : Fragment(R.layout.fragment_friend_feed) {
                     supabaseId = sEntry.id
                 )))
             }
-            
+
             trips.forEach { sTrip ->
                 // Note: Stops would need another API call or combined select
                 feedItems.add(FeedItem.TripItem(Trip(
@@ -102,7 +102,7 @@ class FriendFeedFragment : Fragment(R.layout.fragment_friend_feed) {
                     supabaseId = sTrip.id
                 ), emptyList()))
             }
-            
+
             feedItems.sortByDescending { it.sortDate }
             adapter.updateItems(feedItems)
             tvInfo.text = "${feedItems.size} öffentliche Erlebnisse"

@@ -269,7 +269,15 @@
                     android:layout_marginTop="4dp" />
 
             </LinearLayout>
+            <ProgressBar
+                android:id="@+id/progressBarStats"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone"
+                android:elevation="10dp"/>
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
+
 </androidx.core.widget.NestedScrollView>

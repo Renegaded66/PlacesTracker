@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -42,6 +43,10 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
     private lateinit var tvStopCount: TextView
     private lateinit var tvTotalDistance: TextView
     private lateinit var btnYearSummary: MaterialButton
+    private lateinit var progressBar: ProgressBar
+
+    // 🌟 DER TURBO-BOOST: Ein Gedächtnis für alle Geocoder-Abfragen!
+    private val countryCache = mutableMapOf<String, Pair<String, String>?>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,6 +60,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         tvStopCount = view.findViewById(R.id.tvStopCount)
         tvTotalDistance = view.findViewById(R.id.tvTotalDistance)
         btnYearSummary = view.findViewById(R.id.btnYearSummary)
+        progressBar = view.findViewById(R.id.progressBarStats)
 
         btnYearSummary.setOnClickListener {
             showYearSummaryDialog()
@@ -80,28 +86,36 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
     }
 
     private fun updateStatistics(entries: List<Entry>, trips: List<Trip>, stops: List<TripStop>) {
+        // Lade-Icon anzeigen
+        progressBar.visibility = View.VISIBLE
+
         tvTripCount.text = trips.size.toString()
         tvEntryCount.text = entries.size.toString()
         tvStopCount.text = stops.size.toString()
 
-        lifecycleScope.launch {
+        // 🌟 FIX: Alle schweren Aufgaben im Hintergrund-Thread ausführen!
+        lifecycleScope.launch(Dispatchers.IO) {
             val countries = getVisitedCountries(entries, stops)
-            val countryCount = countries.size
-            val percentage = (countryCount.toFloat() / 195f * 100f).toInt()
-
-            tvCountryCount.text = countryCount.toString()
-            tvCountryPercentage.text = "$percentage%"
-            progressCountries.setProgress(percentage, true)
-
-            val flagsText = countries.entries.joinToString(", ") { (code, name) ->
-                "${getFlagEmoji(code)} $name"
-            }
-            tvFlagList.text = if (flagsText.isEmpty()) getString(R.string.no_countries_visited) else flagsText
-        }
-
-        lifecycleScope.launch {
             val totalDistance = calculateTotalDistance(trips)
-            tvTotalDistance.text = String.format(Locale.getDefault(), "%.1f", totalDistance / 1000.0)
+
+            // Wenn fertig, zurück auf den UI-Thread wechseln
+            withContext(Dispatchers.Main) {
+                val countryCount = countries.size
+                val percentage = (countryCount.toFloat() / 195f * 100f).toInt()
+
+                tvCountryCount.text = countryCount.toString()
+                tvCountryPercentage.text = "$percentage%"
+                progressCountries.setProgress(percentage, true)
+
+                val flagsText = countries.entries.joinToString(", ") { (code, name) ->
+                    "${getFlagEmoji(code)} $name"
+                }
+                tvFlagList.text = if (flagsText.isEmpty()) getString(R.string.no_countries_visited) else flagsText
+                tvTotalDistance.text = String.format(Locale.getDefault(), "%.1f", totalDistance / 1000.0)
+
+                // Lade-Icon wieder verstecken
+                progressBar.visibility = View.GONE
+            }
         }
     }
 
@@ -124,17 +138,20 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         val tvNoData = dialogView.findViewById<TextView>(R.id.tvNoData)
         val listContainer = dialogView.findViewById<LinearLayout>(R.id.llYearListContainer)
 
+        // Versucht das Lade-Icon im Dialog zu finden (falls du es im XML eingefügt hast)
+        val dialogProgressBar = dialogView.findViewById<ProgressBar>(R.id.progressBarStats)
+
         toolbar.setNavigationOnClickListener { dialog.dismiss() }
 
         btnSelectYear.setOnClickListener {
             val currentYear = Calendar.getInstance().get(Calendar.YEAR)
             val years = (currentYear downTo 2020).map { it.toString() }.toTypedArray()
-            
+
             AlertDialog.Builder(requireContext())
                 .setTitle(R.string.select_year)
                 .setItems(years) { _, which ->
                     val selectedYear = years[which].toInt()
-                    loadYearSummary(selectedYear, listContainer, tvYearTitle, statsGrid, tvYearTrips, tvYearEntries, tvYearDistance, tvYearCountries, tvYearFlags, tvPhotosTitle, tvNoData)
+                    loadYearSummary(selectedYear, listContainer, tvYearTitle, statsGrid, tvYearTrips, tvYearEntries, tvYearDistance, tvYearCountries, tvYearFlags, tvPhotosTitle, tvNoData, dialogProgressBar)
                 }.show()
         }
 
@@ -152,7 +169,8 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         tvCountries: TextView,
         tvFlags: TextView,
         tvPhotosTitle: TextView,
-        tvNoData: TextView
+        tvNoData: TextView,
+        dialogProgressBar: ProgressBar?
     ) {
         val calendar = Calendar.getInstance()
         calendar.set(year, Calendar.JANUARY, 1, 0, 0, 0)
@@ -160,95 +178,100 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         calendar.set(year, Calendar.DECEMBER, 31, 23, 59, 59)
         val endOfYear = calendar.timeInMillis
 
-        lifecycleScope.launch {
+        dialogProgressBar?.visibility = View.VISIBLE
+
+        lifecycleScope.launch(Dispatchers.IO) {
             val app = requireActivity().application as PlacesApplication
             val allEntries = app.repository.allEntries.first().filter { it.date in startOfYear..endOfYear }
             val allTrips = app.tripRepository.allTrips.first().filter { it.date in startOfYear..endOfYear }
             val allStops = app.tripRepository.allTripStops.first()
 
-            listContainer.removeAllViews()
-
-            if (allEntries.isEmpty() && allTrips.isEmpty()) {
-                tvTitle.visibility = View.GONE
-                statsGrid.visibility = View.GONE
-                tvFlags.visibility = View.GONE
-                tvPhotosTitle.visibility = View.GONE
-                listContainer.visibility = View.GONE
-                tvNoData.visibility = View.VISIBLE
-                return@launch
-            }
-
-            tvTitle.text = getString(R.string.your_year, year)
-            tvTitle.visibility = View.VISIBLE
-            statsGrid.visibility = View.VISIBLE
-            tvNoData.visibility = View.GONE
-            listContainer.visibility = View.VISIBLE
-
-            tvTrips.text = allTrips.size.toString()
-            tvEntries.text = allEntries.size.toString()
-            
-            // Pass all trips of this year
             val distance = calculateTotalDistance(allTrips)
-            tvDistance.text = String.format(Locale.getDefault(), "%.1f", distance / 1000.0)
-
             val countries = getVisitedCountries(allEntries, allStops.filter { it.date in startOfYear..endOfYear })
-            tvCountries.text = countries.size.toString()
-            
-            val flagsText = countries.keys.joinToString(" ") { getFlagEmoji(it) }
-            tvFlags.text = flagsText
-            tvFlags.visibility = if (flagsText.isNotEmpty()) View.VISIBLE else View.GONE
-            tvPhotosTitle.visibility = View.VISIBLE
 
-            val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+            withContext(Dispatchers.Main) {
+                listContainer.removeAllViews()
 
-            // Trips and Stops rendering
-            allTrips.forEach { trip ->
-                val tripStops = allStops.filter { it.tripId == trip.id }.sortedBy { it.date }
-                val sectionView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_section, listContainer, false)
-                sectionView.findViewById<TextView>(R.id.tvSummaryTitle).text = trip.title
-                
-                val dateStr = if (tripStops.isNotEmpty()) {
-                    "${sdf.format(Date(tripStops.first().date))} - ${sdf.format(Date(tripStops.last().date))}"
-                } else {
-                    sdf.format(Date(trip.date))
+                if (allEntries.isEmpty() && allTrips.isEmpty()) {
+                    tvTitle.visibility = View.GONE
+                    statsGrid.visibility = View.GONE
+                    tvFlags.visibility = View.GONE
+                    tvPhotosTitle.visibility = View.GONE
+                    listContainer.visibility = View.GONE
+                    tvNoData.visibility = View.VISIBLE
+                    dialogProgressBar?.visibility = View.GONE
+                    return@withContext
                 }
-                sectionView.findViewById<TextView>(R.id.tvSummarySubtitle).text = dateStr
-                
-                val ivCover = sectionView.findViewById<ImageView>(R.id.ivSummaryPhoto)
-                trip.coverImage?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivCover) }
-                ivCover.setOnClickListener { trip.coverImage?.let { p -> showFullscreen(p) } }
 
-                val stopsLayout = sectionView.findViewById<LinearLayout>(R.id.llStopsContainer)
-                tripStops.forEach { stop ->
-                    val stopView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_stop, stopsLayout, false)
-                    stopView.findViewById<TextView>(R.id.tvStopTitle).text = stop.title
-                    stopView.findViewById<TextView>(R.id.tvStopDate).text = sdf.format(Date(stop.date))
-                    
-                    val countryInfo = getCountryInfo(requireContext(), stop.location)
-                    stopView.findViewById<TextView>(R.id.tvStopFlag).text = countryInfo?.first?.let { getFlagEmoji(it) } ?: ""
-                    
-                    val ivStop = stopView.findViewById<ImageView>(R.id.ivStopPhoto)
-                    val stopPhoto = stop.coverImage ?: stop.media.firstOrNull()
-                    stopPhoto?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivStop) }
-                    ivStop.setOnClickListener { stopPhoto?.let { p -> showFullscreen(p) } }
-                    
-                    stopsLayout.addView(stopView)
+                tvTitle.text = getString(R.string.your_year, year)
+                tvTitle.visibility = View.VISIBLE
+                statsGrid.visibility = View.VISIBLE
+                tvNoData.visibility = View.GONE
+                listContainer.visibility = View.VISIBLE
+
+                tvTrips.text = allTrips.size.toString()
+                tvEntries.text = allEntries.size.toString()
+                tvDistance.text = String.format(Locale.getDefault(), "%.1f", distance / 1000.0)
+                tvCountries.text = countries.size.toString()
+
+                val flagsText = countries.keys.joinToString(" ") { getFlagEmoji(it) }
+                tvFlags.text = flagsText
+                tvFlags.visibility = if (flagsText.isNotEmpty()) View.VISIBLE else View.GONE
+                tvPhotosTitle.visibility = View.VISIBLE
+
+                val sdf = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
+                // Trips and Stops rendering
+                allTrips.forEach { trip ->
+                    val tripStops = allStops.filter { it.tripId == trip.id }.sortedBy { it.date }
+                    val sectionView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_section, listContainer, false)
+                    sectionView.findViewById<TextView>(R.id.tvSummaryTitle).text = trip.title
+
+                    val dateStr = if (tripStops.isNotEmpty()) {
+                        "${sdf.format(Date(tripStops.first().date))} - ${sdf.format(Date(tripStops.last().date))}"
+                    } else {
+                        sdf.format(Date(trip.date))
+                    }
+                    sectionView.findViewById<TextView>(R.id.tvSummarySubtitle).text = dateStr
+
+                    val ivCover = sectionView.findViewById<ImageView>(R.id.ivSummaryPhoto)
+                    trip.coverImage?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivCover) }
+                    ivCover.setOnClickListener { trip.coverImage?.let { p -> showFullscreen(p) } }
+
+                    val stopsLayout = sectionView.findViewById<LinearLayout>(R.id.llStopsContainer)
+                    tripStops.forEach { stop ->
+                        val stopView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_stop, stopsLayout, false)
+                        stopView.findViewById<TextView>(R.id.tvStopTitle).text = stop.title
+                        stopView.findViewById<TextView>(R.id.tvStopDate).text = sdf.format(Date(stop.date))
+
+                        val countryInfo = getCountryInfo(requireContext(), stop.location)
+                        stopView.findViewById<TextView>(R.id.tvStopFlag).text = countryInfo?.first?.let { getFlagEmoji(it) } ?: ""
+
+                        val ivStop = stopView.findViewById<ImageView>(R.id.ivStopPhoto)
+                        val stopPhoto = stop.coverImage ?: stop.media.firstOrNull()
+                        stopPhoto?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivStop) }
+                        ivStop.setOnClickListener { stopPhoto?.let { p -> showFullscreen(p) } }
+
+                        stopsLayout.addView(stopView)
+                    }
+                    listContainer.addView(sectionView)
                 }
-                listContainer.addView(sectionView)
-            }
 
-            // Entries rendering
-            allEntries.forEach { entry ->
-                val sectionView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_section, listContainer, false)
-                sectionView.findViewById<TextView>(R.id.tvSummaryTitle).text = entry.title
-                sectionView.findViewById<TextView>(R.id.tvSummarySubtitle).text = sdf.format(Date(entry.date))
-                
-                val ivCover = sectionView.findViewById<ImageView>(R.id.ivSummaryPhoto)
-                entry.coverImage?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivCover) }
-                ivCover.setOnClickListener { entry.coverImage?.let { p -> showFullscreen(p) } }
-                
-                sectionView.findViewById<View>(R.id.llStopsContainer).visibility = View.GONE
-                listContainer.addView(sectionView)
+                // Entries rendering
+                allEntries.forEach { entry ->
+                    val sectionView = LayoutInflater.from(requireContext()).inflate(R.layout.item_summary_section, listContainer, false)
+                    sectionView.findViewById<TextView>(R.id.tvSummaryTitle).text = entry.title
+                    sectionView.findViewById<TextView>(R.id.tvSummarySubtitle).text = sdf.format(Date(entry.date))
+
+                    val ivCover = sectionView.findViewById<ImageView>(R.id.ivSummaryPhoto)
+                    entry.coverImage?.let { path -> Glide.with(this@StatisticsFragment).load(File(path)).centerCrop().into(ivCover) }
+                    ivCover.setOnClickListener { entry.coverImage?.let { p -> showFullscreen(p) } }
+
+                    sectionView.findViewById<View>(R.id.llStopsContainer).visibility = View.GONE
+                    listContainer.addView(sectionView)
+                }
+
+                dialogProgressBar?.visibility = View.GONE
             }
         }
     }
@@ -257,9 +280,9 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         MediaDialogFragment.newInstance(arrayListOf(path), 0).show(parentFragmentManager, "media_detail")
     }
 
-    private suspend fun getVisitedCountries(entries: List<Entry>, stops: List<TripStop>): Map<String, String> = withContext(Dispatchers.IO) {
+    private fun getVisitedCountries(entries: List<Entry>, stops: List<TripStop>): Map<String, String> {
         val countries = mutableMapOf<String, String>()
-        val context = context ?: return@withContext emptyMap()
+        val context = context ?: return emptyMap()
 
         entries.forEach { entry ->
             getCountryInfo(context, entry.location)?.let { countries[it.first] = it.second }
@@ -268,11 +291,18 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             getCountryInfo(context, stop.location)?.let { countries[it.first] = it.second }
         }
 
-        countries.toList().sortedBy { it.second }.toMap()
+        return countries.toList().sortedBy { it.second }.toMap()
     }
 
+    // 🌟 FIX: Das neue, clevere Geocoder-Gedächtnis (Caching)
     private fun getCountryInfo(context: Context, location: String?): Pair<String, String>? {
         if (location.isNullOrBlank()) return null
+
+        // Nachschauen, ob wir diese Koordinate schon mal berechnet haben!
+        if (countryCache.containsKey(location)) {
+            return countryCache[location]
+        }
+
         return try {
             val coords = location.split(",")
             if (coords.size != 2) return null
@@ -282,9 +312,14 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             @Suppress("DEPRECATION")
             val addresses = geocoder.getFromLocation(lat, lon, 1)
             val address = addresses?.firstOrNull()
-            if (address?.countryCode != null && address.countryName != null) {
+
+            val result = if (address?.countryCode != null && address.countryName != null) {
                 address.countryCode to address.countryName
             } else null
+
+            // Ergebnis im Gedächtnis speichern für das nächste Mal
+            countryCache[location] = result
+            result
         } catch (e: Exception) {
             null
         }
@@ -297,12 +332,12 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
     }
 
-    private suspend fun calculateTotalDistance(trips: List<Trip>): Double = withContext(Dispatchers.IO) {
+    // 🌟 FIX: Das "suspend" Wörtchen ist wieder da!
+    private suspend fun calculateTotalDistance(trips: List<Trip>): Double {
         var totalDist = 0.0
         val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
 
         trips.forEach { trip ->
-            // 1. Try GPS locations first
             val locations = tripDao.getLocationsForTripSync(trip.id)
             if (locations.size > 1) {
                 for (i in 0 until locations.size - 1) {
@@ -315,7 +350,6 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                     } catch (e: Exception) {}
                 }
             } else {
-                // 2. Fallback: Use Stopps with coordinates
                 val stops = tripDao.getStopsForTripSync(trip.id).sortedBy { it.date }
                 val validCoords = stops.mapNotNull { stop ->
                     stop.location?.split(",")?.let { coords ->
@@ -326,7 +360,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                         } else null
                     }
                 }
-                
+
                 if (validCoords.size > 1) {
                     for (i in 0 until validCoords.size - 1) {
                         val p1 = validCoords[i]
@@ -340,6 +374,6 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                 }
             }
         }
-        totalDist
+        return totalDist
     }
 }

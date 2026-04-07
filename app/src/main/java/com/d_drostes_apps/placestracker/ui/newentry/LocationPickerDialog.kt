@@ -12,8 +12,12 @@ import android.webkit.WebViewClient
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.lifecycleScope
 import com.d_drostes_apps.placestracker.R
+import com.d_drostes_apps.placestracker.utils.LocationUtils
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.launch
 
 class LocationPickerDialog(
     private val onLocationSelected: (Double, Double) -> Unit
@@ -31,6 +35,7 @@ class LocationPickerDialog(
         coordText = view.findViewById(R.id.tvCoordinates)
         val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
         val btnConfirm = view.findViewById<MaterialButton>(R.id.btnConfirmLocation)
+        val fabCurrentLocation = view.findViewById<FloatingActionButton>(R.id.fabCurrentLocation)
 
         webView = view.findViewById(R.id.cesiumWebView)
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -48,16 +53,14 @@ class LocationPickerDialog(
             @JavascriptInterface
             fun onLocationPicked(lat: Double, lon: Double) {
                 activity?.runOnUiThread {
-                    selectedLat = lat
-                    selectedLon = lon
-                    coordText.text = "Lat: ${String.format("%.4f", lat)}, Lon: ${String.format("%.4f", lon)}"
+                    updatePickedLocation(lat, lon)
                 }
             }
         }, "Android")
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
-                // Mapbox is ready
+                // Map ready
             }
         }
 
@@ -66,6 +69,16 @@ class LocationPickerDialog(
 
         btnClose.setOnClickListener { dismiss() }
         
+        fabCurrentLocation.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val loc = LocationUtils.getLastKnownLocation(requireContext())
+                loc?.let {
+                    updatePickedLocation(it.latitude, it.longitude)
+                    webView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${it.latitude}, ${it.longitude}, 0);", null)
+                }
+            }
+        }
+
         btnConfirm.setOnClickListener {
             val lat = selectedLat
             val lon = selectedLon
@@ -78,5 +91,12 @@ class LocationPickerDialog(
         return view
     }
 
-    override fun getTheme(): Int = com.google.android.material.R.style.Theme_Material3_Light_Dialog
+    private fun updatePickedLocation(lat: Double, lon: Double) {
+        selectedLat = lat
+        selectedLon = lon
+        coordText.text = String.format(java.util.Locale.getDefault(), "Lat: %.4f, Lon: %.4f", lat, lon)
+        webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '');", null)
+    }
+
+    override fun getTheme(): Int = com.google.android.material.R.style.Theme_Material3_Dark_Dialog_MinWidth
 }

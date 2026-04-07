@@ -135,7 +135,10 @@ class SupabaseManager(private val context: Context) {
                 client.from("entries").upsert(SupabaseEntry(
                     id = entrySid, title = entry.title, date = entry.date,
                     location = entry.location, user_id = userId!!, 
-                    last_modified = entry.lastModified, is_public = entry.isPublic
+                    last_modified = entry.lastModified, is_public = entry.isPublic,
+                    rating = entry.rating,
+                    people = entry.people.joinToString(","),
+                    entry_type = entry.entryType
                 ))
             }
 

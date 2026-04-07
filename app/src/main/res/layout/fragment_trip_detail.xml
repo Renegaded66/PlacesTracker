@@ -39,11 +39,12 @@
             android:layout_height="40dp"
             android:layout_gravity="bottom|end"
             android:layout_margin="16dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:background="@drawable/circle_background"
+            android:backgroundTint="#80FFFFFF"
             android:elevation="4dp"
             android:src="@drawable/ic_fullscreen"
             android:contentDescription="@string/fullscreen"
-            app:tint="?attr/colorOnSurface" />
+            app:tint="@android:color/black" />
     </FrameLayout>
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -93,7 +94,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:textSize="28sp"
+                    android:textSize="32sp"
                     android:textStyle="bold"
                     tools:text="Sommerurlaub 2024" />
             </LinearLayout>
@@ -141,26 +142,40 @@
                     android:layout_marginStart="60dp">
 
                     <LinearLayout
+                        android:id="@+id/llTripContent"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:paddingHorizontal="16dp">
 
-                        <TextView
-                            android:id="@+id/tvTripDetailNotes"
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cvTripNotes"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:textSize="16sp"
+                            android:layout_marginTop="8dp"
                             android:visibility="gone"
-                            tools:text="Das ist eine Notiz zum gesamten Trip."
-                            tools:visibility="visible" />
+                            app:cardCornerRadius="16dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="?attr/colorOutlineVariant"
+                            app:cardBackgroundColor="?attr/colorSurface">
+
+                            <TextView
+                                android:id="@+id/tvTripDetailNotes"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:padding="16dp"
+                                android:textColor="?android:attr/textColorSecondary"
+                                android:textSize="16sp"
+                                android:lineSpacingExtra="4dp"
+                                tools:text="Das ist eine Notiz zum gesamten Trip." />
+                        </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
                             android:id="@+id/llTripFlags"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="12dp"
                             android:orientation="horizontal" />
 
                         <com.google.android.material.card.MaterialCardView

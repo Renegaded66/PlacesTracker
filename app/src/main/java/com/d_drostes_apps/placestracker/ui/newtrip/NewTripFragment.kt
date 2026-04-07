@@ -82,19 +82,15 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         editingTripId = arguments?.getInt("tripId") ?: -1
         val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
         
-        val inputTitle = view.findViewById<TextInputEditText>(R.id.inputTripTitle)
-        val inputNotes = view.findViewById<TextInputEditText>(R.id.inputTripNotes)
+        val inputTitle = view.findViewById<android.widget.EditText>(R.id.inputTripTitle)
+        val inputNotes = view.findViewById<android.widget.EditText>(R.id.inputTripNotes)
         val switchAutoTrip = view.findViewById<SwitchMaterial>(R.id.switchAutoTrip)
-        val switchPublicTrip = view.findViewById<SwitchMaterial>(R.id.switchPublicTrip)
+        //val switchPublicTrip = view.findViewById<SwitchMaterial>(R.id.switchPublicTrip)
         val rvStops = view.findViewById<RecyclerView>(R.id.rvTripStops)
         val btnAddStop = view.findViewById<MaterialButton>(R.id.btnAddStop)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveTrip)
         val btnAddCover = view.findViewById<MaterialButton>(R.id.btnAddTripCover)
         val ivCoverPreview = view.findViewById<ImageView>(R.id.ivTripCoverPreview)
-        val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarNewTrip)
-
-
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         val scrollView = view.findViewById<androidx.core.widget.NestedScrollView>(R.id.tripScrollView)
 
@@ -133,7 +129,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
             if (scrollY <= 10 && lastZoomedStopIndex != -1) {
                 lastZoomedStopIndex = -1
-                mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(null, null);", null)
+                mapWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
             }
         })
 
@@ -156,12 +152,12 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     inputTitle.setText(it.title)
                     inputNotes.setText(it.notes)
                     switchAutoTrip.isChecked = it.isAutoTrip
-                    switchPublicTrip.isChecked = it.isPublic
+                    //switchPublicTrip.isChecked = it.isPublic
                     tripCoverImagePath = it.coverImage
                     if (it.coverImage != null) {
                         Glide.with(this@NewTripFragment).load(File(it.coverImage)).override(400,400).centerCrop().into(ivCoverPreview)
                     }
-                    btnSave.text = getString(R.string.save)
+                    btnSave.text = "Änderungen speichern"
                 }
                 
                 val dbStops = tripDao.getStopsForTrip(editingTripId).first()
@@ -204,7 +200,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                         tripDao.getTripById(editingTripId)?.isTrackingActive ?: false
                     } else false,
                     isAutoTrip = switchAutoTrip.isChecked,
-                    isPublic = switchPublicTrip.isChecked
+                    isPublic = false //switchPublicTrip.isChecked
                 )
                 
                 val finalTripId = if (editingTripId != -1) {

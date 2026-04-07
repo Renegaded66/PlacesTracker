@@ -43,7 +43,10 @@ data class SupabaseEntry(
     val location: String?,
     val user_id: String,
     val last_modified: Long,
-    val is_public: Boolean = false
+    val is_public: Boolean = false,
+    val rating: Float = 0f,
+    val people: String = "", // Comma separated
+    val entry_type: String = "experience"
 )
 
 @Serializable
