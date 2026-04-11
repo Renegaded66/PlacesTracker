@@ -563,7 +563,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 lastItems.forEach { item ->
                     if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) {
                         val obj = JSONObject()
-                        obj.put("type", "experience")
+                        if (item.entry.entryType == "Tagebuch") {
+                            obj.put("type", "diary")
+                        } else {
+                            obj.put("type", "experience")
+                        }
                         obj.put("id", item.id)
                         obj.put("title", item.entry.title)
                         val sdf = SimpleDateFormat("dd.MM.yy - HH:mm", Locale.getDefault())

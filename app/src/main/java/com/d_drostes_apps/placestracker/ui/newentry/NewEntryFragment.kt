@@ -11,12 +11,10 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ImageButton
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.widget.NestedScrollView
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
@@ -28,11 +26,9 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.ui.themes.newentry.MediaAdapter
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

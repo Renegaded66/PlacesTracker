@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Places Tracker - PC Editor</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface: #1e1e1e;
+            --primary: #BB86FC;
+            --text: #ffffff;
+            --text-secondary: #aaaaaa;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 0; }
+
+        /* Navbar */
+        .navbar { background: var(--surface); padding: 16px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100;}
+        .navbar h1 { margin: 0; font-size: 20px; }
+        .back-btn { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; display: none; }
+        .back-btn:hover { background: rgba(187, 134, 252, 0.1); }
+
+        .container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+
+        /* Views */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* Grid für den Feed */
+        .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .card { background: var(--surface); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid #333;}
+        .card:hover { transform: translateY(-4px); }
+        .card img { width: 100%; height: 160px; object-fit: cover; background: #2c2c2c;}
+        .card-content { padding: 16px; }
+        .card-title { font-size: 18px; font-weight: bold; margin: 0 0 8px 0; }
+        .card-subtitle { font-size: 14px; color: var(--text-secondary); }
+
+        /* Detail & Edit Ansicht */
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { background: #555; cursor: not-allowed; }
+
+        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px;}
+        .gallery-grid img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #444;}
+
+        /* Formular */
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; color: var(--text-secondary); }
+        .form-control { width: 100%; box-sizing: border-box; background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; font-family: inherit;}
+        textarea.form-control { height: 150px; resize: vertical; }
+        input[type="file"] { background: transparent; padding: 0; border: none;}
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <button class="back-btn" id="btn-back" onclick="showView('view-feed')">← Zurück</button>
+    <h1>Places Tracker Web</h1>
+</div>
+
+<div class="container">
+    <div id="loading" style="display: none; text-align: center; padding: 40px; color: var(--primary);">Lade Daten...</div>
+
+    <div id="view-feed" class="view active">
+        <h2>Deine Timeline</h2>
+        <div class="feed-grid" id="feed-list"></div>
+    </div>
+
+    <div id="view-detail-entry" class="view">
+        <div class="detail-header">
+            <div>
+                <h2 id="det-entry-title" style="margin: 0 0 8px 0;">Titel</h2>
+                <div id="det-entry-date" style="color: var(--text-secondary);">Datum</div>
+            </div>
+            <button class="btn" onclick="showEditEntry()">Bearbeiten</button>
+        </div>
+        <p id="det-entry-notes" style="line-height: 1.6; font-size: 16px; white-space: pre-wrap;"></p>
+        <h3>Medien</h3>
+        <div class="gallery-grid" id="det-entry-gallery"></div>
+    </div>
+
+    <div id="view-edit-entry" class="view">
+        <h2>Erlebnis bearbeiten</h2>
+        <div class="form-group">
+            <label>Titel</label>
+            <input type="text" id="edit-entry-title" class="form-control">
+        </div>
+        <div class="form-group">
+            <label>Notizen / Tagebuch</label>
+            <textarea id="edit-entry-notes" class="form-control"></textarea>
+        </div>
+        <div class="form-group" style="background: #2c2c2c; padding: 16px; border-radius: 8px;">
+            <label>Neue Bilder hinzufügen (vom PC)</label>
+            <input type="file" id="edit-entry-files" multiple accept="image/*,video/*">
+        </div>
+        <div style="margin-top: 24px;">
+            <button class="btn" id="btn-save-entry" onclick="saveEntry()">Speichern & Hochladen</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEntry = null; // Speichert das aktuell geöffnete Erlebnis
+
+    // Helfer: Macht aus einem lokalen Android-Pfad eine abrufbare Ktor-URL
+    function getMediaUrl(path) {
+        if (!path) return '';
+        return `/media?path=${encodeURIComponent(path)}`;
+    }
+
+    // Helfer: Wechselt zwischen den HTML-Ansichten (SPA-Logik)
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.getElementById(viewId).classList.add('active');
+
+        // Zurück-Button Logik
+        document.getElementById('btn-back').style.display = (viewId === 'view-feed') ? 'none' : 'block';
+
+        if (viewId === 'view-feed') loadFeed();
+    }
+
+    // --- 1. FEED LADEN ---
+    async function loadFeed() {
+        const listDiv = document.getElementById('feed-list');
+        listDiv.innerHTML = '';
+        document.getElementById('loading').style.display = 'block';
+
+        try {
+            const response = await fetch('/api/feed');
+            const data = await response.json();
+
+            data.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                const dateStr = new Date(item.date).toLocaleDateString('de-DE');
+                const imgUrl = item.coverImage ? getMediaUrl(item.coverImage) : '';
+                const imgTag = imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<div style="height:160px; background:#333; display:flex; align-items:center; justify-content:center; color:#666;">Kein Bild</div>`;
+
+                card.innerHTML = `
+                    ${imgTag}
+                    <div class="card-content">
+                        <div class="card-title">${item.title}</div>
+                        <div class="card-subtitle">${item.type === 'trip' ? '🚗 Trip' : '📝 Erlebnis'} • ${dateStr}</div>
+                    </div>
+                `;
+
+                // Klick auf Karte -> Details laden
+                card.onclick = () => {
+                    if (item.type === 'experience') openEntry(item.id);
+                    else alert('Trip bearbeiten im Editor folgt in Kürze!');
+                };
+
+                listDiv.appendChild(card);
+            });
+        } catch (error) {
+            listDiv.innerHTML = `<p style="color: #ff5252;">Fehler: Server nicht erreichbar.</p>`;
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+
+    // --- 2. ERLEBNIS DETAILS LADEN ---
+    async function openEntry(id) {
+        document.getElementById('loading').style.display = 'block';
+        showView(''); // Verstecke alles während des Ladens
+
+        try {
+            const response = await fetch(`/api/entry/${id}`);
+            currentEntry = await response.json();
+
+            document.getElementById('det-entry-title').innerText = currentEntry.title;
+            document.getElementById('det-entry-date').innerText = new Date(currentEntry.date).toLocaleString('de-DE');
+            document.getElementById('det-entry-notes').innerText = currentEntry.notes || 'Keine Notizen.';
+
+            // Galerie aufbauen
+            const gallery = document.getElementById('det-entry-gallery');
+            gallery.innerHTML = '';
+            if (currentEntry.media && currentEntry.media.length > 0) {
+                currentEntry.media.forEach(path => {
+                    gallery.innerHTML += `<a href="${getMediaUrl(path)}" target="_blank"><img src="${getMediaUrl(path)}"></a>`;
+                });
+            } else {
+                gallery.innerHTML = '<p style="color: #666;">Keine Medien vorhanden.</p>';
+            }
+
+            showView('view-detail-entry');
+        } catch (error) {
+            alert("Fehler beim Laden der Details");
+            showView('view-feed');
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+        }
+    }
+
+    // --- 3. ERLEBNIS BEARBEITEN (Formular füllen) ---
+    function showEditEntry() {
+        if (!currentEntry) return;
+        document.getElementById('edit-entry-title').value = currentEntry.title;
+        document.getElementById('edit-entry-notes').value = currentEntry.notes || '';
+        document.getElementById('edit-entry-files').value = ''; // Datei-Auswahl zurücksetzen
+        showView('view-edit-entry');
+    }
+
+    // --- 4. SPEICHERN & UPLOAD LOGIK ---
+    async function saveEntry() {
+        const btn = document.getElementById('btn-save-entry');
+        const fileInput = document.getElementById('edit-entry-files');
+
+        btn.disabled = true;
+        btn.innerText = "Wird gespeichert...";
+
+        try {
+            // Schritt 1: Gibt es neue Dateien zum Hochladen?
+            let newFilePaths = [];
+            if (fileInput.files.length > 0) {
+                btn.innerText = "Lade Bilder hoch...";
+                const formData = new FormData();
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append("files", fileInput.files[i]);
+                }
+
+                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+                const uploadData = await uploadRes.json();
+
+                if (uploadData.status === 'ok') {
+                    newFilePaths = uploadData.filePaths;
+                } else {
+                    throw new Error("Upload fehlgeschlagen");
+                }
+            }
+
+            // Schritt 2: JSON (ApiEntryDto) aktualisieren
+            btn.innerText = "Speichere in Datenbank...";
+
+            // Neue Pfade an die bestehende Medien-Liste anhängen
+            const updatedMedia = [...(currentEntry.media || []), ...newFilePaths];
+            // Falls noch kein Cover-Bild gesetzt ist, nehmen wir das erste Bild
+            const newCover = currentEntry.coverImage || (updatedMedia.length > 0 ? updatedMedia[0] : null);
+
+            const updatedEntry = {
+                ...currentEntry, // Behält ID, Typ, Ort etc.
+                title: document.getElementById('edit-entry-title').value,
+                notes: document.getElementById('edit-entry-notes').value,
+                media: updatedMedia,
+                coverImage: newCover
+            };
+
+            // Schritt 3: An Ktor Server senden
+            const saveRes = await fetch('/api/entry/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedEntry)
+            });
+
+            if (saveRes.ok) {
+                // Erfolgreich! Wir laden das Erlebnis neu und zeigen die Detailansicht
+                openEntry(currentEntry.id);
+            } else {
+                throw new Error("Fehler beim Speichern in der DB.");
+            }
+
+        } catch (error) {
+            alert(error.message);
+            btn.disabled = false;
+            btn.innerText = "Speichern & Hochladen";
+        }
+    }
+
+    // App starten
+    loadFeed();
+</script>
+</body>
+</html>

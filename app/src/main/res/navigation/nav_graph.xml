@@ -149,7 +149,15 @@
         <action
             android:id="@+id/action_settingsFragment_to_visionsFragment"
             app:destination="@id/visionsFragment" />
+        <action
+            android:id="@+id/action_settingsFragment_to_pcEditFragment"
+            app:destination="@id/pcEditFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/pcEditFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.PcEditFragment"
+        android:label="@string/pc_edit_title" />
 
     <fragment
         android:id="@+id/visionsFragment"

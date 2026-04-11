@@ -32,23 +32,11 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .cesium-widget-credits { display: none !important; }
 
-        /* 🌟 NEU: Das Design für das Karten-Popup */
         #custom-popup {
-            position: absolute;
-            background: rgba(25, 28, 30, 0.95); /* Material Dark Surface */
-            color: white;
-            border-radius: 16px;
-            padding: 16px;
-            width: 220px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            display: none;
-            z-index: 1000;
-            /* Zentriert über dem Marker und etwas nach oben geschoben */
-            transform: translate(-50%, -100%);
-            margin-top: -35px;
-            pointer-events: auto;
-            font-family: sans-serif;
-            border: 1px solid rgba(255,255,255,0.1);
+            position: absolute; background: rgba(25, 28, 30, 0.95); color: white;
+            border-radius: 16px; padding: 16px; width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            display: none; z-index: 1000; transform: translate(-50%, -100%); margin-top: -35px;
+            pointer-events: auto; font-family: sans-serif; border: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(8px);
         }
         #custom-popup .close-btn {
@@ -61,9 +49,9 @@
         #custom-popup .images { display: flex; gap: 6px; margin-bottom: 8px; }
         #custom-popup .images img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
         #custom-popup .nav-btn {
-            background: #BB86FC; color: black; border-radius: 8px;
-            padding: 8px 0; text-align: center; font-weight: bold; font-size: 14px;
-            cursor: pointer; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;
+            background: #BB86FC; color: black; border-radius: 8px; padding: 8px 0; text-align: center;
+            font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 8px; display: flex;
+            align-items: center; justify-content: center; gap: 4px;
         }
     </style>
 </head>
@@ -149,7 +137,8 @@
     markerDataSource.clustering.clusterEvent.addEventListener(async function(clusteredEntities, cluster) {
         const count = clusteredEntities.length; const firstEntity = clusteredEntities[0];
         cluster.label.show = false;
-        const clusterImageUrl = await createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count);
+        // Nutzt jetzt die neue, schnelle Funktion
+        const clusterImageUrl = await createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor);
         cluster.billboard.show = true; cluster.billboard.image = clusterImageUrl;
         cluster.billboard.width = 55; cluster.billboard.height = 55;
         cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
@@ -158,7 +147,6 @@
     });
 
     let polylineEntities = []; let detailEntities = []; let pickerMode = false;
-    // 🌟 NEU: Variablen für das Popup
     let activePopupEntity = null;
     const popupEl = document.getElementById('custom-popup');
 
@@ -176,7 +164,6 @@
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     }
 
-    // 🌟 NEU: Popup Funktionen
     function hidePopup() {
         popupEl.style.display = 'none';
         activePopupEntity = null;
@@ -188,7 +175,6 @@
         }
     }
 
-    // Sorgt dafür, dass sich das Popup mit der Kugel mitbewegt
     viewer.scene.preRender.addEventListener(function() {
         if (activePopupEntity && activePopupEntity.position && popupEl.style.display === 'block') {
             const pos = activePopupEntity.position.getValue(viewer.clock.currentTime);
@@ -205,42 +191,46 @@
     function clearDetails() {
         detailEntities.forEach(e => viewer.entities.remove(e));
         detailEntities = [];
-        hidePopup(); // Schließe Popup beim Säubern
+        hidePopup();
     }
 
     window.setPickerMode = function(enabled) { pickerMode = enabled; };
-    window.setLocation = async function(lat, lon, image) {
-        clearDetails(); const pos = Cesium.Cartesian3.fromDegrees(lon, lat); const typeColor = "#FF0000";
-        if (image && image !== "" && image !== "null") {
-            const finalImageUrl = await createRoundImage(image, typeColor);
-            const entity = viewer.entities.add({
-                position: pos,
-                billboard: { image: finalImageUrl, width: 60, height: 60, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 2500000.0), disableDepthTestDistance: Number.POSITIVE_INFINITY }
-            });
-            detailEntities.push(entity);
-        } else {
-            const entity = viewer.entities.add({
-                position: pos,
-                point: { pixelSize: 16, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY }
-            });
-            detailEntities.push(entity);
-        }
-        viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, 5000), duration: 1.5 });
-    };
 
-    async function createRoundImage(imageUrl, color, count = 0) {
+    // 🌟 FIX 1: Canvas-Größe radikal von 250 auf 100 reduziert (gigantischer Performance-Boost)
+    // 🌟 FIX 2: Nimmt nun 'borderColor' als Parameter an
+    async function createRoundImage(imageUrl, color, count = 0, borderColor = "#ffffff") {
         if (!imageUrl || imageUrl === "null") return null;
         return new Promise(resolve => {
-            const baseSize = 250; const canvas = document.createElement("canvas"); canvas.width = baseSize; canvas.height = baseSize; const ctx = canvas.getContext("2d"); const img = new Image();
+            const baseSize = 100;
+            const canvas = document.createElement("canvas");
+            canvas.width = baseSize; canvas.height = baseSize;
+            const ctx = canvas.getContext("2d");
+            const img = new Image();
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
             img.onload = () => {
-                const c = baseSize / 2; const r = baseSize / 2 - 30;
-                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 5, 0, Math.PI * 2); ctx.shadowColor = color; ctx.shadowBlur = 25; ctx.fillStyle = color; ctx.fill(); ctx.restore();
-                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(img, c - r, c - r, r * 2, r * 2); ctx.restore();
-                ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 10; ctx.stroke();
+                const c = baseSize / 2; // 50
+                const r = 38; // Radius für Bild (lässt Platz für Schatten)
+
+                // Schatten/Glow
+                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 2, 0, Math.PI * 2);
+                ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.fillStyle = color; ctx.fill(); ctx.restore();
+
+                // Bild einfügen
+                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
+                ctx.drawImage(img, c - r, c - r, r * 2, r * 2); ctx.restore();
+
+                // 🌟 FIX: Rand zeichnen (jetzt dynamische Farbe!)
+                ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2);
+                ctx.strokeStyle = borderColor; ctx.lineWidth = 4; ctx.stroke();
+
+                // Badge mit Zähler
                 if (count > 1) {
-                    ctx.beginPath(); ctx.arc(c + r*0.6, c - r*0.6, 40, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5; ctx.stroke();
-                    ctx.fillStyle = "#ffffff"; ctx.font = "bold 45px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("+" + (count-1), c + r*0.6, c - r*0.6);
+                    ctx.beginPath(); ctx.arc(c + r*0.7, c - r*0.7, 16, 0, Math.PI * 2);
+                    ctx.fillStyle = color; ctx.fill();
+                    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
+                    ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px sans-serif";
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    ctx.fillText("+" + (count-1), c + r*0.7, c - r*0.7);
                 }
                 resolve(canvas.toDataURL("image/png"));
             };
@@ -248,20 +238,21 @@
         });
     }
 
-    // 🌟 NEU: Funktion nimmt nun das ganze Item-Objekt an, um die Daten fürs Popup zu speichern
-    function addMarkerToSource(source, item, id, typeColor) {
+    // Übergibt nun auch die borderColor
+    function addMarkerToSource(source, item, id, typeColor, borderColor = "#ffffff") {
         const entity = source.entities.add({
             position: Cesium.Cartesian3.fromDegrees(item.lon, item.lat),
-            point: { pixelSize: 12, color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+            point: { pixelSize: 12, color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"), outlineColor: Cesium.Color.fromCssColorString(borderColor), outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY }
         });
         entity._customId = id;
         entity._originalImage = item.image;
         entity._typeColor = typeColor;
-        entity._itemData = item; // 🌟 Speichert die restlichen JSON Daten (Titel, Datum etc)
+        entity._borderColor = borderColor;
+        entity._itemData = item;
 
         const updateImage = async () => {
             try {
-                const finalImageUrl = (item.image && item.image !== "" && item.image !== "null") ? await createRoundImage(item.image, typeColor) : "https://cdn-icons-png.flaticon.com/512/684/684908.png";
+                const finalImageUrl = (item.image && item.image !== "" && item.image !== "null") ? await createRoundImage(item.image, typeColor, 0, borderColor) : "https://cdn-icons-png.flaticon.com/512/684/684908.png";
                 entity.billboard = { image: finalImageUrl, width: 49, height: 49, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 };
                 entity.point = undefined; entity._safeImageUrl = finalImageUrl;
             } catch (e) {}
@@ -274,33 +265,47 @@
     window.appendPhotosToMap = function(data) {
         try {
             const items = typeof data === 'string' ? JSON.parse(data) : data;
-            for (const item of items) addMarkerToSource(markerDataSource, item, "photo_" + item.id, "#4CAF50");
+            for (const item of items) addMarkerToSource(markerDataSource, item, "photo_" + item.id, "#4CAF50", "#ffffff");
         } catch(e){}
     };
 
+    // 🌟 FIX 3: Asynchrones "Live" Chunk-Loading. Die Benutzeroberfläche friert nicht mehr ein!
     window.setGlobalData = function(data) {
         try {
             const items = typeof data === 'string' ? JSON.parse(data) : data;
             markerDataSource.entities.removeAll(); polylineEntities.forEach(e => viewer.entities.remove(e)); polylineEntities = []; hidePopup();
-            for (const item of items) {
-                if(item.type==="experience") {
-                    addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#4CAF50");
-                }
-                if(item.type==="trip") {
-                    let coordinates = [];
-                    if (item.stops) {
-                        for (const s of item.stops) {
-                            coordinates.push(Cesium.Cartesian3.fromDegrees(s.lon, s.lat));
-                            // Füge Trip-Infos zum Stopp hinzu
-                            s.tripName = item.title;
-                            addMarkerToSource(markerDataSource, s, "stop_"+item.id+"_"+s.id, "#FF0000");
+
+            let i = 0;
+            function processChunk() {
+                // Verarbeitet 15 Marker auf einmal, atmet dann durch und macht weiter (verhindert Einfrieren!)
+                const chunkEnd = Math.min(i + 15, items.length);
+                for (; i < chunkEnd; i++) {
+                    const item = items[i];
+                    if(item.type === "experience") {
+                        addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#4CAF50", "#ffffff");
+                    }
+                    else if(item.type === "diary") { // 🌟 NEU: Diary Typ! Lila Farbe (#BB86FC)
+                        addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#BB86FC", "#BB86FC");
+                    }
+                    else if(item.type === "trip") {
+                        let coordinates = [];
+                        if (item.stops) {
+                            for (const s of item.stops) {
+                                coordinates.push(Cesium.Cartesian3.fromDegrees(s.lon, s.lat));
+                                s.tripName = item.title;
+                                addMarkerToSource(markerDataSource, s, "stop_"+item.id+"_"+s.id, "#FF0000", "#ffffff");
+                            }
+                        }
+                        if (coordinates.length > 1) {
+                            polylineEntities.push(viewer.entities.add({ polyline: { positions: coordinates, width: 4.0, material: Cesium.Color.RED, clampToGround: true } }));
                         }
                     }
-                    if (coordinates.length > 1) {
-                        polylineEntities.push(viewer.entities.add({ polyline: { positions: coordinates, width: 4.0, material: Cesium.Color.RED, clampToGround: true } }));
-                    }
+                }
+                if (i < items.length) {
+                    requestAnimationFrame(processChunk);
                 }
             }
+            processChunk(); // Startet den asynchronen Prozess
         } catch(e){}
     };
 
@@ -322,7 +327,6 @@
                         position: pos,
                         point: { pixelSize: 15, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 }
                     });
-                    // 🌟 NEU: Mach auch Detail-Pfad-Stopps klickbar
                     if(item.id) entity._customId = "stop_" + item.id;
                     entity._itemData = item;
                     detailEntities.push(entity);
@@ -347,10 +351,7 @@
     handler.setInputAction(function(click){
         const picked = viewer.scene.pick(click.position);
 
-        // 🌟 NEU: Wenn ein Marker geklickt wird
         if(picked && picked.id && picked.id._customId && window.Android) {
-
-            // Wenn es ein Foto aus der Timeline ist (kein Titel vorhanden), navigiere sofort!
             if(picked.id._customId.startsWith("photo_")) {
                 window.Android.onMarkerClicked(picked.id._customId);
                 return;
@@ -359,25 +360,20 @@
             activePopupEntity = picked.id;
             const data = activePopupEntity._itemData || {};
 
-            // Fülle die Daten ins Popup
             document.getElementById('popup-title').innerText = data.title || "Ort markiert";
 
             let subtitleText = data.date || "";
-            // Wenn es ein Trip ist, zeige den Trip-Namen an!
             if (data.tripName) {
                 subtitleText = data.tripName + (subtitleText ? " • " + subtitleText : "");
             }
             document.getElementById('popup-subtitle').innerText = subtitleText;
 
-            // Bilder verarbeiten
             const imgContainer = document.getElementById('popup-images');
             imgContainer.innerHTML = '';
 
-            // Erstes Bild (Hauptbild)
             if (data.image && data.image !== "null") {
                 imgContainer.innerHTML += `<img src="${data.image}">`;
             }
-            // Weitere Bilder (falls vorhanden)
             if (data.extraImages && Array.isArray(data.extraImages)) {
                 data.extraImages.slice(0, 2).forEach(img => {
                     imgContainer.innerHTML += `<img src="${img}">`;
@@ -385,8 +381,6 @@
             }
 
             popupEl.style.display = 'block';
-
-            // Karte sanft zum Marker zentrieren (damit Platz fürs Popup ist)
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(data.lon, data.lat, viewer.camera.positionCartographic.height),
                 duration: 0.5
@@ -394,7 +388,6 @@
             return;
         }
 
-        // Wenn ins Leere geklickt wurde, Popup schließen
         hidePopup();
 
         if (pickerMode) {

@@ -99,7 +99,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
             entry?.let {
                 etTitle.setText(it.title)
                 etNotes.setText(it.notes)
-                ratingBar.rating = it.rating
+                ratingBar.rating = it.rating!!
                 selectedDate.timeInMillis = it.date
                 isTimeSet = true
                 updateDateDisplay()

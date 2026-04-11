@@ -269,4 +269,13 @@
     <string name="visions">Visionen</string>
     <string name="visions_desc">Was die App noch lernen soll</string>
     <string name="vision_item_1">Trips liken und kommentieren</string>
+
+    <!-- PC Edit Feature -->
+    <string name="pc_edit">Am Computer bearbeiten</string>
+    <string name="pc_edit_desc">Verwalte deine Erlebnisse bequem im Browser</string>
+    <string name="pc_edit_title">Am Computer bearbeiten</string>
+    <string name="pc_edit_enable">Server aktivieren</string>
+    <string name="pc_edit_url_instruction">Gib diese URL im Browser deines Computers ein:</string>
+    <string name="pc_edit_status_active">Server ist aktiv</string>
+    <string name="pc_edit_status_inactive">Server ist inaktiv</string>
 </resources>

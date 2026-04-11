@@ -69,6 +69,7 @@ class SupabaseManager(private val context: Context) {
     }
 
     suspend fun syncAll() {
+        /*
         val profile = userDao.getUserProfile().firstOrNull() ?: return
         if (!profile.isSyncEnabled) return
 
@@ -160,5 +161,7 @@ class SupabaseManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e("SupabaseSync", "Sync failed: ${e.message}")
         }
+
+         */
     }
 }

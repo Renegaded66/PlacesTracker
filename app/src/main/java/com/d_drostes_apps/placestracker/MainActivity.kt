@@ -1,7 +1,6 @@
 package com.d_drostes_apps.placestracker
 
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -10,18 +9,14 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.setupWithNavController
-import com.d_drostes_apps.placestracker.data.BucketItem
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.service.TrackingService
 import com.d_drostes_apps.placestracker.utils.SharingManager
-import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import androidx.core.view.WindowCompat
 import androidx.navigation.NavOptions
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import android.content.res.ColorStateList

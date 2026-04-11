@@ -42,6 +42,11 @@ android {
         viewBinding = true
         dataBinding = false
     }
+    packaging {
+        resources.excludes.add("META-INF/INDEX.LIST")
+        resources.excludes.add("META-INF/io.netty.versions.properties")
+        resources.excludes.add("META-INF/DEPENDENCIES")
+    }
 }
 
 dependencies {
@@ -101,6 +106,15 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.ktor:ktor-client-okhttp:3.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    // Ktor Server for PC Edit
+    implementation("io.ktor:ktor-server-core:3.0.1")
+    implementation("io.ktor:ktor-server-netty:3.0.1")
+    implementation("io.ktor:ktor-server-content-negotiation:3.0.1")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.1")
+    implementation("io.ktor:ktor-server-cors:3.0.1")
+    implementation("io.ktor:ktor-server-status-pages:3.0.1")
+    implementation("io.ktor:ktor-server-partial-content:3.0.1")
 
     // Play Services Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")

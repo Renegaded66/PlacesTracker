@@ -31,6 +31,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val ivProfilePic = view.findViewById<ImageView>(R.id.ivSettingsProfilePic)
         val tvUsername = view.findViewById<TextView>(R.id.tvSettingsUsername)
         val cardProfile = view.findViewById<View>(R.id.cardProfile)
+        val cardPcEdit = view.findViewById<View>(R.id.cardPcEdit)
         val cardAppSettings = view.findViewById<View>(R.id.cardAppSettings)
         val cardAutoDetection = view.findViewById<View>(R.id.cardAutoDetection)
         val cardBackup = view.findViewById<View>(R.id.cardBackup)
@@ -55,6 +56,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         cardProfile.setOnClickListener {
             findNavController().navigate(R.id.profileSettingsFragment)
+        }
+
+        cardPcEdit.setOnClickListener {
+            findNavController().navigate(R.id.pcEditFragment)
         }
 
         cardAppSettings.setOnClickListener {
