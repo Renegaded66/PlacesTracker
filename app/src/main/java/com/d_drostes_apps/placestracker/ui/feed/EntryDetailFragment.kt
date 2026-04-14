@@ -73,8 +73,27 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         tvCountryNamePopup = view.findViewById(R.id.tvCountryNamePopup)
         
         mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
-        mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        setupMapboxWebView()
+        
+        val isInline = parentFragment is FeedFragment
+        if (isInline) {
+            cardMap.visibility = View.GONE
+            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
+            toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+            toolbar.setNavigationOnClickListener {
+                (parentFragment as? FeedFragment)?.handleBack()
+            }
+            // Increase top padding to account for missing appBar space if needed
+            view.findViewById<View>(R.id.llDetailContent)?.setPadding(
+                (16 * resources.displayMetrics.density).toInt(),
+                0,
+                (16 * resources.displayMetrics.density).toInt(),
+                (100 * resources.displayMetrics.density).toInt()
+            )
+        } else {
+            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setupMapboxWebView()
+            toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        }
 
         // Animation für den Content beim Laden
         view.findViewById<View>(R.id.llDetailContent)?.apply {
@@ -91,8 +110,6 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             }
             false
         }
-
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         view.findViewById<View>(R.id.detailRootLayout).setOnClickListener {
             cvCountryName.visibility = View.GONE
@@ -150,7 +167,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                     }
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
-                updateGlobePosition()
+                if (!isInline) updateGlobePosition()
                 loadCountryFlag(e.location)
             }
         }
@@ -315,14 +332,19 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             javaScriptEnabled = true
             domStorageEnabled = true
             allowFileAccess = true
+            @Suppress("DEPRECATION")
             allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
-        mapboxWebView.addJavascriptInterface(object {
+        
+        class JsInterface {
             @JavascriptInterface
             fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
-        }, "Android")
+        }
+        mapboxWebView.addJavascriptInterface(JsInterface(), "Android")
+        
         mapboxWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 updateGlobePosition()
@@ -358,7 +380,11 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 .setPositiveButton(R.string.save) { _, _ ->
                     lifecycleScope.launch {
                         repository.delete(e)
-                        findNavController().navigateUp()
+                        if (parentFragment is FeedFragment) {
+                            (parentFragment as FeedFragment).handleBack()
+                        } else {
+                            findNavController().navigateUp()
+                        }
                     }
                 }
                 .setNegativeButton(android.R.string.cancel, null)

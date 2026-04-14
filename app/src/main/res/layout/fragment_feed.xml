@@ -7,6 +7,7 @@
 
     <!-- Karten-Container -->
     <FrameLayout
+        android:id="@+id/globeContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
@@ -32,7 +33,7 @@
         app:behavior_hideable="false"
         app:behavior_fitToContents="false">
 
-        <!-- Header / Drag -->
+        <!-- Header / Drag Area -->
         <LinearLayout
             android:id="@+id/sheetHeaderArea"
             android:layout_width="match_parent"
@@ -48,200 +49,218 @@
                 android:layout_marginTop="12dp"
                 android:layout_marginBottom="8dp"
                 android:background="@drawable/ic_drag_handle" />
-
-            <!-- Profil Header -->
-            <RelativeLayout
-                android:id="@+id/globalProfileHeader"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="8dp">
-
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/ivGlobalUserAvatar"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:layout_alignParentStart="true"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/placeholder"
-                    app:shapeAppearanceOverlay="@style/CircleImage"
-                    app:strokeColor="?attr/colorPrimary"
-                    app:strokeWidth="2dp" />
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerVertical="true"
-                    android:layout_marginStart="16dp"
-                    android:layout_toEndOf="@id/ivGlobalUserAvatar"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/tvGlobalUsername"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/default_username"
-                        android:textSize="20sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvGlobalUserFlag"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:textSize="20sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/btnTimelineGallery"
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:layout_marginEnd="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_gallery"
-                        android:visibility="gone"
-                        app:tint="?attr/colorPrimary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnFriends"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/friends"
-                        app:icon="@drawable/ic_friends" />
-
-                </LinearLayout>
-
-            </RelativeLayout>
-
-            <!-- Filter Sektion -->
-            <HorizontalScrollView
-                android:id="@+id/filterScrollView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="16dp"
-                android:paddingBottom="8dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageButton
-                        android:id="@+id/btnSearchFeed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_search"
-                        app:tint="?attr/colorOnSurface" />
-
-                    <EditText
-                        android:id="@+id/inputSearchFeed"
-                        android:layout_width="200dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="8dp"
-                        android:background="@null"
-                        android:hint="@string/search_hint"
-                        android:imeOptions="actionSearch"
-                        android:paddingHorizontal="4dp"
-                        android:paddingVertical="8dp"
-                        android:singleLine="true"
-                        android:textColor="?attr/colorOnSurface"
-                        android:visibility="gone" />
-
-                    <View
-                        android:id="@+id/searchDivider"
-                        android:layout_width="1dp"
-                        android:layout_height="24dp"
-                        android:layout_marginEnd="8dp"
-                        android:background="#33000000"
-                        android:visibility="gone" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFilterType"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/filter_type"
-                        app:chipIcon="@drawable/ic_feed" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFilterDate"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/filter_date"
-                        app:chipIcon="@drawable/ic_calendar" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipFilterLocation"
-                        style="@style/Widget.Material3.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/filter_location"
-                        app:chipIcon="@drawable/ic_marker" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnResetFilter"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/filter_reset"
-                        android:visibility="gone"
-                        app:icon="@android:drawable/ic_menu_revert" />
-
-                </LinearLayout>
-            </HorizontalScrollView>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:layout_marginHorizontal="16dp"
-                android:background="#1A000000" />
         </LinearLayout>
 
-        <!-- Listenansicht -->
+        <!-- Container für Listenansicht und Details -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <ImageView
+            <!-- Listenansicht (Feed) -->
+            <LinearLayout
+                android:id="@+id/feedListLayout"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/feed_background_dark" />
+                android:orientation="vertical">
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="#33000000" />
+                <!-- Profil Header -->
+                <RelativeLayout
+                    android:id="@+id/globalProfileHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingVertical="8dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/feedRecycler"
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/ivGlobalUserAvatar"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_alignParentStart="true"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/placeholder"
+                        app:shapeAppearanceOverlay="@style/CircleImage"
+                        app:strokeColor="?attr/colorPrimary"
+                        app:strokeWidth="2dp" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="16dp"
+                        android:layout_toEndOf="@id/ivGlobalUserAvatar"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvGlobalUsername"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/default_username"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvGlobalUserFlag"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:textSize="20sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/btnTimelineGallery"
+                            android:layout_width="48dp"
+                            android:layout_height="48dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_gallery"
+                            android:visibility="gone"
+                            app:tint="?attr/colorPrimary" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnFriends"
+                            style="@style/Widget.MaterialComponents.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/friends"
+                            app:icon="@drawable/ic_friends" />
+
+                    </LinearLayout>
+                </RelativeLayout>
+
+                <!-- Filter Sektion -->
+                <HorizontalScrollView
+                    android:id="@+id/filterScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="8dp"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/btnSearchFeed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:padding="8dp"
+                            android:src="@drawable/ic_search"
+                            app:tint="?attr/colorOnSurface" />
+
+                        <EditText
+                            android:id="@+id/inputSearchFeed"
+                            android:layout_width="200dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="8dp"
+                            android:background="@null"
+                            android:hint="@string/search_hint"
+                            android:imeOptions="actionSearch"
+                            android:paddingHorizontal="4dp"
+                            android:paddingVertical="8dp"
+                            android:singleLine="true"
+                            android:textColor="?attr/colorOnSurface"
+                            android:visibility="gone" />
+
+                        <View
+                            android:id="@+id/searchDivider"
+                            android:layout_width="1dp"
+                            android:layout_height="24dp"
+                            android:layout_marginEnd="8dp"
+                            android:background="#33000000"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFilterType"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/filter_type"
+                            app:chipIcon="@drawable/ic_feed" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFilterDate"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/filter_date"
+                            app:chipIcon="@drawable/ic_calendar" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipFilterLocation"
+                            style="@style/Widget.Material3.Chip.Filter"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/filter_location"
+                            app:chipIcon="@drawable/ic_marker" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnResetFilter"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/filter_reset"
+                            android:visibility="gone"
+                            app:icon="@android:drawable/ic_menu_revert" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="#1A000000" />
+
+                <!-- RecyclerView Container -->
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/feed_background_dark" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="#33000000" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/feedRecycler"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToPadding="false"
+                        android:paddingHorizontal="8dp"
+                        android:paddingBottom="440dp" />
+                </FrameLayout>
+            </LinearLayout>
+
+            <!-- Detail-Ansicht Container (FragmentContainerView) -->
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/detailFragmentContainer"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingHorizontal="8dp"
-                android:paddingBottom="440dp" />
+                android:visibility="gone" />
 
         </FrameLayout>
-
     </LinearLayout>
 
     <!-- FAB Container -->
@@ -282,34 +301,6 @@
                 app:fabSize="mini"
                 app:srcCompat="@android:drawable/ic_menu_help"
                 app:tint="@android:color/white" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/layoutAddDiary"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:gravity="center_vertical"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
-                android:text="Tagebuch"
-                android:textColor="?attr/colorOnSurface"
-                android:textStyle="bold" />
-
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/fabDiary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:fabSize="mini"
-                app:backgroundTint="#BB86FC"
-                app:srcCompat="@android:drawable/ic_menu_edit"
-                app:tint="#000000"/>
         </LinearLayout>
 
         <LinearLayout

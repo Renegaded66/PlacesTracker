@@ -10,6 +10,7 @@ import android.location.Geocoder
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -33,10 +34,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
+import com.d_drostes_apps.placestracker.data.FeedItem
 import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripLocation
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.service.TrackingService
+import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
@@ -57,8 +60,15 @@ import org.json.JSONObject
 import java.util.*
 
 class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
-
-    private lateinit var mapboxWebView: WebView
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_trip_detail, container, false)
+    }
+    // 🌟 FIX 1: MapBox ist jetzt nullable, falls sie im XML fehlt!
+    private var mapboxWebView: WebView? = null
     private lateinit var tvNoLocation: View
     private lateinit var llFlags: LinearLayout
     private lateinit var cvCountryName: MaterialCardView
@@ -66,12 +76,12 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     private lateinit var rvStops: RecyclerView
     private lateinit var tvTripNotes: TextView
     private lateinit var cvTripNotes: MaterialCardView
-    
+
     private lateinit var cvDayIndicator: MaterialCardView
     private lateinit var tvDayNumber: TextView
     private lateinit var nestedScroll: NestedScrollView
-    private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
-    
+    private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
+
     private var currentTrip: Trip? = null
     private var allStops: List<TripStop> = emptyList()
     private var allLocations: List<TripLocation> = emptyList()
@@ -79,9 +89,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     private var isMapFullscreen = false
     private var tripAdapter: TripStopsAdapter? = null
     private var lastFocusedStopId: Int? = null
-    
+
     private val expandedSections = MutableStateFlow<Set<String>>(emptySet())
-    private val showMiniStopsList = MutableStateFlow(true)
 
     @RequiresApi(Build.VERSION_CODES.O)
     private val requestPermissionLauncher = registerForActivityResult(
@@ -115,92 +124,120 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         rvStops = view.findViewById(R.id.rvTripDetailStops)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
         nestedScroll = view.findViewById(R.id.tripNestedScroll)
-        
+
         cvDayIndicator = view.findViewById(R.id.cvDayIndicator)
         tvDayNumber = view.findViewById(R.id.tvDayNumber)
 
         mapboxWebView = view.findViewById(R.id.tripCesiumWebView)
-        mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
         tvNoLocation = view.findViewById(R.id.tvNoLocation)
         llFlags = view.findViewById(R.id.llTripFlags)
         cvCountryName = view.findViewById(R.id.cvTripCountryName)
         tvCountryNamePopup = view.findViewById(R.id.tvTripCountryNamePopup)
 
-        // Animation für den Content beim Laden
+        val isInline = parentFragment is FeedFragment
+        val bottomSheet = view.findViewById<View>(R.id.bottomSheetTrip)
+
+        if (isInline) {
+            view.findViewById<View>(R.id.mapContainer)?.visibility = View.GONE
+            view.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
+
+            toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+            toolbar.setNavigationOnClickListener {
+                (parentFragment as? FeedFragment)?.handleBack()
+            }
+
+            try {
+                val behavior = BottomSheetBehavior.from(bottomSheet)
+                behavior.isDraggable = false
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+            } catch (e: Exception) {}
+
+            bottomSheet?.elevation = 0f
+            nestedScroll.setPadding(0, 0, 0, (100 * resources.displayMetrics.density).toInt())
+        } else {
+            mapboxWebView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            if (mapboxWebView != null) setupCesiumWebView()
+            toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+
+            // 🌟 FIX 2: Crash-sicheres Zuweisen der BottomSheetBehavior
+            if (bottomSheet != null) {
+                try {
+                    bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+                    bottomSheetBehavior?.isFitToContents = false
+                    bottomSheetBehavior?.halfExpandedRatio = 0.6f
+                    bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+
+                    bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+                        override fun onStateChanged(bottomSheet: View, newState: Int) {}
+                        override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                            val sheetTop = bottomSheet.top
+                            val layoutParams = mapboxWebView?.layoutParams
+                            if (layoutParams != null) {
+                                layoutParams.height = sheetTop
+                                mapboxWebView?.layoutParams = layoutParams
+                            }
+
+                            rvStops.setPadding(
+                                rvStops.paddingLeft,
+                                rvStops.paddingTop,
+                                rvStops.paddingRight,
+                                sheetTop + 150
+                            )
+                        }
+                    })
+                } catch (e: IllegalArgumentException) {
+                    // Ignoriere den Fehler, wenn das Layout kein CoordinatorLayout mehr ist!
+                }
+            }
+
+            view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    val sheetTop = bottomSheet?.top ?: 0
+                    if (sheetTop > 0) {
+                        view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                        val layoutParams = mapboxWebView?.layoutParams
+                        if (layoutParams != null) {
+                            layoutParams.height = sheetTop
+                            mapboxWebView?.layoutParams = layoutParams
+                        }
+
+                        rvStops.setPadding(
+                            rvStops.paddingLeft,
+                            rvStops.paddingTop,
+                            rvStops.paddingRight,
+                            sheetTop + 150
+                        )
+                    }
+                }
+            })
+
+            val tripSheetHeader = view.findViewById<View>(R.id.tripSheetHeader)
+            tripSheetHeader?.setOnTouchListener { _, _ ->
+                bottomSheetBehavior?.isDraggable = true
+                false
+            }
+
+            nestedScroll.setOnTouchListener { _, event ->
+                if (bottomSheetBehavior?.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
+                    bottomSheetBehavior?.isDraggable = false
+                    if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
+                        bottomSheetBehavior?.isDraggable = true
+                    }
+                } else if (bottomSheetBehavior?.state == BottomSheetBehavior.STATE_EXPANDED) {
+                    bottomSheetBehavior?.isDraggable = !nestedScroll.canScrollVertically(-1)
+                }
+                false
+            }
+        }
+
         view.findViewById<View>(R.id.llTripContent)?.apply {
             alpha = 0f
             translationY = 50f
             animate().alpha(1f).translationY(0f).setDuration(600).setStartDelay(150).start()
         }
 
-        // Setup BottomSheet
-        val bottomSheet = view.findViewById<View>(R.id.bottomSheetTrip)
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-
-        bottomSheetBehavior.isFitToContents = false
-        bottomSheetBehavior.halfExpandedRatio = 0.6f
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-
-        val tripSheetHeader = view.findViewById<View>(R.id.tripSheetHeader)
-
-        // Size adjustments on slide
-        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-            override fun onStateChanged(bottomSheet: View, newState: Int) {}
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                val sheetTop = bottomSheet.top
-                val layoutParams = mapboxWebView.layoutParams
-                layoutParams.height = sheetTop
-                mapboxWebView.layoutParams = layoutParams
-
-                rvStops.setPadding(
-                    rvStops.paddingLeft,
-                    rvStops.paddingTop,
-                    rvStops.paddingRight,
-                    sheetTop + 150
-                )
-            }
-        })
-
-        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                val sheetTop = bottomSheet.top
-                if (sheetTop > 0) {
-                    view.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                    val layoutParams = mapboxWebView.layoutParams
-                    layoutParams.height = sheetTop
-                    mapboxWebView.layoutParams = layoutParams
-
-                    rvStops.setPadding(
-                        rvStops.paddingLeft,
-                        rvStops.paddingTop,
-                        rvStops.paddingRight,
-                        sheetTop + 150
-                    )
-                }
-            }
-        })
-
-        nestedScroll.setOnTouchListener { _, event ->
-            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
-                bottomSheetBehavior.isDraggable = false
-                if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
-                    bottomSheetBehavior.isDraggable = true
-                }
-            } else if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                bottomSheetBehavior.isDraggable = !nestedScroll.canScrollVertically(-1)
-            }
-            false
-        }
-
-        tripSheetHeader.setOnTouchListener { _, _ ->
-            bottomSheetBehavior.isDraggable = true
-            false
-        }
-        
-        setupCesiumWebView()
-
-        mapboxWebView.setOnTouchListener { v, event ->
+        mapboxWebView?.setOnTouchListener { v, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
                 MotionEvent.ACTION_UP -> v.parent.requestDisallowInterceptTouchEvent(false)
@@ -208,23 +245,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             false
         }
 
-        btnFullscreen.setOnClickListener {
+        btnFullscreen?.setOnClickListener {
             toggleFullscreen()
         }
 
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-
-        view.findViewById<View>(R.id.tripDetailRootLayout).setOnClickListener {
+        view.findViewById<View>(R.id.tripDetailRootLayout)?.setOnClickListener {
             cvCountryName.visibility = View.GONE
         }
 
         toolbar.inflateMenu(R.menu.menu_entry_detail)
-        
-        tripAdapter = TripStopsAdapter(emptyList(), 
+
+        tripAdapter = TripStopsAdapter(emptyList(),
             onStopClick = { stop ->
-                val bundle = Bundle().apply { putInt("stopId", stop.id) }
-                findNavController().navigate(R.id.action_tripDetailFragment_to_tripStopDetailFragment, bundle)
-            }, 
+                if (isInline) {
+                    (parentFragment as? FeedFragment)?.navigateToDetail(FeedItem.TripItem(currentTrip!!, allStops), stop.id)
+                } else {
+                    val bundle = Bundle().apply { putInt("stopId", stop.id) }
+                    findNavController().navigate(R.id.action_tripDetailFragment_to_tripStopDetailFragment, bundle)
+                }
+            },
             onMiniStopClick = { location ->
                 val bundle = Bundle().apply {
                     putInt("tripId", tripId)
@@ -252,7 +291,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val bundle = Bundle().apply {
                     putInt("tripId", tripId)
                     putBoolean("directAddStop", true)
-                    putInt("stopId", stop.id) 
+                    putInt("stopId", stop.id)
                 }
                 findNavController().navigate(R.id.action_tripDetailFragment_to_newTripFragment, bundle)
             },
@@ -263,11 +302,14 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
         nestedScroll.setOnScrollChangeListener(NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
             updateDayIndicatorPosition()
-            
+
             if (scrollY <= 10) {
                 if (lastFocusedStopId != null) {
                     lastFocusedStopId = null
-                    mapboxWebView.evaluateJavascript("javascript:if(window.setTripPath) window.setTripPath(window.lastPathData);", null)
+                    // 🌟 FIX 3: Den Globus vom Feed abfragen
+                    val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
+                    val globe = if (isInline) (parentFragment as? FeedFragment)?.getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
+                    globe?.evaluateJavascript("javascript:if(window.setTripPath) window.setTripPath(window.lastPathData);", null)
                 }
                 return@OnScrollChangeListener
             }
@@ -287,6 +329,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         }
 
                         val item = tripAdapter?.getItemAt(position)
+                        val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
+                        val globe = if (isInline) (parentFragment as? FeedFragment)?.getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
+
                         if (item is TripItem.Stop) {
                             if (lastFocusedStopId != item.stop.id) {
                                 lastFocusedStopId = item.stop.id
@@ -295,7 +340,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                                         val lat = coords[0].toDoubleOrNull()
                                         val lon = coords[1].toDoubleOrNull()
                                         if (lat != null && lon != null) {
-                                            mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
+                                            globe?.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
                                         }
                                     }
                                 }
@@ -305,7 +350,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                             val miniId = -(item.location.id.toInt())
                             if (lastFocusedStopId != miniId) {
                                 lastFocusedStopId = miniId
-                                mapboxWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${item.location.latitude}, ${item.location.longitude});", null)
+                                globe?.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${item.location.latitude}, ${item.location.longitude});", null)
                             }
                         }
                     }
@@ -327,14 +372,14 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             trip?.let { t ->
                 currentTrip = t
                 tvTitle.text = t.title
-                
+
                 if (!t.notes.isNullOrBlank()) {
                     tvTripNotes.text = t.notes
                     cvTripNotes.visibility = View.VISIBLE
                 } else {
                     cvTripNotes.visibility = View.GONE
                 }
-                
+
                 val isShared = t.friendId != null
                 toolbar.menu.findItem(R.id.action_edit)?.isVisible = !isShared
                 toolbar.menu.findItem(R.id.action_add_shared)?.isVisible = isShared
@@ -354,9 +399,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             ) { stops, locations, expanded ->
                 allStops = stops.sortedBy { it.date }
                 allLocations = locations.filter { !it.isConvertedToStop }.sortedBy { it.timestamp }
-                
+
                 val items = mutableListOf<TripItem>()
-                
+
                 if (allStops.isEmpty()) {
                     items.addAll(allLocations.map { TripItem.MiniStop(it) })
                 } else {
@@ -368,11 +413,11 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
                     allStops.forEachIndexed { index, stop ->
                         items.add(TripItem.Stop(stop))
-                        
+
                         if (index < allStops.size - 1) {
                             val nextStop = allStops[index + 1]
                             items.add(TripItem.Transport(stop.id, nextStop.id, nextStop.transportMode))
-                            
+
                             val between = allLocations.filter { it.timestamp > stop.date && it.timestamp < nextStop.date }
                             if (between.isNotEmpty()) {
                                 val sectionId = "after_${stop.id}"
@@ -422,7 +467,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 else -> false
             }
         }
-        
+
         checkPermissionsAndStartUserLocation()
     }
 
@@ -486,7 +531,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     private fun showTransportSelection(stopId: Int, currentMode: String?) {
         val modes = arrayOf("Auto", "Fahrrad", "Flugzeug", "Zug", "Zu Fuß", "Keines")
         val modeKeys = arrayOf("car", "bike", "plane", "train", "walk", null)
-        
+
         AlertDialog.Builder(requireContext())
             .setTitle("Transportmittel wählen")
             .setItems(modes) { _, which ->
@@ -578,7 +623,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             .addOnSuccessListener { location: Location? ->
                 if (!isAdded) return@addOnSuccessListener
                 location?.let {
-                    mapboxWebView.evaluateJavascript("javascript:if(window.setUserLocation) window.setUserLocation(${it.latitude}, ${it.longitude});", null)
+                    val feedFragment = parentFragmentManager.fragments.find { f -> f is FeedFragment } as? FeedFragment
+                    val globe = if (parentFragment is FeedFragment) (parentFragment as FeedFragment).getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
+                    globe?.evaluateJavascript("javascript:if(window.setUserLocation) window.setUserLocation(${it.latitude}, ${it.longitude});", null)
                 }
             }
     }
@@ -599,19 +646,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     }
 
     private fun setupCesiumWebView() {
-        mapboxWebView.settings.apply {
+        mapboxWebView?.settings?.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
             allowFileAccess = true
+            @Suppress("DEPRECATION")
             allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
             allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
-        mapboxWebView.addJavascriptInterface(object {
+
+        class JsInterface {
             @JavascriptInterface
             fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
-        }, "Android")
-        mapboxWebView.webViewClient = object : WebViewClient() {
+        }
+
+        mapboxWebView?.addJavascriptInterface(JsInterface(), "Android")
+
+        mapboxWebView?.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!isAdded) return
                 updateTripRoute()
@@ -622,7 +675,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         val html = try {
             currentContext.assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
         } catch (e: Exception) { "" }
-        mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
+        mapboxWebView?.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
     private fun updateTripRoute() {
@@ -630,7 +683,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
             val stopsFromDb = tripDao.getStopsForTripSync(tripId)
             val locationsFromDb = tripDao.getLocationsForTripSync(tripId).filter { !it.isConvertedToStop }
-            
+
             val jsonArray = withContext(Dispatchers.Default) {
                 val array = JSONArray()
                 val allPoints = (stopsFromDb.map { it.date to it } + locationsFromDb.map { it.timestamp to it })
@@ -663,14 +716,17 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 array
             }
 
+            val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
+            val globe = if (parentFragment is FeedFragment) (parentFragment as FeedFragment).getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
+
             if (jsonArray.length() == 0) {
-                mapboxWebView.visibility = View.GONE
+                if (parentFragment !is FeedFragment) mapboxWebView?.visibility = View.GONE
                 tvNoLocation.visibility = View.VISIBLE
             } else {
-                mapboxWebView.visibility = View.VISIBLE
+                if (parentFragment !is FeedFragment) mapboxWebView?.visibility = View.VISIBLE
                 tvNoLocation.visibility = View.GONE
                 val pathData = jsonArray.toString()
-                mapboxWebView.evaluateJavascript("javascript:window.lastPathData = '$pathData'; if(window.setTripPath) window.setTripPath('$pathData');", null)
+                globe?.evaluateJavascript("javascript:window.lastPathData = '$pathData'; if(window.setTripPath) window.setTripPath('$pathData');", null)
             }
         }
     }
@@ -751,7 +807,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 lifecycleScope.launch {
                     val trip = app.database.tripDao().getTripById(tripId)
                     trip?.let { app.database.tripDao().deleteTrip(it) }
-                    if (isAdded) findNavController().navigateUp()
+                    if (isAdded) {
+                        if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail() else findNavController().navigateUp()
+                    }
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

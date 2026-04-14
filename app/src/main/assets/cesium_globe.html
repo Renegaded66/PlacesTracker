@@ -76,10 +76,21 @@
         baseLayerPicker: false, animation: false, timeline: false, geocoder: false,
         homeButton: false, sceneModePicker: false, navigationHelpButton: false,
         selectionIndicator: false, infoBox: false,
+
+        // 🌟 FIX 1: Der Samsung-Retter! Schaltet den Tiefenpuffer ab, an dem Mali-GPUs ersticken.
+        logarithmicDepthBuffer: false,
+
         contextOptions: { webgl: { alpha: false, depth: true, stencil: false, antialias: true, premultipliedAlpha: true, preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: false } }
     });
 
-    viewer.resolutionScale = 1.0; viewer.useBrowserRecommendedResolution = false;
+    // 🌟 FIX 2: Verhindert den WebView-Absturz bei extrem hoher System-Schriftgröße!
+    viewer.useBrowserRecommendedResolution = false;
+
+    // Wir zwingen die Render-Auflösung auf ein gesundes Maß.
+    // Selbst wenn das Handy wegen der Schriftgröße "4.0" fordert, deckeln wir es,
+    // damit der Grafikspeicher nicht platzt.
+    const maxPixelRatio = window.devicePixelRatio > 2.0 ? 2.0 : window.devicePixelRatio;
+    viewer.resolutionScale = 1.0 / maxPixelRatio;
     viewer.scene.globe.tileLoadProgressEvent.addEventListener(queuedTileCount => {
         const spinner = document.getElementById("tile-loader");
         if (spinner) spinner.style.display = queuedTileCount > 0 ? "block" : "none";
@@ -137,13 +148,12 @@
     markerDataSource.clustering.clusterEvent.addEventListener(async function(clusteredEntities, cluster) {
         const count = clusteredEntities.length; const firstEntity = clusteredEntities[0];
         cluster.label.show = false;
-        // Nutzt jetzt die neue, schnelle Funktion
         const clusterImageUrl = await createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor);
         cluster.billboard.show = true; cluster.billboard.image = clusterImageUrl;
         cluster.billboard.width = 55; cluster.billboard.height = 55;
         cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
         cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
-        cluster.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+        cluster.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY; // Bleibt immer sichtbar
     });
 
     let polylineEntities = []; let detailEntities = []; let pickerMode = false;
@@ -196,53 +206,69 @@
 
     window.setPickerMode = function(enabled) { pickerMode = enabled; };
 
-    // 🌟 FIX 1: Canvas-Größe radikal von 250 auf 100 reduziert (gigantischer Performance-Boost)
-    // 🌟 FIX 2: Nimmt nun 'borderColor' als Parameter an
+    // 🌟 FIX: Ein Speicher-Cache, der verhindert, dass gleiche Bilder x-mal gerendert werden!
+    const roundImageCache = new Map();
+
     async function createRoundImage(imageUrl, color, count = 0, borderColor = "#ffffff") {
         if (!imageUrl || imageUrl === "null") return null;
+
+        // Caching: Ist das Bild schon fertig generiert? Dann gib es direkt zurück!
+        const cacheKey = `${imageUrl}_${color}_${count}_${borderColor}`;
+        if (roundImageCache.has(cacheKey)) return roundImageCache.get(cacheKey);
+
         return new Promise(resolve => {
-            const baseSize = 100;
+            // 🌟 FIX: Von 100x100 auf extrem schnelle 64x64 reduziert!
+            const baseSize = 64;
             const canvas = document.createElement("canvas");
             canvas.width = baseSize; canvas.height = baseSize;
             const ctx = canvas.getContext("2d");
             const img = new Image();
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
+
             img.onload = () => {
-                const c = baseSize / 2; // 50
-                const r = 38; // Radius für Bild (lässt Platz für Schatten)
+                const c = baseSize / 2; // 32
+                const r = 26; // Radius für Bild
 
                 // Schatten/Glow
-                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 2, 0, Math.PI * 2);
-                ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.fillStyle = color; ctx.fill(); ctx.restore();
+                ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 1, 0, Math.PI * 2);
+                ctx.shadowColor = color; ctx.shadowBlur = 6; ctx.fillStyle = color; ctx.fill(); ctx.restore();
 
                 // Bild einfügen
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
                 ctx.drawImage(img, c - r, c - r, r * 2, r * 2); ctx.restore();
 
-                // 🌟 FIX: Rand zeichnen (jetzt dynamische Farbe!)
+                // Runder Rand in dynamischer Farbe
                 ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2);
-                ctx.strokeStyle = borderColor; ctx.lineWidth = 4; ctx.stroke();
+                ctx.strokeStyle = borderColor; ctx.lineWidth = 3; ctx.stroke();
 
-                // Badge mit Zähler
+                // Badge mit Zähler für Cluster
                 if (count > 1) {
-                    ctx.beginPath(); ctx.arc(c + r*0.7, c - r*0.7, 16, 0, Math.PI * 2);
+                    ctx.beginPath(); ctx.arc(c + r*0.7, c - r*0.7, 12, 0, Math.PI * 2);
                     ctx.fillStyle = color; ctx.fill();
                     ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
-                    ctx.fillStyle = "#ffffff"; ctx.font = "bold 16px sans-serif";
+                    ctx.fillStyle = "#ffffff"; ctx.font = "bold 12px sans-serif";
                     ctx.textAlign = "center"; ctx.textBaseline = "middle";
                     ctx.fillText("+" + (count-1), c + r*0.7, c - r*0.7);
                 }
-                resolve(canvas.toDataURL("image/png"));
+
+                // 🌟 FIX: WebP ist extrem komprimiert, unterstützt Transparenz und kodiert pfeilschnell (60% Qualität reicht!)
+                const resultUrl = canvas.toDataURL("image/webp", 0.6);
+                roundImageCache.set(cacheKey, resultUrl); // Im Cache speichern
+                resolve(resultUrl);
             };
             img.onerror = () => { resolve(imageUrl); }; img.src = imageUrl;
         });
     }
 
-    // Übergibt nun auch die borderColor
     function addMarkerToSource(source, item, id, typeColor, borderColor = "#ffffff") {
         const entity = source.entities.add({
             position: Cesium.Cartesian3.fromDegrees(item.lon, item.lat),
-            point: { pixelSize: 12, color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"), outlineColor: Cesium.Color.fromCssColorString(borderColor), outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY }
+            point: {
+                pixelSize: 12, color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"),
+                outlineColor: Cesium.Color.fromCssColorString(borderColor), outlineWidth: 2,
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY // 🌟 FIX: Punkte immer sichtbar machen!
+            }
         });
         entity._customId = id;
         entity._originalImage = item.image;
@@ -253,7 +279,12 @@
         const updateImage = async () => {
             try {
                 const finalImageUrl = (item.image && item.image !== "" && item.image !== "null") ? await createRoundImage(item.image, typeColor, 0, borderColor) : "https://cdn-icons-png.flaticon.com/512/684/684908.png";
-                entity.billboard = { image: finalImageUrl, width: 49, height: 49, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 };
+                entity.billboard = {
+                    image: finalImageUrl, width: 49, height: 49,
+                    verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY // 🌟 FIX: Bilder tauchen JEDERZEIT auf, egal wie weit man rauszoomt!
+                };
                 entity.point = undefined; entity._safeImageUrl = finalImageUrl;
             } catch (e) {}
         };
@@ -269,7 +300,6 @@
         } catch(e){}
     };
 
-    // 🌟 FIX 3: Asynchrones "Live" Chunk-Loading. Die Benutzeroberfläche friert nicht mehr ein!
     window.setGlobalData = function(data) {
         try {
             const items = typeof data === 'string' ? JSON.parse(data) : data;
@@ -277,14 +307,14 @@
 
             let i = 0;
             function processChunk() {
-                // Verarbeitet 15 Marker auf einmal, atmet dann durch und macht weiter (verhindert Einfrieren!)
-                const chunkEnd = Math.min(i + 15, items.length);
+                // Marker salvenartig rendern, UI bleibt flüssig.
+                const chunkEnd = Math.min(i + 25, items.length);
                 for (; i < chunkEnd; i++) {
                     const item = items[i];
                     if(item.type === "experience") {
                         addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#4CAF50", "#ffffff");
                     }
-                    else if(item.type === "diary") { // 🌟 NEU: Diary Typ! Lila Farbe (#BB86FC)
+                    else if(item.type === "diary") {
                         addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#BB86FC", "#BB86FC");
                     }
                     else if(item.type === "trip") {
@@ -305,7 +335,7 @@
                     requestAnimationFrame(processChunk);
                 }
             }
-            processChunk(); // Startet den asynchronen Prozess
+            processChunk();
         } catch(e){}
     };
 
@@ -325,14 +355,14 @@
                     const color = "#FF0000";
                     const entity = viewer.entities.add({
                         position: pos,
-                        point: { pixelSize: 15, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 }
+                        point: { pixelSize: 15, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY } // 🌟 FIX
                     });
                     if(item.id) entity._customId = "stop_" + item.id;
                     entity._itemData = item;
                     detailEntities.push(entity);
                     if (item.image && item.image !== "" && item.image !== "null") {
                         createRoundImage(item.image, color).then(img => {
-                            if (img) { entity.billboard = { image: img, width: 56, height: 56, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 }; entity.point = undefined; }
+                            if (img) { entity.billboard = { image: img, width: 56, height: 56, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY }; entity.point = undefined; } // 🌟 FIX
                         });
                     }
                 } else {

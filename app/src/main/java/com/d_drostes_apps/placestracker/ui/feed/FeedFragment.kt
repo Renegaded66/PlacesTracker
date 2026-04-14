@@ -14,6 +14,7 @@ import android.webkit.WebViewClient
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -29,6 +30,8 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.FeedItem
 import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripStop
+import com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment
+import com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -66,11 +69,16 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
     private var lastZoomedId: String? = null
 
+    private lateinit var feedListLayout: View
+    private lateinit var detailContainer: View
+
     private val autoTripPicker = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         if (uris.isNotEmpty()) {
             showAutoTripConfirmation(uris)
         }
     }
+
+    fun getGlobe(): WebView = cesiumWebView
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -80,6 +88,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val repository = app.repository
         val tripRepository = app.tripRepository
         val userDao = app.userDao
+
+        feedListLayout = view.findViewById(R.id.feedListLayout)
+        detailContainer = view.findViewById(R.id.detailFragmentContainer)
 
         val ivGlobalAvatar = view.findViewById<com.google.android.material.imageview.ShapeableImageView>(R.id.ivGlobalUserAvatar)
         val tvGlobalUsername = view.findViewById<TextView>(R.id.tvGlobalUsername)
@@ -151,10 +162,22 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             false
         }
 
-        view.findViewById<View>(R.id.sheetHeaderArea).setOnTouchListener { _, _ ->
+        view.findViewById<View>(R.id.sheetHeaderArea)?.setOnTouchListener { _, _ ->
             bottomSheetBehavior?.isDraggable = true
             false
         }
+        
+        // Handle Back Press to close details
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (detailContainer.visibility == View.VISIBLE) {
+                    handleBack()
+                } else {
+                    isEnabled = false
+                    requireActivity().onBackPressed()
+                }
+            }
+        })
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -194,6 +217,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 val behavior = bottomSheetBehavior ?: return
+                if (detailContainer.visibility == View.VISIBLE) return
 
                 if (!recyclerView.canScrollVertically(-1)) {
                     if (lastZoomedId != "top") {
@@ -220,7 +244,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                         val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
 
                         if (item is FeedItem.TripItem && item.stops.isNotEmpty()) {
-                            // 🌟 NEU: Alle gültigen Koordinaten des Trips sammeln
                             val lats = item.stops.mapNotNull { it.location?.split(",")?.getOrNull(0)?.toDoubleOrNull() }
                             val lons = item.stops.mapNotNull { it.location?.split(",")?.getOrNull(1)?.toDoubleOrNull() }
 
@@ -230,16 +253,13 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                                 val minLon = lons.minOrNull() ?: 0.0
                                 val maxLon = lons.maxOrNull() ?: 0.0
 
-                                // Wenn es nur 1 Stopp gibt, machen wir einen normalen Point-Zoom
                                 if (minLat == maxLat && minLon == maxLon) {
                                     cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($minLat, $minLon, $offset);", null)
                                 } else {
-                                    // Sonst zoomen wir auf die gesamte Bounding-Box!
                                     cesiumWebView.evaluateJavascript("javascript:if(window.zoomToBounds) window.zoomToBounds($minLat, $minLon, $maxLat, $maxLon, $offset);", null)
                                 }
                             }
                         } else if (item is FeedItem.Experience && loc != null) {
-                            // Erlebnisse (Einzelne Punkte) wie gewohnt anzoomen
                             val coords = loc.split(",")
                             if (coords.size == 2) {
                                 val lat = coords[0].toDoubleOrNull() ?: 0.0
@@ -282,7 +302,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private fun showAutoTripConfirmation(uris: List<Uri>) {
         AlertDialog.Builder(requireContext())
             .setTitle("Automatischer Trip")
-            // 🌟 NEU: Text angepasst
             .setMessage("Möchtest du aus den ${uris.size} ausgewählten Bildern automatisch einen Trip erstellen lassen? Bilder werden nach Standorten (Radius 1km) gebündelt.")
             .setPositiveButton("Ja, erstellen") { _, _ -> createAutoTrip(uris) }
             .setNegativeButton("Abbrechen", null)
@@ -297,7 +316,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 val app = requireActivity().application as PlacesApplication
                 val tripDao = app.database.tripDao()
 
-                // 1. Bilder extrahieren und nach Zeit sortieren
                 val imageDataList = uris.mapNotNull { uri ->
                     val file = copyToInternalStorage(uri)
                     val exif = try { ExifInterface(file.absolutePath) } catch (e: Exception) { null }
@@ -316,9 +334,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     return@launch
                 }
 
-                // =================================================================
-                // 🌟 NEU: Smarte Gruppierung nach Entfernung (> 1km Radius)
-                // =================================================================
                 val stops = mutableListOf<List<Triple<String, Long, String?>>>()
                 var currentGroup = mutableListOf<Triple<String, Long, String?>>()
                 var currentRefLocation: android.location.Location? = null
@@ -338,72 +353,49 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                                 }
 
                                 if (currentRefLocation == null) {
-                                    // Das ist das allererste Bild mit Standort im aktuellen Stopp
                                     currentRefLocation = imgLoc
                                     currentGroup.add(image)
                                 } else {
-                                    // Distanz zum Referenz-Standort des Stopps berechnen (in Metern)
                                     val distanceInMeters = currentRefLocation.distanceTo(imgLoc)
-
-                                    if (distanceInMeters > 1000f) { // 1000 Meter = 1 Kilometer
-                                        // 🛑 Mehr als 1km entfernt! Wir schließen den aktuellen Stopp ab.
+                                    if (distanceInMeters > 1000f) {
                                         if (currentGroup.isNotEmpty()) stops.add(currentGroup)
-
-                                        // Eröffnen einen neuen Stopp mit diesem Bild als neuem Mittelpunkt
                                         currentGroup = mutableListOf(image)
                                         currentRefLocation = imgLoc
                                     } else {
-                                        // ✅ Unter 1km entfernt. Gehört noch zum selben Stopp!
                                         currentGroup.add(image)
                                     }
                                 }
-                                continue // Fertig mit diesem Bild, ab zum nächsten!
+                                continue
                             }
                         }
                     }
-                    // Wenn wir hier landen, hatte das Bild keinen (gültigen) Standort.
-                    // Es wird einfach blind zum aktuell laufenden Stopp hinzugefügt.
                     currentGroup.add(image)
                 }
-                // Den allerletzten offenen Stopp noch hinzufügen
                 if (currentGroup.isNotEmpty()) stops.add(currentGroup)
-                // =================================================================
 
-
-                // 3. Trip in Datenbank anlegen
                 val firstDate = imageDataList.first().second
                 val tripId = tripDao.insertTrip(Trip(title = "Automatische Reise", date = firstDate, coverImage = imageDataList.first().first)).toInt()
 
-                // Androids eingebauter (kostenloser) Geocoder für Städtenamen
                 val geocoder = Geocoder(requireContext(), Locale.getDefault())
                 val sdf = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
 
-                // 4. Stopps anlegen und benennen
                 stops.forEach { images ->
-                    // Wir suchen das erste Bild in dieser Gruppe, das GPS-Daten hat, um die Stadt abzufragen
                     val refImageWithLocation = images.find { it.third != null }
                     val stopLocation = refImageWithLocation?.third
                     val stopDate = images.first().second
                     val stopMedia = images.map { it.first }
 
-                    // Fallback-Name, falls kein Internet da ist oder GPS fehlt
                     var stopName = "Stopp am ${sdf.format(Date(stopDate))}"
 
-                    // =================================================================
-                    // 🌟 NEU: Stadtname automatisch über kostenlosen Geocoder abfragen
-                    // =================================================================
                     if (stopLocation != null) {
                         try {
                             val coords = stopLocation.split(",")
                             if (coords.size == 2) {
-                                // "1" bedeutet, wir wollen nur das beste Ergebnis
                                 @Suppress("DEPRECATION")
                                 val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1)
                                 val address = addresses?.firstOrNull()
 
                                 if (address != null) {
-                                    // Wir nehmen die Stadt (locality). Falls es z.B. nur ein Landkreis ist,
-                                    // nehmen wir die SubAdminArea (Region).
                                     val city = address.locality ?: address.subAdminArea ?: address.adminArea
                                     if (city != null) {
                                         stopName = city
@@ -411,8 +403,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                                 }
                             }
                         } catch (e: Exception) {
-                            // Wenn der Geocoder fehlschlägt (z.B. Offline-Modus), passiert nichts.
-                            // Er behält dann einfach den "Stopp am..." Namen.
                         }
                     }
 
@@ -480,7 +470,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private suspend fun getAvailableCountries(): Map<String, String> = withContext(Dispatchers.IO) {
         val countries = mutableMapOf<String, String>(); val geocoder = Geocoder(requireContext(), Locale.getDefault())
-        lastItems.forEach { item -> val location = when (item) { is FeedItem.Experience -> item.entry.location; is FeedItem.TripItem -> item.stops.firstOrNull()?.location }; location?.split(",")?.let { coords -> if (coords.size == 2) { try { @Suppress("DEPRECATION") val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1); addresses?.firstOrNull()?.let { addr -> if (addr.countryCode != null && addr.countryName != null) countries[addr.countryCode] = addr.countryName } } catch (e: Exception) {} } } }
+        lastItems.forEach { item -> val location = when (item) { is FeedItem.Experience -> item.entry.location; is FeedItem.TripItem -> item.stops.firstOrNull()?.location }; location?.split(",")?.let { coords -> if (coords.size == 2) { try { @Suppress("DEPRECATION") val addresses = geocoder.getFromLocation(coords[0].toDouble(), coords[1].toDouble(), 1) ; addresses?.firstOrNull()?.let { addr -> if (addr.countryCode != null && addr.countryName != null) countries[addr.countryCode] = addr.countryName } } catch (e: Exception) {} } } }
         countries.toList().sortedBy { it.second }.toMap()
     }
 
@@ -547,7 +537,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         cesiumWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 updateGlobeData()
-                // 🌍 Den Intro-Spin nur beim ersten Start der App triggern
                 cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
             }
         }
@@ -614,7 +603,88 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
-    private fun navigateToDetail(item: FeedItem, stopId: Int? = null) { findNavController().navigate(if (item is FeedItem.Experience) R.id.action_feedFragment_to_entryDetailFragment else R.id.action_feedFragment_to_tripDetailFragment, Bundle().apply { if (item is FeedItem.Experience) putInt("entryId", item.id) else { putInt("tripId", item.id); stopId?.let { putInt("stopId", it) } } }) }
+    fun handleBack() {
+        if (childFragmentManager.backStackEntryCount > 0) {
+            childFragmentManager.popBackStack()
+        } else {
+            closeDetail()
+        }
+    }
+
+    fun navigateToDetail(item: FeedItem, stopId: Int? = null) {
+        val fragment = when {
+            stopId != null -> TripStopDetailFragment().apply {
+                arguments = Bundle().apply { putInt("stopId", stopId) }
+            }
+            item is FeedItem.Experience -> EntryDetailFragment().apply {
+                arguments = Bundle().apply { putInt("entryId", item.id) }
+            }
+            item is FeedItem.TripItem -> TripDetailFragment().apply {
+                arguments = Bundle().apply { putInt("tripId", item.id) }
+            }
+            else -> return
+        }
+
+        when (item) {
+            is FeedItem.Experience -> {
+                item.entry.location?.split(",")?.let { coords ->
+                    if (coords.size == 2) {
+                        val lat = coords[0].toDoubleOrNull() ?: return@let
+                        val lon = coords[1].toDoubleOrNull() ?: return@let
+                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat,$lon,0.0);", null)
+                    }
+                }
+            }
+            is FeedItem.TripItem -> {
+                val stops = if (stopId != null) item.stops.filter { it.id == stopId } else item.stops
+                val lats = stops.mapNotNull { it.location?.split(",")?.getOrNull(0)?.toDoubleOrNull() }
+                val lons = stops.mapNotNull { it.location?.split(",")?.getOrNull(1)?.toDoubleOrNull() }
+
+                if (lats.isNotEmpty() && lons.isNotEmpty()) {
+                    if (lats.size == 1) {
+                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${lats[0]},${lons[0]},0.0);", null)
+                    } else {
+                        val minLat = lats.minOrNull() ?: return
+                        val maxLat = lats.maxOrNull() ?: return
+                        val minLon = lons.minOrNull() ?: return
+                        val maxLon = lons.maxOrNull() ?: return
+                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToBounds) window.zoomToBounds($minLat,$minLon,$maxLat,$maxLon,0.0);", null)
+                    }
+                }
+            }
+        }
+
+        feedListLayout.visibility = View.GONE
+        detailContainer.visibility = View.VISIBLE
+        
+        val transaction = childFragmentManager.beginTransaction()
+            .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
+            .replace(R.id.detailFragmentContainer, fragment)
+        
+        if (childFragmentManager.findFragmentById(R.id.detailFragmentContainer) != null) {
+            transaction.addToBackStack(null)
+        }
+        
+        transaction.commit()
+
+        bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+    }
+
+    fun closeDetail() {
+        // Clear backstack when closing detail view entirely
+        while (childFragmentManager.backStackEntryCount > 0) {
+            childFragmentManager.popBackStackImmediate()
+        }
+
+        feedListLayout.visibility = View.VISIBLE
+        detailContainer.visibility = View.GONE
+        val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
+        if (fragment != null) {
+            childFragmentManager.beginTransaction().remove(fragment).commit()
+        }
+        lastZoomedId = null
+        cesiumWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
+    }
 
     private fun setupExpandableFab(view: View) {
         val fabAdd = view.findViewById<FloatingActionButton>(R.id.fabAdd)

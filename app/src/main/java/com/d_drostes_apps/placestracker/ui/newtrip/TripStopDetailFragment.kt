@@ -15,6 +15,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,6 +23,7 @@ import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.feed.DetailMediaAdapter
+import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.appbar.MaterialToolbar
@@ -50,20 +52,6 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         return inflater.inflate(R.layout.fragment_entry_detail, container, false)
     }
 
-    override fun onStart() {
-        super.onStart()
-        val dialog = dialog as? BottomSheetDialog
-        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-        bottomSheet?.let {
-            val behavior = BottomSheetBehavior.from(it)
-            behavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-            behavior.halfExpandedRatio = 0.65f
-            behavior.skipCollapsed = true
-            
-            it.layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-        }
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -78,14 +66,27 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
         val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
         val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
+        val cardMap = view.findViewById<MaterialCardView>(R.id.cardDetailMap)
         
         llFlags = view.findViewById(R.id.llDetailFlags)
         cvCountryName = view.findViewById(R.id.cvCountryName)
         tvCountryNamePopup = view.findViewById(R.id.tvCountryNamePopup)
         
         mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
-        mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        setupCesiumWebView()
+        
+        val isInline = parentFragment is FeedFragment
+        if (isInline) {
+            cardMap.visibility = View.GONE
+            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
+            toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+            toolbar.setNavigationOnClickListener {
+                (parentFragment as? FeedFragment)?.closeDetail()
+            }
+        } else {
+            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setupCesiumWebView()
+            toolbar.setNavigationOnClickListener { activity?.onBackPressed() }
+        }
 
         // Animation für den Content
         view.findViewById<View>(R.id.llDetailContent)?.apply {
@@ -101,8 +102,6 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             }
             false
         }
-
-        toolbar.setNavigationOnClickListener { dismiss() }
 
         view.findViewById<View>(R.id.detailRootLayout).setOnClickListener {
             cvCountryName.visibility = View.GONE
@@ -134,7 +133,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                     }
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
-                updateGlobePosition()
+                if (!isInline) updateGlobePosition()
                 loadCountryFlag(it.location)
             }
         }

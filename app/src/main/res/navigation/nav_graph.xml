@@ -257,7 +257,7 @@
             android:defaultValue="-1" />
     </fragment>
 
-    <fragment
+    <dialog
         android:id="@+id/tripDetailFragment"
         android:name="com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment"
         android:label="Trip Details">
@@ -270,7 +270,7 @@
         <action
             android:id="@+id/action_tripDetailFragment_to_newTripFragment"
             app:destination="@id/newTripFragment" />
-    </fragment>
+    </dialog>
 
     <dialog
         android:id="@+id/tripStopDetailFragment"
