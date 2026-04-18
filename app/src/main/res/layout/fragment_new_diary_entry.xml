@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#121212">
@@ -22,7 +23,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Tagebuch"
+                android:text="@string/diary"
                 android:textColor="#E0E0E0"
                 android:textSize="34sp"
                 android:fontFamily="serif"
@@ -36,12 +37,11 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Titel Input -->
             <EditText
                 android:id="@+id/etDiaryTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Titel deiner Geschichte..."
+                android:hint="@string/diary_title_hint"
                 android:background="@null"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#66FFFFFF"
@@ -50,7 +50,6 @@
                 android:inputType="textCapSentences"
                 android:layout_marginBottom="24dp"/>
 
-            <!-- Datum & Uhrzeit Picker -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -82,7 +81,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
-                            android:text="24. Mai 2024"
+                            tools:text="24. Mai 2024"
                             android:textColor="#FFFFFF"
                             android:textSize="14sp"/>
                     </LinearLayout>
@@ -113,14 +112,13 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
-                            android:text="Uhrzeit"
+                            android:text="@string/diary_add_time"
                             android:textColor="#FFFFFF"
                             android:textSize="14sp"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Vorschaubild -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardDiaryImage"
                 android:layout_width="match_parent"
@@ -157,18 +155,17 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Bild hinzufügen"
+                            android:text="@string/diary_add_image"
                             android:textColor="#FFFFFF"
                             android:layout_marginTop="8dp"/>
                     </LinearLayout>
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Bewertung -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wie war dein Tag?"
+                android:text="@string/diary_rate_day"
                 android:textColor="#BDBDBD"
                 android:textSize="14sp"
                 android:textAllCaps="true"
@@ -186,11 +183,10 @@
                 style="?android:attr/ratingBarStyleIndicator"
                 android:isIndicator="false"/>
 
-            <!-- Standort -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wo warst du?"
+                android:text="@string/diary_where_were_you"
                 android:textColor="#BDBDBD"
                 android:textSize="14sp"
                 android:textAllCaps="true"
@@ -213,18 +209,17 @@
                     android:id="@+id/etDiaryLocation"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Standort eingeben..."
+                    android:hint="@string/diary_location_hint"
                     android:textColor="#FFFFFF"
                     android:background="@null"
                     android:focusable="false"
                     android:clickable="true" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Personen -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mit wem warst du unterwegs?"
+                android:text="@string/diary_who_with"
                 android:textColor="#BDBDBD"
                 android:textSize="14sp"
                 android:textAllCaps="true"
@@ -247,7 +242,7 @@
                     android:id="@+id/etDiaryPeople"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Name eingeben..."
+                    android:hint="@string/diary_name_hint"
                     android:textColor="#FFFFFF"
                     android:background="@null"
                     android:completionThreshold="1"
@@ -262,11 +257,10 @@
                 android:layout_marginBottom="32dp"
                 app:chipSpacing="8dp"/>
 
-            <!-- Notizen / Tagebuchtext -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Deine Gedanken"
+                android:text="@string/diary_your_thoughts"
                 android:textColor="#BDBDBD"
                 android:textSize="14sp"
                 android:textAllCaps="true"
@@ -277,7 +271,7 @@
                 android:id="@+id/etDiaryNotes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Schreibe etwas über deinen Tag..."
+                android:hint="@string/diary_notes_hint"
                 android:background="@drawable/bg_diary_input"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#44FFFFFF"
@@ -298,7 +292,7 @@
         android:layout_height="64dp"
         android:layout_gravity="bottom"
         android:layout_margin="24dp"
-        android:text="Eintrag verewigen"
+        android:text="@string/diary_save_entry"
         android:textAllCaps="false"
         android:textSize="18sp"
         android:fontFamily="serif-medium"

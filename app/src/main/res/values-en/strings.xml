@@ -205,6 +205,33 @@
     <string name="profile_saved">Profile saved</string>
     <string name="enter_name_error">Please enter a name</string>
 
+    <string name="jan">Jan</string>
+    <string name="feb">Feb</string>
+    <string name="mar">Mar</string>
+    <string name="apr">Apr</string>
+    <string name="may">May</string>
+    <string name="jun">Jun</string>
+    <string name="jul">Jul</string>
+    <string name="aug">Aug</string>
+    <string name="sep">Sep</string>
+    <string name="oct">Oct</string>
+    <string name="nov">Nov</string>
+    <string name="dec">Dec</string>
+
+    <string name="edit_trip">Edit trip</string>
+    <string name="unknown">Unknown</string>
+    <string name="select_transport_mode">Select transport mode</string>
+    <string name="apply_to_all_trip">Apply this transport mode to the entire trip?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="car">Car</string>
+    <string name="bike">Bike</string>
+    <string name="plane">Plane</string>
+    <string name="train">Train</string>
+    <string name="walk">Walk</string>
+    <string name="none">None</string>
+    <string name="setting_vision_underscore">Future features of the app</string>
+
     <!-- Help Dialog Content -->
     <string name="help_local_title">100% Local &amp; Private</string>
     <string name="help_local_desc">Your data belongs to you. PlacesTracker stores all experiences, images, and GPS data exclusively locally on your device. There is no communication with a server, and no personal data is uploaded to the cloud.</string>
@@ -243,4 +270,34 @@
     <string name="visions">Visions</string>
     <string name="visions_desc">What the app should still learn</string>
     <string name="vision_item_1">Like and comment on trips</string>
+
+    <string name="pc_edit_title">PC Editor</string>
+    <string name="pc_edit_description">Edit your trips and experiences comfortably on a large screen. Enable the local server and enter the URL in your computer\'s browser.</string>
+    <string name="pc_edit_enable">Enable Local Server</string>
+    <string name="pc_edit_url_instruction">Enter this URL in your PC\'s browser:</string>
+    <string name="pc_edit_status_active">Server is active and listening for connections</string>
+    <string name="pc_edit_status_inactive">Server is inactive</string>
+    <string name="pc_edit">PC Editor</string>
+    <string name="pc_edit_desc">PC Editor</string>
+    <string name="edit">Edit</string>
+
+    <string name="diary">Diary</string>
+    <string name="diary_title_hint">Title of your story…</string>
+    <string name="diary_add_time">Add time</string>
+    <string name="diary_add_image">Add image</string>
+    <string name="diary_rate_day">How was your day?</string>
+    <string name="diary_where_were_you">Where were you?</string>
+    <string name="diary_location_hint">Enter location…</string>
+    <string name="diary_who_with">Who were you with?</string>
+    <string name="diary_name_hint">Enter name…</string>
+    <string name="diary_your_thoughts">Your thoughts</string>
+    <string name="diary_notes_hint">Write something about your day…</string>
+    <string name="diary_save_entry">Immortalize entry</string>
+
+    <string name="experience_title">Experience</string>
+    <string name="experience_title_hint">Where were you?</string>
+    <string name="choose_location">Choose location</string>
+    <string name="experience_notes_hint">Your notes…</string>
+    <string name="media_title">Media</string>
+    <string name="save_experience">Save experience</string>
 </resources>

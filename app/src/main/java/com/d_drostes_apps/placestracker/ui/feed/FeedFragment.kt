@@ -692,13 +692,16 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val layoutExperience = view.findViewById<View>(R.id.layoutAddExperience)
         val layoutTrip = view.findViewById<View>(R.id.layoutAddTrip)
         val layoutAutoTrip = view.findViewById<View>(R.id.layoutAutoTrip)
+        val layoutDiary = view.findViewById<View>(R.id.layoutAddDiary)
 
         val fabHelp = view.findViewById<FloatingActionButton>(R.id.fabHelp)
         val fabExperience = view.findViewById<FloatingActionButton>(R.id.fabExperience)
         val fabTrip = view.findViewById<FloatingActionButton>(R.id.fabTrip)
         val fabAutoTrip = view.findViewById<FloatingActionButton>(R.id.fabAutoTrip)
+        val fabDiary = view.findViewById<FloatingActionButton>(R.id.fabDiary)
 
-        val layouts = listOf(layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+
+        val layouts = listOf(layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip, layoutDiary)
         layouts.forEach {
             it.visibility = View.GONE
             it.alpha = 0f
@@ -731,6 +734,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         fabTrip.setOnClickListener {
             findNavController().navigate(R.id.newTripFragment)
             closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+        }
+
+        fabDiary.setOnClickListener {
+            findNavController().navigate(R.id.newDiaryEntryFragment)
+            closeFabMenu(fabAdd, layoutHelp, layoutDiary, layoutExperience, layoutTrip, layoutAutoTrip)
         }
 
         fabAutoTrip.setOnClickListener {

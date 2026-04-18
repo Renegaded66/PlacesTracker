@@ -11,10 +11,10 @@
             --primary: #BB86FC;
             --text: #ffffff;
             --text-secondary: #aaaaaa;
+            --border: #333333;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 0; }
 
-        /* Navbar */
         .navbar { background: var(--surface); padding: 16px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100;}
         .navbar h1 { margin: 0; font-size: 20px; }
         .back-btn { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; display: none; }
@@ -22,20 +22,17 @@
 
         .container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
 
-        /* Views */
         .view { display: none; }
         .view.active { display: block; }
 
-        /* Grid für den Feed */
         .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-        .card { background: var(--surface); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid #333;}
-        .card:hover { transform: translateY(-4px); }
+        .card { background: var(--surface); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid var(--border);}
+        .card:hover { transform: translateY(-4px); border-color: #555; }
         .card img { width: 100%; height: 160px; object-fit: cover; background: #2c2c2c;}
         .card-content { padding: 16px; }
         .card-title { font-size: 18px; font-weight: bold; margin: 0 0 8px 0; }
         .card-subtitle { font-size: 14px; color: var(--text-secondary); }
 
-        /* Detail & Edit Ansicht */
         .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn:hover { opacity: 0.9; }
@@ -44,10 +41,13 @@
         .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px;}
         .gallery-grid img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #444;}
 
-        /* Formular */
+        .stop-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+        .stop-item { background: #2c2c2c; padding: 16px; border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer;}
+        .stop-item:hover { background: #383838; }
+
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 8px; color: var(--text-secondary); }
-        .form-control { width: 100%; box-sizing: border-box; background: #2c2c2c; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; font-family: inherit;}
+        .form-control { width: 100%; box-sizing: border-box; background: #2c2c2c; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; font-family: inherit;}
         textarea.form-control { height: 150px; resize: vertical; }
         input[type="file"] { background: transparent; padding: 0; border: none;}
     </style>
@@ -55,7 +55,7 @@
 <body>
 
 <div class="navbar">
-    <button class="back-btn" id="btn-back" onclick="showView('view-feed')">← Zurück</button>
+    <button class="back-btn" id="btn-back" onclick="goBack()">← Zurück</button>
     <h1>Places Tracker Web</h1>
 </div>
 
@@ -82,14 +82,8 @@
 
     <div id="view-edit-entry" class="view">
         <h2>Erlebnis bearbeiten</h2>
-        <div class="form-group">
-            <label>Titel</label>
-            <input type="text" id="edit-entry-title" class="form-control">
-        </div>
-        <div class="form-group">
-            <label>Notizen / Tagebuch</label>
-            <textarea id="edit-entry-notes" class="form-control"></textarea>
-        </div>
+        <div class="form-group"><label>Titel</label><input type="text" id="edit-entry-title" class="form-control"></div>
+        <div class="form-group"><label>Notizen / Tagebuch</label><textarea id="edit-entry-notes" class="form-control"></textarea></div>
         <div class="form-group" style="background: #2c2c2c; padding: 16px; border-radius: 8px;">
             <label>Neue Bilder hinzufügen (vom PC)</label>
             <input type="file" id="edit-entry-files" multiple accept="image/*,video/*">
@@ -98,29 +92,101 @@
             <button class="btn" id="btn-save-entry" onclick="saveEntry()">Speichern & Hochladen</button>
         </div>
     </div>
+
+    <div id="view-detail-trip" class="view">
+        <div class="detail-header">
+            <div>
+                <h2 id="det-trip-title" style="margin: 0 0 8px 0;">Trip Titel</h2>
+                <div id="det-trip-date" style="color: var(--text-secondary);">Datum</div>
+            </div>
+            <button class="btn" onclick="showEditTrip()">Trip Bearbeiten</button>
+        </div>
+        <p id="det-trip-notes" style="line-height: 1.6; font-size: 16px; white-space: pre-wrap;"></p>
+
+        <h3>Stopps auf dieser Reise</h3>
+        <div class="stop-list" id="det-trip-stops"></div>
+    </div>
+
+    <div id="view-edit-trip" class="view">
+        <h2>Trip Infos bearbeiten</h2>
+        <div class="form-group"><label>Trip Titel</label><input type="text" id="edit-trip-title" class="form-control"></div>
+        <div class="form-group"><label>Generelle Notizen zum Trip</label><textarea id="edit-trip-notes" class="form-control"></textarea></div>
+        <div style="margin-top: 24px;">
+            <button class="btn" id="btn-save-trip" onclick="saveTrip()">Trip Speichern</button>
+        </div>
+    </div>
+
+    <div id="view-detail-stop" class="view">
+        <div class="detail-header">
+            <div>
+                <h2 id="det-stop-title" style="margin: 0 0 8px 0;">Stopp Titel</h2>
+                <div id="det-stop-date" style="color: var(--text-secondary);">Datum</div>
+            </div>
+            <button class="btn" onclick="showEditStop()">Stopp bearbeiten</button>
+        </div>
+        <p id="det-stop-notes" style="line-height: 1.6; font-size: 16px; white-space: pre-wrap;"></p>
+        <h3>Medien des Stopps</h3>
+        <div class="gallery-grid" id="det-stop-gallery"></div>
+    </div>
+
+    <div id="view-edit-stop" class="view">
+        <h2>Stopp bearbeiten</h2>
+        <div class="form-group"><label>Stopp Titel</label><input type="text" id="edit-stop-title" class="form-control"></div>
+        <div class="form-group"><label>Notizen / Tagebuch</label><textarea id="edit-stop-notes" class="form-control"></textarea></div>
+        <div class="form-group" style="background: #2c2c2c; padding: 16px; border-radius: 8px;">
+            <label>Neue Bilder für diesen Stopp hinzufügen</label>
+            <input type="file" id="edit-stop-files" multiple accept="image/*,video/*">
+        </div>
+        <div style="margin-top: 24px;">
+            <button class="btn" id="btn-save-stop" onclick="saveStop()">Speichern & Hochladen</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    let currentEntry = null; // Speichert das aktuell geöffnete Erlebnis
+    let currentEntry = null;
+    let currentTrip = null;
+    let currentStop = null;
 
-    // Helfer: Macht aus einem lokalen Android-Pfad eine abrufbare Ktor-URL
+    let activeView = 'view-feed';
+    const backMap = {
+        'view-detail-entry': 'view-feed',
+        'view-edit-entry': 'view-detail-entry',
+        'view-detail-trip': 'view-feed',
+        'view-edit-trip': 'view-detail-trip',
+        'view-detail-stop': 'view-detail-trip',
+        'view-edit-stop': 'view-detail-stop'
+    };
+
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+
+        // 🌟 FIX: Prüfen, ob das Element existiert, bevor wir Klassen ändern!
+        const targetView = document.getElementById(viewId);
+        if (targetView) {
+            targetView.classList.add('active');
+        }
+
+        activeView = viewId;
+        // Zurück-Button bei Ladescreen oder Feed verstecken
+        document.getElementById('btn-back').style.display = (viewId === 'view-feed' || !viewId) ? 'none' : 'block';
+        if (viewId === 'view-feed') loadFeed();
+    }
+
+    function goBack() { showView(backMap[activeView] || 'view-feed'); }
+
+    // 🌟 NEU: URL Helfer für Originalbild (Klick in Galerie)
     function getMediaUrl(path) {
         if (!path) return '';
         return `/media?path=${encodeURIComponent(path)}`;
     }
 
-    // Helfer: Wechselt zwischen den HTML-Ansichten (SPA-Logik)
-    function showView(viewId) {
-        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
-
-        // Zurück-Button Logik
-        document.getElementById('btn-back').style.display = (viewId === 'view-feed') ? 'none' : 'block';
-
-        if (viewId === 'view-feed') loadFeed();
+    // 🌟 NEU: URL Helfer für das komprimierte Thumbnail (Feed & Vorschau)
+    function getThumbUrl(path) {
+        if (!path) return '';
+        return `/api/thumbnail?path=${encodeURIComponent(path)}`;
     }
 
-    // --- 1. FEED LADEN ---
     async function loadFeed() {
         const listDiv = document.getElementById('feed-list');
         listDiv.innerHTML = '';
@@ -135,21 +201,21 @@
                 card.className = 'card';
 
                 const dateStr = new Date(item.date).toLocaleDateString('de-DE');
-                const imgUrl = item.coverImage ? getMediaUrl(item.coverImage) : '';
+                // 🌟 FIX: Nutzen jetzt Thumbnails für den Feed
+                const imgUrl = item.coverImage ? getThumbUrl(item.coverImage) : '';
                 const imgTag = imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<div style="height:160px; background:#333; display:flex; align-items:center; justify-content:center; color:#666;">Kein Bild</div>`;
 
                 card.innerHTML = `
                     ${imgTag}
                     <div class="card-content">
                         <div class="card-title">${item.title}</div>
-                        <div class="card-subtitle">${item.type === 'trip' ? '🚗 Trip' : '📝 Erlebnis'} • ${dateStr}</div>
+                        <div class="card-subtitle">${item.type === 'trip' ? '🚗 Trip' : '📝 Erlebnis'} • ${dateStr} ${item.stopCount ? `(${item.stopCount} Stopps)` : ''}</div>
                     </div>
                 `;
 
-                // Klick auf Karte -> Details laden
                 card.onclick = () => {
                     if (item.type === 'experience') openEntry(item.id);
-                    else alert('Trip bearbeiten im Editor folgt in Kürze!');
+                    else if (item.type === 'trip') openTrip(item.id);
                 };
 
                 listDiv.appendChild(card);
@@ -161,10 +227,9 @@
         }
     }
 
-    // --- 2. ERLEBNIS DETAILS LADEN ---
     async function openEntry(id) {
         document.getElementById('loading').style.display = 'block';
-        showView(''); // Verstecke alles während des Ladens
+        showView('');
 
         try {
             const response = await fetch(`/api/entry/${id}`);
@@ -174,101 +239,221 @@
             document.getElementById('det-entry-date').innerText = new Date(currentEntry.date).toLocaleString('de-DE');
             document.getElementById('det-entry-notes').innerText = currentEntry.notes || 'Keine Notizen.';
 
-            // Galerie aufbauen
             const gallery = document.getElementById('det-entry-gallery');
             gallery.innerHTML = '';
             if (currentEntry.media && currentEntry.media.length > 0) {
                 currentEntry.media.forEach(path => {
-                    gallery.innerHTML += `<a href="${getMediaUrl(path)}" target="_blank"><img src="${getMediaUrl(path)}"></a>`;
+                    // 🌟 FIX: Zeigt Thumbnail an, verlinkt aber auf Originalbild!
+                    gallery.innerHTML += `<a href="${getMediaUrl(path)}" target="_blank"><img src="${getThumbUrl(path)}"></a>`;
                 });
             } else {
                 gallery.innerHTML = '<p style="color: #666;">Keine Medien vorhanden.</p>';
             }
-
             showView('view-detail-entry');
         } catch (error) {
             alert("Fehler beim Laden der Details");
-            showView('view-feed');
-        } finally {
-            document.getElementById('loading').style.display = 'none';
-        }
+            goBack();
+        } finally { document.getElementById('loading').style.display = 'none'; }
     }
 
-    // --- 3. ERLEBNIS BEARBEITEN (Formular füllen) ---
     function showEditEntry() {
-        if (!currentEntry) return;
         document.getElementById('edit-entry-title').value = currentEntry.title;
         document.getElementById('edit-entry-notes').value = currentEntry.notes || '';
-        document.getElementById('edit-entry-files').value = ''; // Datei-Auswahl zurücksetzen
+        document.getElementById('edit-entry-files').value = '';
         showView('view-edit-entry');
     }
 
-    // --- 4. SPEICHERN & UPLOAD LOGIK ---
     async function saveEntry() {
         const btn = document.getElementById('btn-save-entry');
         const fileInput = document.getElementById('edit-entry-files');
-
-        btn.disabled = true;
-        btn.innerText = "Wird gespeichert...";
+        btn.disabled = true; btn.innerText = "Wird gespeichert...";
 
         try {
-            // Schritt 1: Gibt es neue Dateien zum Hochladen?
-            let newFilePaths = [];
-            if (fileInput.files.length > 0) {
-                btn.innerText = "Lade Bilder hoch...";
-                const formData = new FormData();
-                for (let i = 0; i < fileInput.files.length; i++) {
-                    formData.append("files", fileInput.files[i]);
-                }
-
-                const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
-                const uploadData = await uploadRes.json();
-
-                if (uploadData.status === 'ok') {
-                    newFilePaths = uploadData.filePaths;
-                } else {
-                    throw new Error("Upload fehlgeschlagen");
-                }
-            }
-
-            // Schritt 2: JSON (ApiEntryDto) aktualisieren
+            let newFilePaths = await handleFileUpload(fileInput, btn);
             btn.innerText = "Speichere in Datenbank...";
 
-            // Neue Pfade an die bestehende Medien-Liste anhängen
             const updatedMedia = [...(currentEntry.media || []), ...newFilePaths];
-            // Falls noch kein Cover-Bild gesetzt ist, nehmen wir das erste Bild
             const newCover = currentEntry.coverImage || (updatedMedia.length > 0 ? updatedMedia[0] : null);
 
             const updatedEntry = {
-                ...currentEntry, // Behält ID, Typ, Ort etc.
+                ...currentEntry,
                 title: document.getElementById('edit-entry-title').value,
                 notes: document.getElementById('edit-entry-notes').value,
                 media: updatedMedia,
                 coverImage: newCover
             };
 
-            // Schritt 3: An Ktor Server senden
-            const saveRes = await fetch('/api/entry/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedEntry)
-            });
+            const saveRes = await fetch('/api/entry/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedEntry) });
+            if (saveRes.ok) openEntry(currentEntry.id);
+            else throw new Error("Fehler beim Speichern.");
+        } catch (error) {
+            alert(error.message); btn.disabled = false; btn.innerText = "Speichern & Hochladen";
+        }
+    }
 
-            if (saveRes.ok) {
-                // Erfolgreich! Wir laden das Erlebnis neu und zeigen die Detailansicht
-                openEntry(currentEntry.id);
+    async function openTrip(id) {
+        document.getElementById('loading').style.display = 'block';
+        showView('');
+
+        try {
+            const response = await fetch(`/api/trip/${id}`);
+            const detailDto = await response.json();
+            currentTrip = detailDto.trip;
+            const stops = detailDto.stops || [];
+
+            document.getElementById('det-trip-title').innerText = currentTrip.title;
+            document.getElementById('det-trip-date').innerText = new Date(currentTrip.date).toLocaleDateString('de-DE');
+            document.getElementById('det-trip-notes').innerText = currentTrip.notes || 'Keine Trip-Notizen.';
+
+            const stopsList = document.getElementById('det-trip-stops');
+            stopsList.innerHTML = '';
+
+            if(stops.length === 0) {
+                stopsList.innerHTML = '<p style="color:#666;">Noch keine Stopps auf dieser Reise.</p>';
             } else {
-                throw new Error("Fehler beim Speichern in der DB.");
+                stops.forEach(stop => {
+                    const stopEl = document.createElement('div');
+                    stopEl.className = 'stop-item';
+                    const sDate = new Date(stop.date).toLocaleString('de-DE');
+                    stopEl.innerHTML = `
+                        <div>
+                            <strong>${stop.title}</strong>
+                            <div style="color:var(--text-secondary); font-size:12px; margin-top:4px;">${sDate}</div>
+                        </div>
+                        <div style="color:var(--primary); font-weight:bold;">➔</div>
+                    `;
+                    stopEl.onclick = () => openStop(stop);
+                    stopsList.appendChild(stopEl);
+                });
             }
 
+            showView('view-detail-trip');
         } catch (error) {
-            alert(error.message);
+            alert("Fehler beim Laden des Trips"); goBack();
+        } finally { document.getElementById('loading').style.display = 'none'; }
+    }
+
+    function showEditTrip() {
+        document.getElementById('edit-trip-title').value = currentTrip.title;
+        document.getElementById('edit-trip-notes').value = currentTrip.notes || '';
+        showView('view-edit-trip');
+    }
+
+    async function saveTrip() {
+        const btn = document.getElementById('btn-save-trip');
+        btn.disabled = true; btn.innerText = "Speichere...";
+        try {
+            const updatedTrip = {
+                ...currentTrip,
+                title: document.getElementById('edit-trip-title').value,
+                notes: document.getElementById('edit-trip-notes').value
+            };
+            const saveRes = await fetch('/api/trip/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatedTrip) });
+            if (saveRes.ok) openTrip(currentTrip.id);
+            else throw new Error("Fehler beim Speichern.");
+        } catch(err) { alert(err.message); btn.disabled = false; btn.innerText = "Trip Speichern"; }
+    }
+
+    function openStop(stop) {
+        currentStop = stop;
+        document.getElementById('det-stop-title').innerText = stop.title;
+        document.getElementById('det-stop-date').innerText = new Date(stop.date).toLocaleString('de-DE');
+        document.getElementById('det-stop-notes').innerText = stop.notes || 'Keine Notizen.';
+
+        const gallery = document.getElementById('det-stop-gallery');
+        gallery.innerHTML = '';
+        if (stop.media && stop.media.length > 0) {
+            stop.media.forEach(path => {
+                // 🌟 FIX: Zeigt Thumbnail an, verlinkt aber auf Originalbild!
+                gallery.innerHTML += `<a href="${getMediaUrl(path)}" target="_blank"><img src="${getThumbUrl(path)}"></a>`;
+            });
+        } else {
+            gallery.innerHTML = '<p style="color: #666;">Keine Medien vorhanden.</p>';
+        }
+        showView('view-detail-stop');
+    }
+
+    function showEditStop() {
+        document.getElementById('edit-stop-title').value = currentStop.title;
+        document.getElementById('edit-stop-notes').value = currentStop.notes || '';
+        document.getElementById('edit-stop-files').value = '';
+        showView('view-edit-stop');
+    }
+
+    async function saveStop() {
+        const btn = document.getElementById('btn-save-stop');
+        const fileInput = document.getElementById('edit-stop-files');
+        btn.disabled = true;
+        btn.innerText = "Wird gespeichert...";
+
+        try {
+            let newFilePaths = await handleFileUpload(fileInput, btn);
+            btn.innerText = "Speichere in Datenbank...";
+
+            const updatedMedia = [...(currentStop.media || []), ...newFilePaths];
+            const newCover = currentStop.coverImage || (updatedMedia.length > 0 ? updatedMedia[0] : null);
+
+            // 🌟 WICHTIG: Das Objekt muss exakt zum ApiTripStopDto passen
+            const updatedStop = {
+                id: currentStop.id,
+                tripId: currentStop.tripId,
+                date: currentStop.date,           // <-- Das ist das Wichtigste, das gefehlt hat!
+                location: currentStop.location,   // <-- Sollte auch mit rein!
+                title: document.getElementById('edit-stop-title').value,
+                notes: document.getElementById('edit-stop-notes').value,
+                media: updatedMedia,
+                coverImage: newCover,
+                isMini: currentStop.isMini || false,
+                isDraft: currentStop.isDraft || false,
+                transportMode: currentStop.transportMode || null
+            };
+
+            const saveRes = await fetch('/api/stop/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedStop)
+            });
+
+            if (!saveRes.ok) {
+                const errorText = await saveRes.text();
+                throw new Error(`DB-Fehler: ${errorText}`);
+            }
+
+            // Erfolg!
+            currentStop = updatedStop;
+            openStop(currentStop);
+            alert("Erfolgreich gespeichert!");
+
+        } catch (error) {
+            console.error(error);
+            alert("Fehler: " + error.message);
+        } finally {
             btn.disabled = false;
             btn.innerText = "Speichern & Hochladen";
         }
     }
 
-    // App starten
+    async function handleFileUpload(fileInput, btnElement) {
+        if (fileInput.files.length === 0) return [];
+        btnElement.innerText = "Lade Bilder hoch...";
+        const formData = new FormData();
+        for (let i = 0; i < fileInput.files.length; i++) {
+            formData.append("files", fileInput.files[i]);
+        }
+
+        const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+
+        // 🌟 DEBUG-CHECK: Wenn nicht OK, schau was drin steht
+        if (!uploadRes.ok) {
+            const errorText = await uploadRes.text();
+            throw new Error(`Server-Fehler (${uploadRes.status}): ${errorText}`);
+        }
+
+        const uploadData = await uploadRes.json();
+        if (uploadData.status === 'ok') return uploadData.filePaths;
+        throw new Error("Upload fehlgeschlagen");
+    }
+
     loadFeed();
 </script>
 </body>

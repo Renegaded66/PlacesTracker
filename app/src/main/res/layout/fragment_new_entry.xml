@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#121212">
@@ -23,7 +24,7 @@
                 android:id="@+id/tvHeaderType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Erlebnis"
+                android:text="@string/experience_title"
                 android:textColor="#E0E0E0"
                 android:textSize="34sp"
                 android:fontFamily="serif"
@@ -37,12 +38,11 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Titel Input -->
             <EditText
                 android:id="@+id/inputTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Wo warst du?"
+                android:hint="@string/experience_title_hint"
                 android:background="@null"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#66FFFFFF"
@@ -51,7 +51,6 @@
                 android:inputType="textCapSentences"
                 android:layout_marginBottom="24dp"/>
 
-            <!-- Datum & Uhrzeit -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -84,7 +83,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
-                            android:text="Datum"
+                            tools:text="24. Mai 2024"
                             android:textColor="#FFFFFF"
                             android:textSize="14sp"/>
                     </LinearLayout>
@@ -116,19 +115,18 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="8dp"
-                            android:text="Uhrzeit"
+                            android:text="@string/diary_add_time"
                             android:textColor="#FFFFFF"
                             android:textSize="14sp"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
-            <!-- Standort Button & Karte -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Standort wählen"
+                android:text="@string/choose_location"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 app:strokeColor="#33FFFFFF"
                 android:textColor="#FFFFFF"
@@ -144,7 +142,8 @@
                 app:cardBackgroundColor="#1E1E1E"
                 app:cardCornerRadius="20dp"
                 app:strokeWidth="0dp"
-                android:layout_marginBottom="32dp">
+                android:layout_marginBottom="32dp"
+                tools:visibility="visible">
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
@@ -161,7 +160,8 @@
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:src="@drawable/ic_fullscreen"
                         app:tint="#FFFFFF"
-                        android:elevation="4dp" />
+                        android:elevation="4dp"
+                        android:contentDescription="@string/fullscreen"/>
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -169,18 +169,17 @@
                 android:id="@+id/tvCoordinates"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text=""
+                tools:text="Lat: 51.528, Lon: 7.420"
                 android:textAlignment="center"
                 android:textColor="#99FFFFFF"
                 android:textSize="12sp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Notizen -->
             <EditText
                 android:id="@+id/inputNotes"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Deine Notizen..."
+                android:hint="@string/experience_notes_hint"
                 android:background="@drawable/bg_diary_input"
                 android:textColor="#FFFFFF"
                 android:textColorHint="#44FFFFFF"
@@ -191,11 +190,10 @@
                 android:padding="16dp"
                 android:layout_marginBottom="32dp"/>
 
-            <!-- Medien Sektion -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Medien"
+                android:text="@string/media_title"
                 android:textColor="#BDBDBD"
                 android:textSize="14sp"
                 android:textAllCaps="true"
@@ -219,7 +217,7 @@
         android:layout_height="64dp"
         android:layout_gravity="bottom"
         android:layout_margin="24dp"
-        android:text="Erlebnis speichern"
+        android:text="@string/save_experience"
         android:textAllCaps="false"
         android:textSize="18sp"
         android:fontFamily="serif-medium"

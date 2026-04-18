@@ -67,7 +67,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     ): View? {
         return inflater.inflate(R.layout.fragment_trip_detail, container, false)
     }
-    // 🌟 FIX 1: MapBox ist jetzt nullable, falls sie im XML fehlt!
+
     private var mapboxWebView: WebView? = null
     private lateinit var tvNoLocation: View
     private lateinit var llFlags: LinearLayout
@@ -157,65 +157,17 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         } else {
             mapboxWebView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             if (mapboxWebView != null) setupCesiumWebView()
+
+            toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
-            // 🌟 FIX 2: Crash-sicheres Zuweisen der BottomSheetBehavior
             if (bottomSheet != null) {
                 try {
                     bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
                     bottomSheetBehavior?.isFitToContents = false
                     bottomSheetBehavior?.halfExpandedRatio = 0.6f
                     bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-
-                    bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-                        override fun onStateChanged(bottomSheet: View, newState: Int) {}
-                        override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                            val sheetTop = bottomSheet.top
-                            val layoutParams = mapboxWebView?.layoutParams
-                            if (layoutParams != null) {
-                                layoutParams.height = sheetTop
-                                mapboxWebView?.layoutParams = layoutParams
-                            }
-
-                            rvStops.setPadding(
-                                rvStops.paddingLeft,
-                                rvStops.paddingTop,
-                                rvStops.paddingRight,
-                                sheetTop + 150
-                            )
-                        }
-                    })
-                } catch (e: IllegalArgumentException) {
-                    // Ignoriere den Fehler, wenn das Layout kein CoordinatorLayout mehr ist!
-                }
-            }
-
-            view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    val sheetTop = bottomSheet?.top ?: 0
-                    if (sheetTop > 0) {
-                        view.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                        val layoutParams = mapboxWebView?.layoutParams
-                        if (layoutParams != null) {
-                            layoutParams.height = sheetTop
-                            mapboxWebView?.layoutParams = layoutParams
-                        }
-
-                        rvStops.setPadding(
-                            rvStops.paddingLeft,
-                            rvStops.paddingTop,
-                            rvStops.paddingRight,
-                            sheetTop + 150
-                        )
-                    }
-                }
-            })
-
-            val tripSheetHeader = view.findViewById<View>(R.id.tripSheetHeader)
-            tripSheetHeader?.setOnTouchListener { _, _ ->
-                bottomSheetBehavior?.isDraggable = true
-                false
+                } catch (e: IllegalArgumentException) {}
             }
 
             nestedScroll.setOnTouchListener { _, event ->
@@ -306,10 +258,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             if (scrollY <= 10) {
                 if (lastFocusedStopId != null) {
                     lastFocusedStopId = null
-                    // 🌟 FIX 3: Den Globus vom Feed abfragen
                     val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
                     val globe = if (isInline) (parentFragment as? FeedFragment)?.getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
-                    globe?.evaluateJavascript("javascript:if(window.setTripPath) window.setTripPath(window.lastPathData);", null)
+
+                    // 🌟 FIX: Anstatt die Route neu zu zeichnen (was die Kamera verwirrt),
+                    // befehlen wir der 3D-Kugel, sanft auf alle gezeichneten Linien herauszuzoomen!
+                    val js = """
+                        javascript:(function(){
+                            try {
+                                if (typeof viewer !== 'undefined') {
+                                    if (typeof polylineEntities !== 'undefined' && polylineEntities.length > 0) {
+                                        viewer.zoomTo(polylineEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
+                                    } else if (typeof detailEntities !== 'undefined' && detailEntities.length > 0) {
+                                        viewer.zoomTo(detailEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
+                                    }
+                                }
+                            } catch(e) {}
+                        })();
+                    """.trimIndent()
+                    globe?.evaluateJavascript(js, null)
                 }
                 return@OnScrollChangeListener
             }
@@ -381,15 +348,34 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 }
 
                 val isShared = t.friendId != null
-                toolbar.menu.findItem(R.id.action_edit)?.isVisible = !isShared
-                toolbar.menu.findItem(R.id.action_add_shared)?.isVisible = isShared
-                toolbar.menu.findItem(R.id.action_delete)?.isVisible = true
 
-                toolbar.menu.add(0, R.id.action_share, 0, "Teilen").apply {
-                    setIcon(R.drawable.ic_share)
-                    setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
-                    isVisible = !isShared
+                val fabEdit = view.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabEditTrip)
+                fabEdit?.visibility = View.VISIBLE
+                fabEdit?.setOnClickListener {
+                    val bundle = Bundle().apply {
+                        putInt("tripId", tripId)
+                        putString("title", "Trip bearbeiten")
+                    }
+                    findNavController().navigate(R.id.newTripFragment, bundle)
                 }
+
+                toolbar.menu.findItem(R.id.action_edit)?.apply {
+                    isVisible = true
+                    setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                }
+                toolbar.menu.findItem(R.id.action_delete)?.apply {
+                    isVisible = true
+                    setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                }
+                toolbar.menu.findItem(R.id.action_add_shared)?.isVisible = isShared
+
+                if (toolbar.menu.findItem(R.id.action_share) == null) {
+                    toolbar.menu.add(0, R.id.action_share, 0, "Teilen").apply {
+                        setIcon(R.drawable.ic_share)
+                        setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS)
+                    }
+                }
+                toolbar.menu.findItem(R.id.action_share)?.isVisible = true
             }
 
             combine(
@@ -449,7 +435,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         putInt("tripId", tripId)
                         putString("title", "Trip bearbeiten")
                     }
-                    findNavController().navigate(R.id.action_tripDetailFragment_to_newTripFragment, bundle)
+                    findNavController().navigate(R.id.newTripFragment, bundle)
                     true
                 }
                 R.id.action_delete -> {

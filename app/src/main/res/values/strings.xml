@@ -31,7 +31,7 @@
 
     <!-- UI Strings -->
     <string name="friends">Freunde</string>
-    <string name="search_hint">Suchen...</string>
+    <string name="search_hint">Suchen…</string>
     <string name="filter_type">Typ</string>
     <string name="filter_date">Datum</string>
     <string name="filter_location">Standort</string>
@@ -138,7 +138,7 @@
     <string name="location_label">Standort:</string>
 
     <string name="auto_trip_confirm_msg">Möchtest du aus den %1$d ausgewählten Bildern automatisch einen Trip erstellen lassen? Bilder werden nach Standorten (Radius 1km) gebündelt.</string>
-    <string name="processing_images">Bilder werden verarbeitet...</string>
+    <string name="processing_images">Bilder werden verarbeitet…</string>
     <string name="no_valid_images_found">Keine gültigen Bilder gefunden.</string>
     <string name="auto_trip_default_title">Automatische Reise</string>
     <string name="stop_at_date">Stopp am %1$s</string>
@@ -184,11 +184,11 @@
     <string name="bucket_type_experience">ERLEBNIS</string>
     <string name="bucket_type_trip">REISE</string>
 
-    <string name="creating_backup">Backup wird erstellt...</string>
+    <string name="creating_backup">Backup wird erstellt…</string>
     <string name="backup_success">Backup erfolgreich erstellt</string>
     <string name="backup_error">Fehler beim Backup: %1$s</string>
-    <string name="restoring_data">Daten werden wiederhergestellt...</string>
-    <string name="restore_success">Wiederherstellung erfolgreich. App wird neu gestartet...</string>
+    <string name="restoring_data">Daten werden wiederhergestellt…</string>
+    <string name="restore_success">Wiederherstellung erfolgreich. App wird neu gestartet…</string>
     <string name="restore_error">Fehler bei Wiederherstellung: %1$s</string>
 
     <string name="create_profile_first">Bitte erstelle zuerst ein Profil</string>
@@ -270,12 +270,35 @@
     <string name="visions_desc">Was die App noch lernen soll</string>
     <string name="vision_item_1">Trips liken und kommentieren</string>
 
-    <!-- PC Edit Feature -->
-    <string name="pc_edit">Am Computer bearbeiten</string>
-    <string name="pc_edit_desc">Verwalte deine Erlebnisse bequem im Browser</string>
-    <string name="pc_edit_title">Am Computer bearbeiten</string>
-    <string name="pc_edit_enable">Server aktivieren</string>
-    <string name="pc_edit_url_instruction">Gib diese URL im Browser deines Computers ein:</string>
-    <string name="pc_edit_status_active">Server ist aktiv</string>
-    <string name="pc_edit_status_inactive">Server ist inaktiv</string>
+    <string name="pc_edit_title">PC Editor</string>
+    <string name="pc_edit_description">Bearbeite deine Trips und Erlebnisse bequem am großen Bildschirm. Aktiviere den Server und gib die URL im Browser ein.</string>
+    <string name="pc_edit_enable">Lokalen Server aktivieren</string>
+    <string name="pc_edit_url_instruction">Gib diese URL im Browser deines PCs ein:</string>
+    <string name="pc_edit_status_active">Server ist aktiv und wartet auf Verbindung</string>
+    <string name="pc_edit_status_inactive">Server ist deaktiviert</string>
+    <string name="pc_edit">PC Editor</string>
+    <string name="pc_edit_desc">PC Editor</string>
+    <string name="edit">Bearbeiten</string>
+
+    <string name="diary">Tagebuch</string>
+
+    <string name="diary_title_hint">Titel deiner Geschichte…</string>
+    <string name="diary_add_time">Uhrzeit hinzufügen</string>
+    <string name="diary_add_image">Bild hinzufügen</string>
+    <string name="diary_rate_day">Wie war dein Tag?</string>
+    <string name="diary_where_were_you">Wo warst du?</string>
+    <string name="diary_location_hint">Standort eingeben…</string>
+    <string name="diary_who_with">Mit wem warst du unterwegs?</string>
+    <string name="diary_name_hint">Name eingeben…</string>
+    <string name="diary_your_thoughts">Deine Gedanken</string>
+    <string name="diary_notes_hint">Schreibe etwas über deinen Tag…</string>
+    <string name="diary_save_entry">Eintrag verewigen</string>
+
+    <string name="experience_title">Erlebnis</string>
+    <string name="experience_title_hint">Wo warst du?</string>
+    <string name="choose_location">Standort wählen</string>
+    <string name="experience_notes_hint">Deine Notizen…</string>
+    <string name="media_title">Medien</string>
+    <string name="save_experience">Erlebnis speichern</string>
+    <string name="setting_vision_underscore">Was die App noch lernen soll</string>
 </resources>

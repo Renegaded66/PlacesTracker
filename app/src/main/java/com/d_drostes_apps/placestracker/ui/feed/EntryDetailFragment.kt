@@ -184,7 +184,12 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                             putInt("entryId", it.id)
                             putString("title", getString(R.string.edit_entry))
                         }
-                        findNavController().navigate(R.id.action_entryDetailFragment_to_newEntryFragment, bundle)
+                        // 🌟 FIX: Prüfen, ob es ein Tagebuch ist, und das richtige Fragment öffnen!
+                        if (it.entryType == "diary") {
+                            findNavController().navigate(R.id.newDiaryEntryFragment, bundle)
+                        } else {
+                            findNavController().navigate(R.id.newEntryFragment, bundle)
+                        }
                     }
                     true
                 }

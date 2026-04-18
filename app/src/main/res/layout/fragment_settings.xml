@@ -292,7 +292,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Was die App noch lernen soll"
+                            android:text="@string/setting_vision_underscore"
                             android:textColor="?android:attr/textColorSecondary" />
                     </LinearLayout>
 

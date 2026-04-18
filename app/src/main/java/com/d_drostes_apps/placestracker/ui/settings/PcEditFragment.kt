@@ -81,6 +81,6 @@ class PcEditFragment : Fragment(R.layout.fragment_pc_edit) {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopServer()
+        // stopServer()
     }
 }

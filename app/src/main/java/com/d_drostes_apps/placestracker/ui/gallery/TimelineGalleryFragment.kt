@@ -5,13 +5,11 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Base64
-import android.util.Log
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -48,7 +46,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
     private lateinit var mapWebView: WebView
     private lateinit var progressBar: ProgressBar
     private lateinit var adapter: TimelineGalleryAdapter
-    
+
     private var allPhotos = mutableListOf<GalleryItem.Photo>()
     private var filterDateStart: Long? = null
     private var filterDateEnd: Long? = null
@@ -152,17 +150,19 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
     private fun loadPhotos() {
         loadingJob?.cancel()
         progressBar.visibility = View.VISIBLE
-        
+
         loadingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val context = context ?: return@launch
             val photos = mutableListOf<GalleryItem.Photo>()
+            val mapLiveChunk = mutableListOf<GalleryItem.Photo>() // 🌟 NEU: Sammler für den direkten Karten-Upload
+
             val projection = arrayOf(
                 MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.DATE_TAKEN,
                 @Suppress("DEPRECATION") MediaStore.Images.Media.LATITUDE,
                 @Suppress("DEPRECATION") MediaStore.Images.Media.LONGITUDE
             )
-            
+
             val sortOrder = "${MediaStore.Images.Media.DATE_TAKEN} DESC"
             val query = context.contentResolver.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -182,31 +182,52 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
                     val date = cursor.getLong(dateColumn)
-                    
-                    var lat = if (cursor.isNull(latColumn)) null else cursor.getDouble(latColumn)
-                    var lon = if (cursor.isNull(lonColumn)) null else cursor.getDouble(lonColumn)
-                    
+
+                    val lat = if (cursor.isNull(latColumn)) null else cursor.getDouble(latColumn)
+                    val lon = if (cursor.isNull(lonColumn)) null else cursor.getDouble(lonColumn)
+
                     val contentUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-                    photos.add(GalleryItem.Photo(id, contentUri.toString(), date, lat, lon))
+                    val photo = GalleryItem.Photo(id, contentUri.toString(), date, lat, lon)
+
+                    photos.add(photo)
                     count++
 
-                    // 🌟 FIX: Jedes Bild wird jetzt SOFORT angezeigt, sobald es geladen wurde
-                    // (In 10er Schritten am Anfang für Speed, dann einzeln)
-                    if (count <= 10 || count % 5 == 0) {
+                    // Wenn ein Foto Koordinaten hat, legen wir es in den Karten-Sammler
+                    if (lat != null && lon != null && (lat != 0.0 || lon != 0.0)) {
+                        mapLiveChunk.add(photo)
+                    }
+
+                    // 🌟 FIX 1: Schicke Pakete an die Karte, OHNE sie vorher zu löschen
+                    if (mapLiveChunk.size >= 20) {
+                        val chunkToSend = ArrayList(mapLiveChunk)
+                        mapLiveChunk.clear()
+
+                        // Nur streamen, wenn die Karte gerade angesehen wird und kein Datumsfilter aktiv ist
+                        if (mapWebView.visibility == View.VISIBLE && isMapLoaded && filterDateStart == null) {
+                            launch(Dispatchers.Default) { sendToMapLive(context, chunkToSend) }
+                        }
+                    }
+
+                    // Galerie-UI seltener updaten (Performance-Boost)
+                    if (count <= 20 || count % 100 == 0) {
                         val currentSnapshot = ArrayList(photos)
                         withContext(Dispatchers.Main) {
                             if (isAdded) {
                                 allPhotos = currentSnapshot
                                 adapter.updateItems(groupPhotosByDate(currentSnapshot))
-                                progressBar.visibility = View.GONE
-                                if (mapWebView.visibility == View.VISIBLE) startMapUpdateStream()
                             }
                         }
                     }
                 }
             }
-            
+
             val finalPhotos = ArrayList(photos)
+
+            // 🌟 FIX 2: Restliche Bilder an die Karte feuern
+            if (mapLiveChunk.isNotEmpty() && mapWebView.visibility == View.VISIBLE && isMapLoaded && filterDateStart == null) {
+                launch(Dispatchers.Default) { sendToMapLive(context, mapLiveChunk) }
+            }
+
             withContext(Dispatchers.Main) {
                 if (isAdded) {
                     allPhotos = finalPhotos
@@ -221,7 +242,7 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
     private fun loadMissingExifLocations() {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val context = context ?: return@launch
-            
+
             allPhotos.forEachIndexed { index, photo ->
                 if (photo.latitude == null || photo.latitude == 0.0) {
                     try {
@@ -237,14 +258,10 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                                 val updatedPhoto = photo.copy(latitude = latLong[0].toDouble(), longitude = latLong[1].toDouble())
                                 allPhotos[index] = updatedPhoto
 
-                                // 🌟 FIX: Jedes gefundene EXIF-Datum wird jetzt SOFORT in die UI gepusht
                                 withContext(Dispatchers.Main) {
                                     if (isAdded) {
-                                        // Wir updaten den Adapter (nur das eine Item für Performance)
-                                        adapter.notifyItemChanged(index) 
-                                        
-                                        // Wenn wir in der Kartenansicht sind, Marker direkt hinzufügen
-                                        if (mapWebView.visibility == View.VISIBLE && isMapLoaded) {
+                                        adapter.notifyItemChanged(index)
+                                        if (mapWebView.visibility == View.VISIBLE && isMapLoaded && filterDateStart == null) {
                                             sendSinglePhotoToMap(context, updatedPhoto)
                                         }
                                     }
@@ -321,10 +338,10 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                 allPhotos
             }.filter { it.latitude != null && it.longitude != null && (it.latitude != 0.0 || it.longitude != 0.0) }
 
-            // In winzigen Chunks senden für flüssige UI
-            filtered.chunked(10).forEach { chunk ->
+            // 🌟 FIX 3: Riesige Chunks für Highspeed-Laden nach Filteränderungen
+            filtered.chunked(25).forEach { chunk ->
                 sendToMapLive(context, chunk)
-                delay(20) 
+                delay(15) // Mikropause, damit das WebView nicht einfriert
             }
         }
     }

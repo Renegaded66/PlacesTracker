@@ -26,6 +26,9 @@ interface TripDao {
     @Update
     suspend fun updateTrip(trip: Trip)
 
+    @Update
+    suspend fun updateStop(stop: TripStop)
+
     @Delete
     suspend fun deleteTrip(trip: Trip)
 

@@ -142,18 +142,25 @@
     const markerDataSource = new Cesium.CustomDataSource('markers');
     viewer.dataSources.add(markerDataSource);
 
-    markerDataSource.clustering.enabled = true;
-    markerDataSource.clustering.pixelRange = -20;
+    markerDataSource.clustering.enabled = false;
+    markerDataSource.clustering.pixelRange = 2; // Clustert nur, wenn sie WIRKLICH übereinander liegen
     markerDataSource.clustering.minimumClusterSize = 2;
     markerDataSource.clustering.clusterEvent.addEventListener(async function(clusteredEntities, cluster) {
         const count = clusteredEntities.length; const firstEntity = clusteredEntities[0];
         cluster.label.show = false;
-        const clusterImageUrl = await createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor);
-        cluster.billboard.show = true; cluster.billboard.image = clusterImageUrl;
-        cluster.billboard.width = 55; cluster.billboard.height = 55;
-        cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
-        cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
-        cluster.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY; // Bleibt immer sichtbar
+
+        // Asynchrones Laden des Cluster-Bildes
+        createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor).then(clusterImageUrl => {
+            if (clusterImageUrl) {
+                cluster.billboard.show = true;
+                cluster.billboard.image = clusterImageUrl;
+                cluster.billboard.width = 55; cluster.billboard.height = 55;
+                cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
+                cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
+                // 🌟 FIX: Cluster bleiben beim Rauszoomen immer sichtbar!
+                cluster.billboard.disableDepthTestDistance = Number.POSITIVE_INFINITY;
+            }
+        });
     });
 
     let polylineEntities = []; let detailEntities = []; let pickerMode = false;
@@ -211,14 +218,11 @@
 
     async function createRoundImage(imageUrl, color, count = 0, borderColor = "#ffffff") {
         if (!imageUrl || imageUrl === "null") return null;
-
-        // Caching: Ist das Bild schon fertig generiert? Dann gib es direkt zurück!
         const cacheKey = `${imageUrl}_${color}_${count}_${borderColor}`;
         if (roundImageCache.has(cacheKey)) return roundImageCache.get(cacheKey);
 
         return new Promise(resolve => {
-            // 🌟 FIX: Von 100x100 auf extrem schnelle 64x64 reduziert!
-            const baseSize = 64;
+            const baseSize = 64; // Klein und extrem schnell
             const canvas = document.createElement("canvas");
             canvas.width = baseSize; canvas.height = baseSize;
             const ctx = canvas.getContext("2d");
@@ -226,48 +230,37 @@
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
 
             img.onload = () => {
-                const c = baseSize / 2; // 32
-                const r = 26; // Radius für Bild
-
-                // Schatten/Glow
+                const c = baseSize / 2; const r = 26;
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 1, 0, Math.PI * 2);
                 ctx.shadowColor = color; ctx.shadowBlur = 6; ctx.fillStyle = color; ctx.fill(); ctx.restore();
-
-                // Bild einfügen
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
                 ctx.drawImage(img, c - r, c - r, r * 2, r * 2); ctx.restore();
-
-                // Runder Rand in dynamischer Farbe
                 ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2);
                 ctx.strokeStyle = borderColor; ctx.lineWidth = 3; ctx.stroke();
 
-                // Badge mit Zähler für Cluster
-                if (count > 1) {
-                    ctx.beginPath(); ctx.arc(c + r*0.7, c - r*0.7, 12, 0, Math.PI * 2);
-                    ctx.fillStyle = color; ctx.fill();
-                    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke();
-                    ctx.fillStyle = "#ffffff"; ctx.font = "bold 12px sans-serif";
-                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                    ctx.fillText("+" + (count-1), c + r*0.7, c - r*0.7);
-                }
-
-                // 🌟 FIX: WebP ist extrem komprimiert, unterstützt Transparenz und kodiert pfeilschnell (60% Qualität reicht!)
                 const resultUrl = canvas.toDataURL("image/webp", 0.6);
-                roundImageCache.set(cacheKey, resultUrl); // Im Cache speichern
+                roundImageCache.set(cacheKey, resultUrl);
                 resolve(resultUrl);
             };
-            img.onerror = () => { resolve(imageUrl); }; img.src = imageUrl;
+            img.onerror = () => { resolve(null); };
+            img.src = imageUrl;
         });
     }
 
     function addMarkerToSource(source, item, id, typeColor, borderColor = "#ffffff") {
+        // 🌟 FIX 2: Absturz-Schutz für Tagebücher ohne Standort!
+        if (item.lat === undefined || item.lat === null || item.lon === undefined || item.lon === null) return;
+
         const entity = source.entities.add({
             position: Cesium.Cartesian3.fromDegrees(item.lon, item.lat),
+            // 🌟 FIX 3: Punkt sofort zeichnen und IMMER über der Erde halten
             point: {
-                pixelSize: 12, color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"),
-                outlineColor: Cesium.Color.fromCssColorString(borderColor), outlineWidth: 2,
+                pixelSize: 14,
+                color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"),
+                outlineColor: Cesium.Color.fromCssColorString(borderColor),
+                outlineWidth: 2,
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY // 🌟 FIX: Punkte immer sichtbar machen!
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
             }
         });
         entity._customId = id;
@@ -276,19 +269,21 @@
         entity._borderColor = borderColor;
         entity._itemData = item;
 
-        const updateImage = async () => {
-            try {
-                const finalImageUrl = (item.image && item.image !== "" && item.image !== "null") ? await createRoundImage(item.image, typeColor, 0, borderColor) : "https://cdn-icons-png.flaticon.com/512/684/684908.png";
-                entity.billboard = {
-                    image: finalImageUrl, width: 49, height: 49,
-                    verticalOrigin: Cesium.VerticalOrigin.CENTER,
-                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY // 🌟 FIX: Bilder tauchen JEDERZEIT auf, egal wie weit man rauszoomt!
-                };
-                entity.point = undefined; entity._safeImageUrl = finalImageUrl;
-            } catch (e) {}
-        };
-        updateImage();
+        // 🌟 FIX 4: Bilder asynchron laden und IMMER über der Erde halten
+        if (item.image && item.image !== "" && item.image !== "null") {
+            createRoundImage(item.image, typeColor, 0, borderColor).then(finalImageUrl => {
+                if (finalImageUrl) {
+                    entity.billboard = {
+                        image: finalImageUrl, width: 49, height: 49,
+                        verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        disableDepthTestDistance: Number.POSITIVE_INFINITY
+                    };
+                    entity.point = undefined; // Punkt verstecken, sobald das Bild da ist
+                    entity._safeImageUrl = finalImageUrl;
+                }
+            });
+        }
     }
 
     window.clearMapMarkers = function() { markerDataSource.entities.removeAll(); hidePopup(); };
@@ -307,7 +302,6 @@
 
             let i = 0;
             function processChunk() {
-                // Marker salvenartig rendern, UI bleibt flüssig.
                 const chunkEnd = Math.min(i + 25, items.length);
                 for (; i < chunkEnd; i++) {
                     const item = items[i];
@@ -315,15 +309,18 @@
                         addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#4CAF50", "#ffffff");
                     }
                     else if(item.type === "diary") {
+                        // 🌟 FIX 5: Tagebücher in Lila (#BB86FC)
                         addMarkerToSource(markerDataSource, item, "exp_"+item.id, "#BB86FC", "#BB86FC");
                     }
                     else if(item.type === "trip") {
                         let coordinates = [];
                         if (item.stops) {
                             for (const s of item.stops) {
-                                coordinates.push(Cesium.Cartesian3.fromDegrees(s.lon, s.lat));
-                                s.tripName = item.title;
-                                addMarkerToSource(markerDataSource, s, "stop_"+item.id+"_"+s.id, "#FF0000", "#ffffff");
+                                if(s.lat && s.lon) {
+                                    coordinates.push(Cesium.Cartesian3.fromDegrees(s.lon, s.lat));
+                                    s.tripName = item.title;
+                                    addMarkerToSource(markerDataSource, s, "stop_"+item.id+"_"+s.id, "#FF0000", "#ffffff");
+                                }
                             }
                         }
                         if (coordinates.length > 1) {
