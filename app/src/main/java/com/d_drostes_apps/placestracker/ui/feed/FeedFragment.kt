@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -109,6 +110,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         // --- Cesium 3D Globe Setup ---
         cesiumWebView = view.findViewById(R.id.feedCesiumWebView)
         cesiumWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        if (android.os.Build.VERSION.SDK_INT < 26) {
+            cesiumWebView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        }
         cesiumWebView.settings.loadsImagesAutomatically = true
         cesiumWebView.settings.blockNetworkImage = false
         setupCesiumWebView()
@@ -297,6 +301,30 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         setupExpandableFab(view)
         setupFilters(view)
+        setupViewMode(view)
+    }
+
+    private fun setupViewMode(view: View) {
+        val btnViewMode = view.findViewById<ImageButton>(R.id.btnViewMode)
+        btnViewMode.setOnClickListener {
+            val popup = PopupMenu(requireContext(), btnViewMode)
+            popup.menuInflater.inflate(R.menu.menu_feed_view_mode, popup.menu)
+            
+            popup.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.mode_standard -> {
+                        adapter?.setViewMode(FeedAdapter.ViewMode.STANDARD)
+                        true
+                    }
+                    R.id.mode_compact -> {
+                        adapter?.setViewMode(FeedAdapter.ViewMode.COMPACT)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            popup.show()
+        }
     }
 
     private fun showAutoTripConfirmation(uris: List<Uri>) {
@@ -552,7 +580,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 lastItems.forEach { item ->
                     if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) {
                         val obj = JSONObject()
-                        if (item.entry.entryType == "Tagebuch") {
+                        if (item.entry.entryType == "diary") {
                             obj.put("type", "diary")
                         } else {
                             obj.put("type", "experience")
@@ -717,33 +745,33 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     layout.animate().alpha(1f).translationY(0f).setDuration(300).setStartDelay((index * 50).toLong()).start()
                 }
             } else {
-                closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+                closeFabMenu(fabAdd, layouts)
             }
         }
 
         fabHelp.setOnClickListener {
             showHelpDialog()
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+            closeFabMenu(fabAdd, layouts)
         }
 
         fabExperience.setOnClickListener {
             findNavController().navigate(R.id.newEntryFragment)
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+            closeFabMenu(fabAdd, layouts)
         }
 
         fabTrip.setOnClickListener {
             findNavController().navigate(R.id.newTripFragment)
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+            closeFabMenu(fabAdd, layouts)
         }
 
         fabDiary.setOnClickListener {
             findNavController().navigate(R.id.newDiaryEntryFragment)
-            closeFabMenu(fabAdd, layoutHelp, layoutDiary, layoutExperience, layoutTrip, layoutAutoTrip)
+            closeFabMenu(fabAdd, layouts)
         }
 
         fabAutoTrip.setOnClickListener {
             autoTripPicker.launch("image/*")
-            closeFabMenu(fabAdd, layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip)
+            closeFabMenu(fabAdd, layouts)
         }
     }
 
@@ -755,9 +783,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .show()
     }
 
-    private fun closeFabMenu(mainFab: FloatingActionButton, vararg layouts: View) {
+    private fun closeFabMenu(mainFab: FloatingActionButton, layouts: List<View>) {
         isFabMenuOpen = false
         mainFab.animate().rotation(0f).setDuration(300).start()
+
         layouts.reversed().forEachIndexed { index, layout ->
             layout.animate()
                 .alpha(0f)

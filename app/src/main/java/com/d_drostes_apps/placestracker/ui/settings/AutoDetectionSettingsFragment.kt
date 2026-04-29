@@ -22,7 +22,6 @@ import androidx.lifecycle.lifecycleScope
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.UserProfile
-import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
 import com.d_drostes_apps.placestracker.worker.GalleryScanWorker
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -159,6 +158,14 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        webView.evaluateJavascript(
+            "javascript:if(window.setPickerMode) window.setPickerMode(false);",
+            null
+        )
     }
 
     // 🌟 NEU: Zieht die Koordinaten vom Gerät und markiert sie auf der Karte

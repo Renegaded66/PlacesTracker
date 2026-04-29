@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PlacesTracker</string>
     <string name="default_username">User</string>
@@ -300,4 +301,10 @@
     <string name="experience_notes_hint">Your notes…</string>
     <string name="media_title">Media</string>
     <string name="save_experience">Save experience</string>
+
+    <!-- NEU: View Mode Strings -->
+    <string name="view_mode_select">Choose View</string>
+    <string name="view_mode_standard">Standard</string>
+    <string name="view_mode_compact">Compact</string>
+    <string name="view_mode_visual">Visual</string>
 </resources>

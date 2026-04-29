@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PlacesTracker</string>
     <string name="default_username">Benutzer</string>
@@ -236,7 +237,7 @@
     <string name="help_local_desc">Deine Daten gehören dir. PlacesTracker speichert alle Erlebnisse, Bilder und GPS-Daten ausschließlich lokal auf deinem Gerät. Es findet keine Kommunikation mit einem Server statt und es werden keine persönlichen Daten in die Cloud geladen.</string>
 
     <string name="help_types_title">Erlebnis vs. Trip</string>
-    <string name="help_types_desc">Ein Erlebnis ist ein einzelner Ort mit Bildern und Notizen.\n\nEin Trip hingegen ist eine ganze Reise mit mehreren Stopps. Während eines aktiven Trips zeichnet die App im Hintergrund Wegpunkte auf, damit du deine Route später genau nachvollziehen kannst.</string>
+    <string name="help_types_desc">Ein Erlebnis ist ein einzelner ort mit Bildern und Notizen.\n\nEin Trip hingegen ist eine ganze Reise mit mehreren Stopps. Während eines aktiven Trips zeichnet die App im Hintergrund Wegpunkte auf, damit du deine Route später genau nachvollziehen kannst.</string>
 
     <string name="help_auto_trip_title">Automatischer Trip</string>
     <string name="help_auto_trip_desc">Keine Lust, jeden Stopp manuell anzulegen? Nutze die Automatik! Wähle einfach mehrere Bilder aus deiner Galerie aus. Ein schlauer Algorithmus analysiert die Aufnahmeorte und Zeiten, bündelt Bilder an den gleichen Standorten zu Stopps und erstellt für dich eine fertige Reiseroute inklusive Städtenamen.</string>
@@ -301,4 +302,10 @@
     <string name="media_title">Medien</string>
     <string name="save_experience">Erlebnis speichern</string>
     <string name="setting_vision_underscore">Was die App noch lernen soll</string>
+
+    <!-- NEU: View Mode Strings -->
+    <string name="view_mode_select">Ansicht wählen</string>
+    <string name="view_mode_standard">Standard</string>
+    <string name="view_mode_compact">Kompakt</string>
+    <string name="view_mode_visual">Visuell</string>
 </resources>

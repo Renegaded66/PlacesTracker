@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/mode_standard"
+        android:title="@string/view_mode_standard"
+        android:icon="@drawable/ic_feed" />
+    <item
+        android:id="@+id/mode_compact"
+        android:title="@string/view_mode_compact"
+        android:icon="@drawable/ic_drag_handle" />
+</menu>
