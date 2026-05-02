@@ -4,14 +4,18 @@ import android.annotation.SuppressLint
 import android.location.Geocoder
 import android.media.ExifInterface
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ImageButton
+import android.widget.RadioButton
+import androidx.activity.result.PickVisualMediaRequest
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -73,9 +77,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private lateinit var feedListLayout: View
     private lateinit var detailContainer: View
 
-    private val autoTripPicker = registerForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
+    private var selectedAutoTripUris = mutableListOf<Uri>()
+
+    private val autoTripPicker = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(100)) { uris ->
         if (uris.isNotEmpty()) {
-            showAutoTripConfirmation(uris)
+            selectedAutoTripUris.addAll(uris)
+            showAutoTripConfirmation(selectedAutoTripUris)
         }
     }
 
@@ -328,12 +335,27 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun showAutoTripConfirmation(uris: List<Uri>) {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Automatischer Trip")
-            .setMessage("Möchtest du aus den ${uris.size} ausgewählten Bildern automatisch einen Trip erstellen lassen? Bilder werden nach Standorten (Radius 1km) gebündelt.")
-            .setPositiveButton("Ja, erstellen") { _, _ -> createAutoTrip(uris) }
-            .setNegativeButton("Abbrechen", null)
-            .show()
+        val dialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+            .setTitle(R.string.auto_trip_default_title)
+            .setMessage(getString(R.string.auto_trip_confirm_msg, uris.size))
+            .setPositiveButton(R.string.yes_create) { _, _ -> 
+                createAutoTrip(uris)
+                selectedAutoTripUris.clear()
+            }
+            .setNeutralButton(R.string.add_more_images) { _, _ ->
+                autoTripPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                selectedAutoTripUris.clear()
+            }
+            .setOnCancelListener {
+                selectedAutoTripUris.clear()
+            }
+            .create()
+        
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setDimAmount(0.6f)
     }
 
     private fun createAutoTrip(uris: List<Uri>) {
@@ -684,6 +706,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         feedListLayout.visibility = View.GONE
         detailContainer.visibility = View.VISIBLE
+        view?.findViewById<View>(R.id.fabContainer)?.visibility = View.GONE
         
         val transaction = childFragmentManager.beginTransaction()
             .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
@@ -706,6 +729,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         feedListLayout.visibility = View.VISIBLE
         detailContainer.visibility = View.GONE
+        view?.findViewById<View>(R.id.fabContainer)?.visibility = View.VISIBLE
         val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
         if (fragment != null) {
             childFragmentManager.beginTransaction().remove(fragment).commit()
@@ -714,64 +738,106 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         cesiumWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
     }
 
-    private fun setupExpandableFab(view: View) {
-        val fabAdd = view.findViewById<FloatingActionButton>(R.id.fabAdd)
-        val layoutHelp = view.findViewById<View>(R.id.layoutHelp)
-        val layoutExperience = view.findViewById<View>(R.id.layoutAddExperience)
-        val layoutTrip = view.findViewById<View>(R.id.layoutAddTrip)
-        val layoutAutoTrip = view.findViewById<View>(R.id.layoutAutoTrip)
-        val layoutDiary = view.findViewById<View>(R.id.layoutAddDiary)
+    private fun showAddSelectionDialog() {
+        val dialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog).create()
+        val view = layoutInflater.inflate(R.layout.dialog_add_selection, null)
+        dialog.setView(view)
+        
+        dialog.show()
+        val width = (resources.displayMetrics.widthPixels * 0.85).toInt()
+        dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setDimAmount(0.6f)
 
-        val fabHelp = view.findViewById<FloatingActionButton>(R.id.fabHelp)
-        val fabExperience = view.findViewById<FloatingActionButton>(R.id.fabExperience)
-        val fabTrip = view.findViewById<FloatingActionButton>(R.id.fabTrip)
-        val fabAutoTrip = view.findViewById<FloatingActionButton>(R.id.fabAutoTrip)
-        val fabDiary = view.findViewById<FloatingActionButton>(R.id.fabDiary)
+        val radioExperience = view.findViewById<RadioButton>(R.id.radioExperience)
+        val radioTrip = view.findViewById<RadioButton>(R.id.radioTrip)
+        val radioDiary = view.findViewById<RadioButton>(R.id.radioDiary)
 
+        val btnConfirm = view.findViewById<MaterialButton>(R.id.btnConfirmSelection)
 
-        val layouts = listOf(layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip, layoutDiary)
-        layouts.forEach {
-            it.visibility = View.GONE
-            it.alpha = 0f
-            it.translationY = 50f
-        }
-
-        fabAdd.setOnClickListener {
-            isFabMenuOpen = !isFabMenuOpen
-            if (isFabMenuOpen) {
-                fabAdd.animate().rotation(135f).setDuration(300).start()
-                layouts.forEachIndexed { index, layout ->
-                    layout.visibility = View.VISIBLE
-                    layout.animate().alpha(1f).translationY(0f).setDuration(300).setStartDelay((index * 50).toLong()).start()
-                }
-            } else {
-                closeFabMenu(fabAdd, layouts)
+        // RadioButton Logic (Manual group)
+        val radios = listOf(radioExperience, radioTrip, radioDiary)
+        radios.forEach { rb ->
+            rb.setOnClickListener {
+                radios.forEach { it.isChecked = false }
+                rb.isChecked = true
             }
         }
 
-        fabHelp.setOnClickListener {
-            showHelpDialog()
-            closeFabMenu(fabAdd, layouts)
+        // Layout click logic
+        view.findViewById<View>(R.id.layoutOptionExperience).setOnClickListener {
+            radios.forEach { it.isChecked = false }
+            radioExperience.isChecked = true
+        }
+        view.findViewById<View>(R.id.layoutOptionTrip).setOnClickListener {
+            radios.forEach { it.isChecked = false }
+            radioTrip.isChecked = true
+        }
+        view.findViewById<View>(R.id.layoutOptionDiary).setOnClickListener {
+            radios.forEach { it.isChecked = false }
+            radioDiary.isChecked = true
         }
 
-        fabExperience.setOnClickListener {
-            findNavController().navigate(R.id.newEntryFragment)
-            closeFabMenu(fabAdd, layouts)
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            when {
+                radioExperience.isChecked -> findNavController().navigate(R.id.newEntryFragment)
+                radioDiary.isChecked -> findNavController().navigate(R.id.newDiaryEntryFragment)
+                radioTrip.isChecked -> showTripSelectionDialog()
+            }
         }
 
-        fabTrip.setOnClickListener {
-            findNavController().navigate(R.id.newTripFragment)
-            closeFabMenu(fabAdd, layouts)
+        dialog.show()
+    }
+
+    private fun showTripSelectionDialog() {
+        val dialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog).create()
+        val view = layoutInflater.inflate(R.layout.dialog_trip_selection, null)
+        dialog.setView(view)
+
+        dialog.show()
+        val width = (resources.displayMetrics.widthPixels * 0.85).toInt()
+        dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setDimAmount(0.6f)
+
+        val radioTracker = view.findViewById<RadioButton>(R.id.radioTripTracker)
+        val radioAuto = view.findViewById<RadioButton>(R.id.radioTripAuto)
+        val btnConfirm = view.findViewById<MaterialButton>(R.id.btnConfirmTripSelection)
+
+        val radios = listOf(radioTracker, radioAuto)
+        radios.forEach { rb ->
+            rb.setOnClickListener {
+                radios.forEach { it.isChecked = false }
+                rb.isChecked = true
+            }
         }
 
-        fabDiary.setOnClickListener {
-            findNavController().navigate(R.id.newDiaryEntryFragment)
-            closeFabMenu(fabAdd, layouts)
+        view.findViewById<View>(R.id.layoutOptionTripTracker).setOnClickListener {
+            radios.forEach { it.isChecked = false }
+            radioTracker.isChecked = true
+        }
+        view.findViewById<View>(R.id.layoutOptionTripAuto).setOnClickListener {
+            radios.forEach { it.isChecked = false }
+            radioAuto.isChecked = true
         }
 
-        fabAutoTrip.setOnClickListener {
-            autoTripPicker.launch("image/*")
-            closeFabMenu(fabAdd, layouts)
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            if (radioTracker.isChecked) {
+                findNavController().navigate(R.id.newTripFragment)
+            } else {
+                autoTripPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun setupExpandableFab(view: View) {
+        val fabAdd = view.findViewById<FloatingActionButton>(R.id.fabAdd)
+        fabAdd.setOnClickListener {
+            showAddSelectionDialog()
         }
     }
 
@@ -783,11 +849,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .show()
     }
 
-    private fun closeFabMenu(mainFab: FloatingActionButton, layouts: List<View>) {
+    private fun closeFabMenu(mainFab: FloatingActionButton, layouts: List<View?>) {
         isFabMenuOpen = false
         mainFab.animate().rotation(0f).setDuration(300).start()
 
-        layouts.reversed().forEachIndexed { index, layout ->
+        layouts.filterNotNull().reversed().forEachIndexed { index, layout ->
             layout.animate()
                 .alpha(0f)
                 .translationY(50f)

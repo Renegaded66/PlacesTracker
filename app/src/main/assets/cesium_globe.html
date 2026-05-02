@@ -88,19 +88,11 @@
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
 
-        logarithmicDepthBuffer: false,
+        // 🌟 FIX 1: Muss auf true stehen, sonst schneiden Mali-GPUs (Android) den Globus eckig ab!
+        logarithmicDepthBuffer: true
 
-        contextOptions: {
-            webgl: {
-                alpha: false,
-                depth: true,
-                stencil: false,
-                antialias: true,
-                premultipliedAlpha: true,
-                preserveDrawingBuffer: false,
-                failIfMajorPerformanceCaveat: false
-            }
-        }
+        // 🌟 FIX 2: Die kompletten contextOptions wurden entfernt.
+        // Durch 'stencil: false' hat sich Cesium auf manchen Handys selbst zerschossen.
     });
 
     viewer.scene.globe.baseColor = Cesium.Color.BLACK;

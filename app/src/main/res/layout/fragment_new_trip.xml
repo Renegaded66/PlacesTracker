@@ -5,18 +5,35 @@
     android:layout_height="match_parent"
     android:background="#121212">
 
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:paddingTop="12dp"
+        app:elevation="0dp">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbarNewTrip"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:navigationIconTint="#E0E0E0" />
+    </com.google.android.material.appbar.AppBarLayout>
+
     <androidx.core.widget.NestedScrollView
         android:id="@+id/tripScrollView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="100dp">
+        android:paddingBottom="100dp"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:id="@+id/tvHeaderTrip"
@@ -27,7 +44,7 @@
                 android:textSize="34sp"
                 android:fontFamily="serif"
                 android:textStyle="bold"
-                android:layout_marginTop="16dp"/>
+                android:layout_marginTop="0dp"/>
 
             <View
                 android:layout_width="60dp"
@@ -91,7 +108,8 @@
                 app:cardBackgroundColor="#1E1E1E"
                 app:cardCornerRadius="20dp"
                 app:strokeWidth="0dp"
-                android:layout_marginBottom="32dp">
+                android:layout_marginBottom="32dp"
+                android:visibility="gone">
                 <android.webkit.WebView
                     android:id="@+id/tripMapPreview"
                     android:layout_width="match_parent"

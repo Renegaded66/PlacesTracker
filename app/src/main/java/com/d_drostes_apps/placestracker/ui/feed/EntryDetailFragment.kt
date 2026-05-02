@@ -158,7 +158,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 tvDate.text = sdf.format(Date(e.date))
 
                 rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
-                rvMedia.adapter = DetailMediaAdapter(e.media) { path ->
+                rvMedia.adapter = DetailMediaAdapter(e.media) { path, transitionView ->
                     val dialog = MediaDialogFragment().apply {
                         arguments = Bundle().apply {
                             putStringArrayList("mediaPaths", ArrayList(e.media))

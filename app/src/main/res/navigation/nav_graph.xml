@@ -255,6 +255,11 @@
             android:name="stopId"
             app:argType="integer"
             android:defaultValue="-1" />
+        <action
+            android:id="@+id/action_newTripFragment_to_feedFragment"
+            app:destination="@id/feedFragment"
+            app:popUpTo="@id/feedFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <dialog

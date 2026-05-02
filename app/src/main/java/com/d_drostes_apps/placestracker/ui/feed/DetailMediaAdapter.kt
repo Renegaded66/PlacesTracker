@@ -11,7 +11,7 @@ import java.io.File
 
 class DetailMediaAdapter(
     private val mediaPaths: List<String>,
-    private val onMediaClick: (String) -> Unit
+    private val onMediaClick: (String, View) -> Unit
 ) : RecyclerView.Adapter<DetailMediaAdapter.MediaViewHolder>() {
 
     class MediaViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -31,8 +31,10 @@ class DetailMediaAdapter(
             .centerCrop()
             .into(holder.imageView)
 
+        holder.imageView.transitionName = "media_$path"
+
         holder.itemView.setOnClickListener {
-            onMediaClick(path)
+            onMediaClick(path, holder.imageView)
         }
     }
 

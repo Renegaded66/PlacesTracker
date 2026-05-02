@@ -88,6 +88,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         //val switchPublicTrip = view.findViewById<SwitchMaterial>(R.id.switchPublicTrip)
         val rvStops = view.findViewById<RecyclerView>(R.id.rvTripStops)
         val btnAddStop = view.findViewById<MaterialButton>(R.id.btnAddStop)
+        val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarNewTrip)
+        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveTrip)
         val btnAddCover = view.findViewById<MaterialButton>(R.id.btnAddTripCover)
         val ivCoverPreview = view.findViewById<ImageView>(R.id.ivTripCoverPreview)
@@ -145,6 +148,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         rvStops.layoutManager = LinearLayoutManager(requireContext())
         rvStops.adapter = adapter
 
+        val directAddStop = arguments?.getBoolean("directAddStop") ?: false
+        val preStopId = arguments?.getInt("stopId") ?: -1
+
         if (editingTripId != -1) {
             lifecycleScope.launch {
                 val trip = tripDao.getTripById(editingTripId)
@@ -166,16 +172,22 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 updateAdapterItems()
                 updateTripMap()
 
-                if (arguments?.getBoolean("directAddStop") == true) {
-                    val preLat = arguments?.getFloat("preLat") ?: 0.0f
-                    val preLon = arguments?.getFloat("preLon") ?: 0.0f
-                    val preTime = arguments?.getLong("preTime") ?: System.currentTimeMillis()
-                    val preLocationId = arguments?.getLong("preLocationId") ?: -1L
-                    
-                    showAddStopDialog(initialLat = preLat.toDouble(), initialLon = preLon.toDouble(), initialTime = preTime, miniStopIdToDelete = preLocationId)
-                    arguments?.remove("directAddStop")
+                if (directAddStop) {
+                    if (preStopId != -1) {
+                        val stop = tripDao.getStopById(preStopId)
+                        stop?.let { showAddStopDialog(it) }
+                    } else {
+                        val preLat = arguments?.getFloat("preLat") ?: 0.0f
+                        val preLon = arguments?.getFloat("preLon") ?: 0.0f
+                        val preTime = arguments?.getLong("preTime") ?: System.currentTimeMillis()
+                        val preLocationId = arguments?.getLong("preLocationId") ?: -1L
+                        
+                        showAddStopDialog(initialLat = preLat.toDouble(), initialLon = preLon.toDouble(), initialTime = preTime, miniStopIdToDelete = preLocationId)
+                    }
                 }
             }
+        } else if (directAddStop) {
+            showAddStopDialog()
         }
 
         btnAddCover.setOnClickListener { tripCoverPicker.launch("image/*") }
@@ -217,7 +229,12 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 stops.forEach { stop ->
                     tripDao.insertStop(stop.copy(id = 0, tripId = finalTripId))
                 }
-                requireActivity().onBackPressedDispatcher.onBackPressed()
+                
+                if (directAddStop || editingTripId != -1) {
+                    findNavController().popBackStack()
+                } else {
+                    findNavController().navigate(R.id.action_newTripFragment_to_feedFragment)
+                }
             }
         }
     }

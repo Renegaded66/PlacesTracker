@@ -45,6 +45,7 @@ import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.card.MaterialCardView
@@ -245,7 +246,40 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     putBoolean("directAddStop", true)
                     putInt("stopId", stop.id)
                 }
-                findNavController().navigate(R.id.action_tripDetailFragment_to_newTripFragment, bundle)
+                val destination = if (isInline) R.id.action_feedFragment_to_newTripFragment else R.id.action_tripDetailFragment_to_newTripFragment
+                findNavController().navigate(destination, bundle)
+            },
+            onAddStopClick = {
+                val currentContext = context ?: return@TripStopsAdapter
+                val fusedLocationClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(currentContext)
+                if (androidx.core.content.ContextCompat.checkSelfPermission(currentContext, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    fusedLocationClient.getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, null)
+                        .addOnSuccessListener { location: android.location.Location? ->
+                            val bundle = Bundle().apply {
+                                putInt("tripId", tripId)
+                                putBoolean("directAddStop", true)
+                                location?.let {
+                                    putFloat("preLat", it.latitude.toFloat())
+                                    putFloat("preLon", it.longitude.toFloat())
+                                    putLong("preTime", System.currentTimeMillis())
+                                }
+                            }
+                            val destination = if (isInline) R.id.action_feedFragment_to_newTripFragment else R.id.action_tripDetailFragment_to_newTripFragment
+                            findNavController().navigate(destination, bundle)
+                        }
+                } else {
+                    val bundle = Bundle().apply {
+                        putInt("tripId", tripId)
+                        putBoolean("directAddStop", true)
+                        putLong("preTime", System.currentTimeMillis())
+                    }
+                    val destination = if (isInline) R.id.action_feedFragment_to_newTripFragment else R.id.action_tripDetailFragment_to_newTripFragment
+                    findNavController().navigate(destination, bundle)
+                }
+            },
+            onMediaClick = { path, view ->
+                val dialog = MediaDialogFragment.newInstance(ArrayList(listOf(path)), 0)
+                dialog.show(parentFragmentManager, "MediaFullscreen")
             },
             scope = viewLifecycleOwner.lifecycleScope
         )
@@ -255,29 +289,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         nestedScroll.setOnScrollChangeListener(NestedScrollView.OnScrollChangeListener { _, _, scrollY, _, _ ->
             updateDayIndicatorPosition()
 
-            if (scrollY <= 10) {
-                if (lastFocusedStopId != null) {
-                    lastFocusedStopId = null
-                    val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
-                    val globe = if (isInline) (parentFragment as? FeedFragment)?.getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
+            if (scrollY <= 5) {
+                lastFocusedStopId = null
+                val feedFragment = parentFragmentManager.fragments.find { it is FeedFragment } as? FeedFragment
+                val globe = if (isInline) (parentFragment as? FeedFragment)?.getGlobe() else feedFragment?.getGlobe() ?: mapboxWebView
 
-                    // 🌟 FIX: Anstatt die Route neu zu zeichnen (was die Kamera verwirrt),
-                    // befehlen wir der 3D-Kugel, sanft auf alle gezeichneten Linien herauszuzoomen!
-                    val js = """
-                        javascript:(function(){
-                            try {
-                                if (typeof viewer !== 'undefined') {
-                                    if (typeof polylineEntities !== 'undefined' && polylineEntities.length > 0) {
-                                        viewer.zoomTo(polylineEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
-                                    } else if (typeof detailEntities !== 'undefined' && detailEntities.length > 0) {
-                                        viewer.zoomTo(detailEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
-                                    }
+                val js = """
+                    javascript:(function(){
+                        try {
+                            if (typeof viewer !== 'undefined') {
+                                if (typeof polylineEntities !== 'undefined' && polylineEntities.length > 0) {
+                                    viewer.zoomTo(polylineEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
+                                } else if (typeof detailEntities !== 'undefined' && detailEntities.length > 0) {
+                                    viewer.zoomTo(detailEntities, new Cesium.HeadingPitchRange(0, -Math.PI/2, 0));
                                 }
-                            } catch(e) {}
-                        })();
-                    """.trimIndent()
-                    globe?.evaluateJavascript(js, null)
-                }
+                            }
+                        } catch(e) {}
+                    })();
+                """.trimIndent()
+                globe?.evaluateJavascript(js, null)
                 return@OnScrollChangeListener
             }
 

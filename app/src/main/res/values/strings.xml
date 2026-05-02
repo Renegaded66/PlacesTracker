@@ -308,4 +308,22 @@
     <string name="view_mode_standard">Standard</string>
     <string name="view_mode_compact">Kompakt</string>
     <string name="view_mode_visual">Visuell</string>
+    <!-- Add Selection Dialog -->
+    <string name="add_selection_title">Was möchtest du hinzufügen?</string>
+    <string name="add_selection_experience">Erlebnis</string>
+    <string name="add_selection_experience_desc">Ein eintägiges Erlebnis wie eine Wanderung oder eine Party.</string>
+    <string name="add_selection_trip">Reise</string>
+    <string name="add_selection_trip_desc">Eine mehrtägige Reise mit mehreren Stopps.</string>
+    <string name="add_selection_diary">Tagebuch</string>
+    <string name="add_selection_diary_desc">Halte Gedanken und Erlebnisse in kurzen Notizen fest.</string>
+
+    <string name="trip_selection_title">Welche Art von Reise?</string>
+    <string name="trip_selection_tracker">Reise Tracker</string>
+    <string name="trip_selection_tracker_desc">Tracke live deine Reise während du unterwegs bist.</string>
+    <string name="trip_selection_auto">Fertige Reise</string>
+    <string name="trip_selection_auto_desc">Füge Bilder mit Standortdaten hinzu, um eine fertig zusammengestellte Reise zu erhalten.</string>
+    <string name="add_more_images">Mehr Bilder hinzufügen</string>
+
+    <string name="plus_symbol">+</string>
+
 </resources>

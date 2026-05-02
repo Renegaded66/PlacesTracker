@@ -14,6 +14,9 @@ class MediaDialogFragment : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setStyle(STYLE_NORMAL, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        
+        enterTransition = com.google.android.material.transition.MaterialFadeThrough()
+        exitTransition = com.google.android.material.transition.MaterialFadeThrough()
     }
 
     override fun onCreateView(
@@ -23,6 +26,8 @@ class MediaDialogFragment : DialogFragment() {
     ): View? {
         return inflater.inflate(R.layout.dialog_fullscreen_media, container, false)
     }
+
+    private var adapter: FullscreenMediaAdapter? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -35,9 +40,14 @@ class MediaDialogFragment : DialogFragment() {
 
         btnClose.setOnClickListener { dismiss() }
 
-        val adapter = FullscreenMediaAdapter(mediaPaths)
+        adapter = FullscreenMediaAdapter(mediaPaths)
         viewPager.adapter = adapter
         viewPager.setCurrentItem(initialPosition, false)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        adapter?.releaseAllPlayers()
     }
 
     companion object {

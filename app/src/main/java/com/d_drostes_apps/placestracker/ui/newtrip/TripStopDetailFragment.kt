@@ -80,7 +80,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
-                (parentFragment as? FeedFragment)?.closeDetail()
+                (parentFragment as? FeedFragment)?.handleBack()
             }
         } else {
             mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
@@ -124,7 +124,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                 tvDate.text = sdf.format(Date(it.date))
 
                 rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
-                rvMedia.adapter = DetailMediaAdapter(it.media) { path ->
+                rvMedia.adapter = DetailMediaAdapter(it.media) { path, transitionView ->
                     val dialog = MediaDialogFragment().apply {
                         arguments = Bundle().apply {
                             putStringArrayList("mediaPaths", ArrayList(it.media))

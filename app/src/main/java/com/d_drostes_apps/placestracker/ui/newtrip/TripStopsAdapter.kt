@@ -15,6 +15,8 @@ import com.d_drostes_apps.placestracker.data.TripLocation
 import com.d_drostes_apps.placestracker.data.TripStop
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -45,6 +47,8 @@ class TripStopsAdapter(
     private val onTransportClick: (Int, String?) -> Unit,
     private val onConfirmDraft: (TripStop) -> Unit = {},
     private val onRemoveDraft: (TripStop) -> Unit = {},
+    private val onAddStopClick: (() -> Unit)? = null,
+    private val onMediaClick: ((String, View) -> Unit)? = null,
     private val scope: CoroutineScope? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -53,6 +57,7 @@ class TripStopsAdapter(
         private const val TYPE_MINI_STOP = 1
         private const val TYPE_EXPAND = 2
         private const val TYPE_TRANSPORT = 3
+        private const val TYPE_ADD_BUTTON = 4
     }
 
     private val flagCache = mutableMapOf<String, String>()
@@ -67,6 +72,7 @@ class TripStopsAdapter(
     }
 
     override fun getItemViewType(position: Int): Int {
+        if (position == items.size) return TYPE_ADD_BUTTON
         return when (items[position]) {
             is TripItem.Stop -> TYPE_STOP
             is TripItem.MiniStop -> TYPE_MINI_STOP
@@ -89,6 +95,10 @@ class TripStopsAdapter(
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_transport_plus, parent, false)
                 TransportViewHolder(view)
             }
+            TYPE_ADD_BUTTON -> {
+                val view = LayoutInflater.from(parent.context).inflate(R.layout.item_trip_add_button, parent, false)
+                AddButtonViewHolder(view)
+            }
             else -> {
                 val view = LayoutInflater.from(parent.context).inflate(R.layout.item_mini_stop, parent, false)
                 MiniStopViewHolder(view)
@@ -97,6 +107,10 @@ class TripStopsAdapter(
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is AddButtonViewHolder) {
+            holder.bind()
+            return
+        }
         when (val item = items[position]) {
             is TripItem.Stop -> (holder as StopViewHolder).bind(item.stop)
             is TripItem.MiniStop -> (holder as MiniStopViewHolder).bind(item.location)
@@ -105,7 +119,29 @@ class TripStopsAdapter(
         }
     }
 
-    override fun getItemCount(): Int = items.size
+    override fun getItemCount(): Int = items.size + if (onAddStopClick != null) 1 else 0
+
+    inner class AddButtonViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val btnAdd: MaterialButton = view.findViewById(R.id.btnBigAddStop)
+        
+        fun bind() {
+            btnAdd.setIconResource(R.drawable.ic_add)
+            // Removed text to keep it as a "dickes plus icon" as requested
+            btnAdd.text = ""
+            btnAdd.setStrokeColorResource(android.R.color.transparent)
+            (itemView.context.applicationContext as? com.d_drostes_apps.placestracker.PlacesApplication)?.let { app ->
+                scope?.launch(Dispatchers.Main) {
+                    val profile = withContext(Dispatchers.IO) { app.userDao.getUserProfile().firstOrNull() }
+                    profile?.themeColor?.let { color ->
+                        btnAdd.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+                        btnAdd.setTextColor(if (com.d_drostes_apps.placestracker.utils.ThemeHelper.isDarkColor(color)) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+                        btnAdd.iconTint = btnAdd.textColors
+                    }
+                }
+            }
+            btnAdd.setOnClickListener { onAddStopClick?.invoke() }
+        }
+    }
 
     inner class StopViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val ivPic: ImageView = view.findViewById(R.id.ivStopPic)
@@ -132,12 +168,16 @@ class TripStopsAdapter(
 
             val coverPath = stop.coverImage ?: stop.media.firstOrNull()
             if (coverPath != null) {
+                ivPic.transitionName = "media_$coverPath"
                 Glide.with(itemView.context)
                     .load(File(coverPath))
                     .centerCrop()
                     .into(ivPic)
+                
+                ivPic.setOnClickListener { onStopClick(stop) }
             } else {
                 ivPic.setImageResource(R.drawable.vorschaubild)
+                ivPic.setOnClickListener(null)
             }
 
             // Load Flag
@@ -147,14 +187,12 @@ class TripStopsAdapter(
                     tvFlag.text = flagCache[loc]
                     tvFlag.visibility = View.VISIBLE
                 } else {
-                    scope?.launch {
-                        val flag = getFlagForLocation(itemView.context, loc)
+                    scope?.launch(Dispatchers.Main) {
+                        val flag = withContext(Dispatchers.IO) { getFlagForLocation(itemView.context, loc) }
                         if (flag != null) {
                             flagCache[loc] = flag
-                            withContext(Dispatchers.Main) {
-                                tvFlag.text = flag
-                                tvFlag.visibility = View.VISIBLE
-                            }
+                            tvFlag.text = flag
+                            tvFlag.visibility = View.VISIBLE
                         }
                     }
                 }

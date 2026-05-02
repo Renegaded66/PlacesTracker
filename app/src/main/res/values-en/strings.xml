@@ -307,4 +307,22 @@
     <string name="view_mode_standard">Standard</string>
     <string name="view_mode_compact">Compact</string>
     <string name="view_mode_visual">Visual</string>
+    <!-- Add Selection Dialog -->
+    <string name="add_selection_title">What do you want to add?</string>
+    <string name="add_selection_experience">Experience</string>
+    <string name="add_selection_experience_desc">A one-day experience like a hike or a party.</string>
+    <string name="add_selection_trip">Trip</string>
+    <string name="add_selection_trip_desc">A multi-day journey with several stops.</string>
+    <string name="add_selection_diary">Diary</string>
+    <string name="add_selection_diary_desc">Record thoughts and experiences in short notes.</string>
+
+    <string name="trip_selection_title">What kind of trip?</string>
+    <string name="trip_selection_tracker">Trip Tracker</string>
+    <string name="trip_selection_tracker_desc">Track your trip live while you are on the go.</string>
+    <string name="trip_selection_auto">Finished Trip</string>
+    <string name="trip_selection_auto_desc">Add images with location data to get a ready-made trip.</string>
+    <string name="add_more_images">Add more images</string>
+
+    <string name="plus_symbol">+</string>
+
 </resources>
