@@ -71,6 +71,31 @@
 <script>
     Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0Nzc1Nzc0Yi1mYzg4LTQwZWQtODc1NS0xNzBkZjU1ZGRlZDAiLCJpZCI6NDA4ODc5LCJpYXQiOjE3NzQ0MzExMDh9.l97sgxaAGqcNZS7CQ2wvZm1Lv1FBcDgIO5uyaksXKqk";
 
+    // GPU‑abhängige Stabilitätsprüfung (verhindert schwarze Globus‑Texturen auf manchen Android Geräten)
+    function detectSafeLogDepth() {
+        try {
+            const canvas = document.createElement("canvas");
+            const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+            if (!gl) return false;
+
+            const renderer = (gl.getParameter(gl.RENDERER) || "").toLowerCase();
+            const vendor = (gl.getParameter(gl.VENDOR) || "").toLowerCase();
+            const info = renderer + " " + vendor;
+
+            // Mali GPUs funktionieren stabil mit logarithmicDepthBuffer
+            if (info.includes("mali")) return true;
+
+            // Adreno / einige Samsung & Xiaomi WebViews verursachen schwarze Kugeln
+            if (info.includes("adreno")) return false;
+
+            return false;
+        } catch(e) {
+            return false;
+        }
+    }
+
+    const useLogDepth = detectSafeLogDepth();
+
     const viewer = new Cesium.Viewer('cesiumContainer', {
 
         terrainProvider: new Cesium.EllipsoidTerrainProvider(),
@@ -88,14 +113,18 @@
         requestRenderMode: true,
         maximumRenderTimeChange: Infinity,
 
-        // 🌟 FIX 1: Muss auf true stehen, sonst schneiden Mali-GPUs (Android) den Globus eckig ab!
-        logarithmicDepthBuffer: true
+        // Dynamisch aktiviert: verhindert Renderingfehler auf Adreno/Samsung WebViews
+        logarithmicDepthBuffer: useLogDepth
 
         // 🌟 FIX 2: Die kompletten contextOptions wurden entfernt.
         // Durch 'stencil: false' hat sich Cesium auf manchen Handys selbst zerschossen.
     });
 
     viewer.scene.globe.baseColor = Cesium.Color.BLACK;
+
+    // Zusätzliche Stabilität für Android WebView GPUs
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.globe.enableLighting = false;
 
     viewer.scene.globe.maximumScreenSpaceError = 0.8;
     viewer.scene.globe.loadingDescendantLimit = 20;
@@ -115,6 +144,10 @@
 
     viewer.scene.fog.enabled = false; viewer.scene.globe.showGroundAtmosphere = false;
     viewer.scene.skyAtmosphere.show = false; viewer.scene.highDynamicRange = false;
+
+    // Zusätzliche Performance‑Optimierung für mobile GPUs
+    viewer.scene.requestRenderMode = true;
+    viewer.scene.maximumRenderTimeChange = Infinity;
 
     // Earth Glow Effect
     viewer.scene.primitives.add(new Cesium.Primitive({
@@ -139,8 +172,12 @@
         new Cesium.UrlTemplateImageryProvider({
             url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
             maximumLevel: 19,
+            minimumLevel: 1,
+            tileWidth: 256,
+            tileHeight: 256,
             credit: "Esri",
-            enablePickFeatures: false
+            enablePickFeatures: false,
+            hasAlphaChannel: false
         })
     );
 
