@@ -2,7 +2,7 @@ package com.d_drostes_apps.placestracker.ui.feed
 
 import android.annotation.SuppressLint
 import android.location.Geocoder
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -55,6 +55,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.view.isVisible
 
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
@@ -79,10 +80,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private var selectedAutoTripUris = mutableListOf<Uri>()
 
-    private val autoTripPicker = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(100)) { uris ->
+    private val autoTripPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
             selectedAutoTripUris.addAll(uris)
-            showAutoTripConfirmation(selectedAutoTripUris)
+            showAutoTripConfirmation(selectedAutoTripUris.toList())
         }
     }
 
@@ -116,12 +117,18 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         // --- Cesium 3D Globe Setup ---
         cesiumWebView = view.findViewById(R.id.feedCesiumWebView)
+
+        // Force hardware acceleration for WebGL (required by Cesium)
         cesiumWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        if (android.os.Build.VERSION.SDK_INT < 26) {
-            cesiumWebView.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-        }
+
         cesiumWebView.settings.loadsImagesAutomatically = true
         cesiumWebView.settings.blockNetworkImage = false
+        cesiumWebView.settings.allowContentAccess = true
+        cesiumWebView.settings.databaseEnabled = true
+        cesiumWebView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+
+        // Enable WebView debugging so JS errors appear in logcat
+        WebView.setWebContentsDebuggingEnabled(true)
         setupCesiumWebView()
 
         // --- Bottom Sheet Setup ---
@@ -181,7 +188,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (detailContainer.visibility == View.VISIBLE) {
+                if (detailContainer.isVisible) {
                     handleBack()
                 } else {
                     isEnabled = false
@@ -343,7 +350,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 selectedAutoTripUris.clear()
             }
             .setNeutralButton(R.string.add_more_images) { _, _ ->
-                autoTripPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                autoTripPicker.launch(arrayOf("image/*"))
             }
             .setNegativeButton(R.string.cancel) { _, _ ->
                 selectedAutoTripUris.clear()
@@ -367,14 +374,71 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 val tripDao = app.database.tripDao()
 
                 val imageDataList = uris.mapNotNull { uri ->
-                    val file = copyToInternalStorage(uri)
-                    val exif = try { ExifInterface(file.absolutePath) } catch (e: Exception) { null }
-                    val dateStr = exif?.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) ?: exif?.getAttribute(ExifInterface.TAG_DATETIME)
-                    val date = if (dateStr != null) { try { SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault()).parse(dateStr)?.time } catch (e: Exception) { null } } else file.lastModified()
-                    val latLong = FloatArray(2)
-                    val location = if (exif?.getLatLong(latLong) == true) "${latLong[0]},${latLong[1]}" else null
-                    if (date != null) Triple(file.absolutePath, date, location) else null
+                    try {
+                        val file = copyToInternalStorage(uri)
+
+                        // Read EXIF from the ORIGINAL URI (Google Photos keeps metadata there)
+                        val exif = try {
+                            requireContext().contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                                ExifInterface(pfd.fileDescriptor)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        }
+
+                        val latLong = FloatArray(2)
+                        var location: String? = null
+
+                        // Try EXIF GPS first
+                        if (exif?.getLatLong(latLong) == true) {
+                            location = "${latLong[0]},${latLong[1]}"
+                        }
+
+                        // Fallback: some galleries store GPS only in MediaStore
+                        if (location == null) {
+                            try {
+                                val projection = arrayOf(
+                                    android.provider.MediaStore.Images.ImageColumns.LATITUDE,
+                                    android.provider.MediaStore.Images.ImageColumns.LONGITUDE
+                                )
+
+                                requireContext().contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                                    if (cursor.moveToFirst()) {
+                                        val lat = cursor.getDouble(0)
+                                        val lon = cursor.getDouble(1)
+                                        if (lat != 0.0 && lon != 0.0) {
+                                            location = "${lat},${lon}"
+                                        }
+                                    }
+                                }
+                            } catch (_: Exception) {}
+                        }
+
+                        val dateStr =
+                            exif?.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                                ?: exif?.getAttribute(ExifInterface.TAG_DATETIME)
+
+                        val parsedDate = dateStr?.let {
+                            try {
+                                SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault())
+                                    .parse(it)?.time
+                            } catch (_: Exception) {
+                                null
+                            }
+                        }
+
+                        val finalDate =
+                            parsedDate
+                                ?: file.lastModified().takeIf { it > 0 }
+                                ?: System.currentTimeMillis()
+
+                        Triple(file.absolutePath, finalDate, location)
+
+                    } catch (e: Exception) {
+                        null
+                    }
                 }.sortedBy { it.second }
+
 
                 if (imageDataList.isEmpty()) {
                     withContext(Dispatchers.Main) {
@@ -384,44 +448,46 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     return@launch
                 }
 
-                val stops = mutableListOf<List<Triple<String, Long, String?>>>()
-                var currentGroup = mutableListOf<Triple<String, Long, String?>>()
-                var currentRefLocation: android.location.Location? = null
+                val stops = mutableListOf<MutableList<Triple<String, Long, String?>>>()
+                var currentGroup: MutableList<Triple<String, Long, String?>>? = null
+                var refLocation: android.location.Location? = null
 
                 for (image in imageDataList) {
-                    val imgLocStr = image.third
-                    if (imgLocStr != null) {
-                        val coords = imgLocStr.split(",")
-                        if (coords.size == 2) {
-                            val imgLat = coords[0].toDoubleOrNull()
-                            val imgLon = coords[1].toDoubleOrNull()
-
-                            if (imgLat != null && imgLon != null) {
-                                val imgLoc = android.location.Location("").apply {
-                                    latitude = imgLat
-                                    longitude = imgLon
+                    val locStr = image.third
+                    val loc = if (locStr != null) {
+                        val parts = locStr.split(",")
+                        if (parts.size == 2) {
+                            val lat = parts[0].toDoubleOrNull()
+                            val lon = parts[1].toDoubleOrNull()
+                            if (lat != null && lon != null) {
+                                android.location.Location("").apply {
+                                    latitude = lat
+                                    longitude = lon
                                 }
+                            } else null
+                        } else null
+                    } else null
 
-                                if (currentRefLocation == null) {
-                                    currentRefLocation = imgLoc
-                                    currentGroup.add(image)
-                                } else {
-                                    val distanceInMeters = currentRefLocation.distanceTo(imgLoc)
-                                    if (distanceInMeters > 1000f) {
-                                        if (currentGroup.isNotEmpty()) stops.add(currentGroup)
-                                        currentGroup = mutableListOf(image)
-                                        currentRefLocation = imgLoc
-                                    } else {
-                                        currentGroup.add(image)
-                                    }
-                                }
-                                continue
-                            }
-                        }
+                    if (currentGroup == null) {
+                        currentGroup = mutableListOf(image)
+                        stops.add(currentGroup)
+                        refLocation = loc
+                        continue
                     }
-                    currentGroup.add(image)
+
+                    if (loc != null && refLocation != null) {
+                        val distance = refLocation.distanceTo(loc)
+                        if (distance > 5000f) {
+                            currentGroup = mutableListOf(image)
+                            stops.add(currentGroup)
+                            refLocation = loc
+                        } else {
+                            currentGroup.add(image)
+                        }
+                    } else {
+                        currentGroup.add(image)
+                    }
                 }
-                if (currentGroup.isNotEmpty()) stops.add(currentGroup)
 
                 val firstDate = imageDataList.first().second
                 val tripId = tripDao.insertTrip(Trip(title = "Automatische Reise", date = firstDate, coverImage = imageDataList.first().first)).toInt()
@@ -483,8 +549,14 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun copyToInternalStorage(uri: Uri): File {
-        val file = File(requireContext().filesDir, "${UUID.randomUUID()}.jpg")
-        FileOutputStream(file).use { output -> requireContext().contentResolver.openInputStream(uri)?.use { input -> input.copyTo(output) } }
+        val mime = requireContext().contentResolver.getType(uri)
+        val ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mime) ?: "jpg"
+        val file = File(requireContext().filesDir, "${UUID.randomUUID()}.$ext")
+        requireContext().contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        }
         return file
     }
 
@@ -590,8 +662,17 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
             }
         }
-        val html = try { requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() } } catch (e: Exception) { "" }
-        cesiumWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
+        val html = try {
+            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
+        } catch (e: Exception) { "" }
+
+        cesiumWebView.loadDataWithBaseURL(
+            "file:///android_asset/",
+            html,
+            "text/html",
+            "UTF-8",
+            null
+        )
     }
 
     private fun updateGlobeData() {
@@ -827,7 +908,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             if (radioTracker.isChecked) {
                 findNavController().navigate(R.id.newTripFragment)
             } else {
-                autoTripPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                autoTripPicker.launch(arrayOf("image/*"))
             }
         }
 

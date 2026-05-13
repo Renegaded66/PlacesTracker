@@ -13,6 +13,7 @@ data class BucketItem(
     val isCompleted: Boolean = false,
     val media: List<String> = emptyList(),
     val isTrip: Boolean = false, // false = Experience, true = Trip
+    val folderName: String? = null,
     val lastModified: Long = System.currentTimeMillis(),
     val supabaseId: String = UUID.randomUUID().toString()
 )

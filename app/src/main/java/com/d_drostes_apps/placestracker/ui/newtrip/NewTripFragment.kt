@@ -23,6 +23,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -231,7 +232,12 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 }
                 
                 if (directAddStop || editingTripId != -1) {
-                    findNavController().popBackStack()
+                    if (editingTripId != -1) {
+                        val bundle = Bundle().apply { putInt("tripId", editingTripId) }
+                        findNavController().navigate(R.id.tripDetailFragment, bundle, NavOptions.Builder().setPopUpTo(R.id.feedFragment, true).build())
+                    } else {
+                        findNavController().popBackStack()
+                    }
                 } else {
                     findNavController().navigate(R.id.action_newTripFragment_to_feedFragment)
                 }
@@ -548,8 +554,10 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         btnSetAsCover.setOnClickListener {
             onCoverSet(path)
             adapter.updateCoverImage(path)
+            tripCoverImagePath = path
             bottomSheet.dismiss()
         }
+
 
         btnUseLocation.setOnClickListener {
             if (hasLocation) onLocationFound(latLong[0].toDouble(), latLong[1].toDouble())

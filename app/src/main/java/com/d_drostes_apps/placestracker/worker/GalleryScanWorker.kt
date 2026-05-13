@@ -20,6 +20,7 @@ import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.data.TripStop
 import kotlinx.coroutines.flow.first
 import java.io.File
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -36,6 +37,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         Log.d("GalleryScanWorker", "Starting gallery scan...")
         val app = applicationContext as PlacesApplication
         val userDao = app.database.userDao()
+        val tripDao = app.database.tripDao()
         val profile = userDao.getUserProfile().first() ?: return Result.success()
 
         if (!profile.isAutoGalleryScanEnabled || profile.homeLatitude == null || profile.homeLongitude == null) {
@@ -43,8 +45,14 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             return Result.success()
         }
 
+        // 🌟 POINT 3: Check if travel tracking is active
+        val activeTrip = tripDao.getActiveTrackingTrip()
+        if (activeTrip != null) {
+            Log.d("GalleryScanWorker", "Travel tracking is active for trip: ${activeTrip.title}. Skipping scan.")
+            return Result.success()
+        }
+
         val prefs = applicationContext.getSharedPreferences("gallery_scan_prefs", Context.MODE_PRIVATE)
-        // Initial scan: last 24 hours. Subsequent scans: since last scan.
         val lastScanTime = prefs.getLong("last_scan_time", System.currentTimeMillis() - 86400000)
         
         Log.d("GalleryScanWorker", "Scanning photos since: ${Date(lastScanTime)}")
@@ -57,6 +65,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         }
 
         val groups = mutableListOf<PhotoGroup>()
+        val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         newPhotos.forEach { (uri, dateTaken) ->
             try {
@@ -74,13 +83,20 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                         val minDistanceMeters = profile.autoGalleryScanDistance * 1000
                         if (minDistanceMeters == 0 || distFromHome[0] > minDistanceMeters) {
                             var foundGroup = false
+                            val photoDay = sdfDay.format(Date(dateTaken))
+
                             for (group in groups) {
-                                val distToGroup = FloatArray(1)
-                                Location.distanceBetween(group.lat, group.lon, photoLat, photoLon, distToGroup)
-                                if (distToGroup[0] < 500) { // 500m clustering
-                                    group.uris.add(uri)
-                                    foundGroup = true
-                                    break
+                                val groupDay = sdfDay.format(Date(group.timestamp))
+                                
+                                // 🌟 POINT 3: Group by Day AND Location (500m)
+                                if (photoDay == groupDay) {
+                                    val distToGroup = FloatArray(1)
+                                    Location.distanceBetween(group.lat, group.lon, photoLat, photoLon, distToGroup)
+                                    if (distToGroup[0] < 500) { 
+                                        group.uris.add(uri)
+                                        foundGroup = true
+                                        break
+                                    }
                                 }
                             }
                             if (!foundGroup) {

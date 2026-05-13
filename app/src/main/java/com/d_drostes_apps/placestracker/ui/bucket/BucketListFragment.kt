@@ -28,6 +28,8 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.android.material.textfield.TextInputEditText
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
@@ -162,6 +164,7 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
         val inputTitle = dialog.findViewById<TextInputEditText>(R.id.inputBucketTitle)
         val inputDesc = dialog.findViewById<TextInputEditText>(R.id.inputBucketDesc)
+        val inputFolder = dialog.findViewById<AutoCompleteTextView>(R.id.inputBucketFolder)
         val tvDate = dialog.findViewById<TextView>(R.id.tvBucketDateDisplay)
         val btnAddMedia = dialog.findViewById<MaterialButton>(R.id.btnAddBucketMedia)
         ivPreview = dialog.findViewById<ImageView>(R.id.ivBucketMediaPreview)
@@ -172,9 +175,15 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
         var selectedDate: Long? = existingItem?.date
         selectedMedia = existingItem?.media?.firstOrNull()
 
+        // Setup folder suggestions
+        val folders = allItems.mapNotNull { it.folderName }.distinct()
+        val folderAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, folders)
+        inputFolder.setAdapter(folderAdapter)
+
         existingItem?.let {
             inputTitle.setText(it.title)
             inputDesc.setText(it.description)
+            inputFolder.setText(it.folderName)
             cbIsTrip.isChecked = it.isTrip
             if (it.date != null) {
                 tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(it.date))
@@ -203,11 +212,13 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
             if (title.isBlank()) return@setOnClickListener
 
             lifecycleScope.launch {
+                val folder = inputFolder.text.toString().let { if (it.isBlank()) null else it }
                 val item = (existingItem ?: BucketItem(title = "", description = null, date = null)).copy(
                     title = title,
                     description = inputDesc.text.toString(),
                     date = selectedDate,
                     isTrip = cbIsTrip.isChecked,
+                    folderName = folder,
                     media = if (selectedMedia != null) listOf(selectedMedia!!) else emptyList()
                 )
                 val dao = (requireActivity().application as PlacesApplication).database.bucketDao()
@@ -261,32 +272,101 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
     }
 }
 
+sealed class BucketEntry {
+    data class Folder(val name: String, val items: List<BucketItem>, var isExpanded: Boolean = false) : BucketEntry()
+    data class Item(val item: BucketItem) : BucketEntry()
+}
+
 class BucketAdapter(
     private val onToggle: (BucketItem) -> Unit,
     private val onEdit: (BucketItem) -> Unit,
     private val onDelete: (BucketItem) -> Unit
-) : RecyclerView.Adapter<BucketAdapter.ViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private var items = emptyList<BucketItem>()
+    private var displayItems = emptyList<BucketEntry>()
+    private var allItems = emptyList<BucketItem>()
+    private val expandedFolders = mutableSetOf<String>()
+
+    companion object {
+        private const val TYPE_FOLDER = 0
+        private const val TYPE_ITEM = 1
+    }
 
     fun submitList(newItems: List<BucketItem>) {
-        items = newItems
+        allItems = newItems
+        updateDisplayItems()
+    }
+
+    private fun updateDisplayItems() {
+        val grouped = allItems.groupBy { it.folderName }
+        val newList = mutableListOf<BucketEntry>()
+
+        // Folders first
+        grouped.filter { it.key != null }.forEach { (folderName, items) ->
+            val isExpanded = expandedFolders.contains(folderName)
+            newList.add(BucketEntry.Folder(folderName!!, items, isExpanded))
+            if (isExpanded) {
+                newList.addAll(items.map { BucketEntry.Item(it) })
+            }
+        }
+
+        // Ungrouped items last
+        grouped[null]?.let { items ->
+            newList.addAll(items.map { BucketEntry.Item(it) })
+        }
+
+        displayItems = newList
         notifyDataSetChanged()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_bucket, parent, false)
-        return ViewHolder(view)
+    override fun getItemViewType(position: Int): Int {
+        return when (displayItems[position]) {
+            is BucketEntry.Folder -> TYPE_FOLDER
+            is BucketEntry.Item -> TYPE_ITEM
+        }
     }
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val item = items[position]
-        holder.bind(item)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+        return if (viewType == TYPE_FOLDER) {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_bucket_folder, parent, false)
+            FolderViewHolder(view)
+        } else {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_bucket, parent, false)
+            ItemViewHolder(view)
+        }
     }
 
-    override fun getItemCount() = items.size
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        when (val entry = displayItems[position]) {
+            is BucketEntry.Folder -> (holder as FolderViewHolder).bind(entry)
+            is BucketEntry.Item -> (holder as ItemViewHolder).bind(entry.item)
+        }
+    }
 
-    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    override fun getItemCount() = displayItems.size
+
+    inner class FolderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val tvName = view.findViewById<TextView>(R.id.tvFolderName)
+        private val tvCount = view.findViewById<TextView>(R.id.tvFolderCount)
+        private val ivChevron = view.findViewById<ImageView>(R.id.ivFolderChevron)
+
+        fun bind(folder: BucketEntry.Folder) {
+            tvName.text = folder.name
+            tvCount.text = "(${folder.items.size})"
+            ivChevron.rotation = if (folder.isExpanded) 180f else 0f
+            
+            itemView.setOnClickListener {
+                if (expandedFolders.contains(folder.name)) {
+                    expandedFolders.remove(folder.name)
+                } else {
+                    expandedFolders.add(folder.name)
+                }
+                updateDisplayItems()
+            }
+        }
+    }
+
+    inner class ItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         private val ivMedia = view.findViewById<ImageView>(R.id.ivBucketMedia)
         private val tvTitle = view.findViewById<TextView>(R.id.tvBucketTitle)
         private val tvDate = view.findViewById<TextView>(R.id.tvBucketDate)

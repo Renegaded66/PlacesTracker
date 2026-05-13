@@ -325,4 +325,10 @@
 
     <string name="plus_symbol">+</string>
 
+    <string name="num_stops">%1$d stops</string>
+    <string name="bucket_folder">Folder</string>
+    <string name="no_folder">No folder</string>
+    <string name="select_folder">Select folder</string>
+    <string name="new_folder">New folder</string>
+    <string name="folder_name_hint">Folder name</string>
 </resources>

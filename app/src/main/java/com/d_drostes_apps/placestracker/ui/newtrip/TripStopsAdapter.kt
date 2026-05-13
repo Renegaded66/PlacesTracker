@@ -243,8 +243,9 @@ class TripStopsAdapter(
         private val ivDelete: ImageView = view.findViewById(R.id.ivDeleteMiniStop)
 
         fun bind(location: TripLocation) {
-            tvTitle.text = "Mini-Stopp"
-            val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+            val context = itemView.context
+            tvTitle.text = context.getString(R.string.mini_stop)
+            val sdf = SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
             tvDate.text = sdf.format(Date(location.timestamp))
 
             itemView.setOnClickListener { onMiniStopClick(location) }

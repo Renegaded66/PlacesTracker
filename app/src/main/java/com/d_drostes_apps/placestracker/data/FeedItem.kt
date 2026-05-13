@@ -22,7 +22,7 @@ sealed class FeedItem(val id: Int, val title: String, val date: Long, val coverI
         trip.id, 
         trip.title, 
         trip.date, 
-        trip.coverImage ?: stops.firstOrNull()?.media?.firstOrNull(),
+        trip.coverImage ?: stops.firstNotNullOfOrNull { it.coverImage } ?: stops.firstOrNull()?.media?.firstOrNull(),
         stops.sumOf { it.media.size },
         trip.supabaseId,
         trip.isPublic

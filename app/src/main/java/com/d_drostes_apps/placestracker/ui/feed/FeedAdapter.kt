@@ -1,6 +1,7 @@
 package com.d_drostes_apps.placestracker.ui.feed
 
 import android.content.Context
+import android.graphics.Color
 import android.location.Geocoder
 import android.location.Location
 import android.view.LayoutInflater
@@ -12,11 +13,13 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import com.bumptech.glide.Glide
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.FeedItem
 import com.d_drostes_apps.placestracker.data.TripStop
+import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -75,10 +78,14 @@ class FeedAdapter(
     class FeedViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val cardView: com.google.android.material.card.MaterialCardView = view.findViewById(R.id.feedCard)
         val title: TextView = view.findViewById(R.id.feedTitle)
-        val image: ImageView = view.findViewById(R.id.feedImage)
+        val image: ImageView? = view.findViewById(R.id.feedImage)
+        val viewPager: ViewPager2? = view.findViewById(R.id.feedViewPager)
+        val dotsIndicator: com.google.android.material.tabs.TabLayout? = view.findViewById(R.id.feedDotsIndicator)
         val tvFeedDateTime: TextView = view.findViewById(R.id.tvFeedDateTime)
-        val ivTypeIcon: ImageView = view.findViewById(R.id.ivTypeIcon)
+        val ivTypeIcon: ImageView? = view.findViewById(R.id.ivTypeIcon)
         val tvLocationFlags: TextView = view.findViewById(R.id.tvLocationFlags)
+        val tvNumStops: TextView? = view.findViewById(R.id.tvNumStops)
+        val feedDescription: TextView? = view.findViewById(R.id.feedDescription)
 
         // Optional views that might not exist in all layouts
         val draftBadge: View? = view.findViewById(R.id.draftBadge)
@@ -87,11 +94,6 @@ class FeedAdapter(
         val btnConfirmDraft: Button? = view.findViewById(R.id.btnConfirmDraft)
         val btnRemoveDraft: Button? = view.findViewById(R.id.btnRemoveDraft)
 
-        val image2: ImageView? = view.findViewById(R.id.feedImage2)
-        val image3: ImageView? = view.findViewById(R.id.feedImage3)
-        val extraMediaContainer: View? = view.findViewById(R.id.extraMediaContainer)
-        val tvMediaCount: TextView? = view.findViewById(R.id.tvMediaCount)
-        val btnExpandTrip: ImageButton? = view.findViewById(R.id.btnExpandTrip)
         val rvStopsPreview: RecyclerView? = view.findViewById(R.id.rvTripStopsPreview)
         val tvTrackingBadge: TextView? = view.findViewById(R.id.tvTrackingActiveBadge)
 
@@ -149,6 +151,97 @@ class FeedAdapter(
 
         holder.title.text = item.title
 
+        // Airbnb style adjustments
+        if (currentViewMode == ViewMode.STANDARD) {
+            holder.cardView.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, context.resources.displayMetrics).toInt()
+            holder.cardView.strokeColor = Color.parseColor("#1A000000")
+            holder.cardView.cardElevation = 0f
+            
+            // Description handling
+            holder.feedDescription?.visibility = View.VISIBLE
+            val notes = when(item) {
+                is FeedItem.Experience -> item.entry.notes
+                is FeedItem.TripItem -> item.trip.notes
+            }
+            holder.feedDescription?.text = notes
+            holder.feedDescription?.visibility = if (notes.isNullOrBlank()) View.GONE else View.VISIBLE
+
+            // Stop count for trips
+            if (item is FeedItem.TripItem) {
+                holder.tvNumStops?.visibility = View.VISIBLE
+                holder.tvNumStops?.text = context.getString(R.string.num_stops, item.stops.size)
+            } else {
+                holder.tvNumStops?.visibility = View.GONE
+            }
+
+            // Media Slider (ViewPager2)
+            val allMedia = when(item) {
+                is FeedItem.Experience -> item.entry.media
+                is FeedItem.TripItem -> {
+                    val media = item.stops.flatMap { it.media }.distinct().toMutableList()
+                    item.coverImage?.let { cover ->
+                        media.remove(cover)
+                        media.add(0, cover)
+                    }
+                    media
+                }
+            }
+            
+            if (allMedia.isNotEmpty()) {
+                val vp: ViewPager2? = holder.viewPager
+                if (vp != null) {
+                    val mediaAdapter = DetailMediaAdapter(allMedia) { _, _ ->
+                        onItemClick(item, null)
+                    }
+                    vp.adapter = mediaAdapter
+
+                    val dots = holder.dotsIndicator
+                    if (dots != null && dots is com.google.android.material.tabs.TabLayout) {
+                        if (allMedia.size > 1) {
+                            dots.visibility = View.VISIBLE
+                            val mediator = TabLayoutMediator(dots, vp) { tab, _ ->
+                                val dot = View(context)
+                                val size = (context.resources.displayMetrics.density * 6).toInt()
+                                val params = ViewGroup.LayoutParams(size, size)
+                                dot.layoutParams = params
+                                dot.setBackgroundResource(R.drawable.feed_dot_indicator)
+                                tab.customView = dot
+                            }
+                            mediator.attach()
+
+                            fun updateDots(position: Int) {
+                                val count = dots.tabCount
+                                for (i in 0 until count) {
+                                    val tab = dots.getTabAt(i) ?: continue
+                                    val v = tab.customView ?: continue
+                                    val visible = when {
+                                        count <= 2 -> true
+                                        position == 0 -> i <= 1
+                                        position == count - 1 -> i >= count - 2
+                                        else -> i in (position - 1)..(position + 1)
+                                    }
+                                    v.visibility = if (visible) View.VISIBLE else View.GONE
+                                    val scale = if (i == position) 1.6f else 1f
+                                    v.scaleX = scale
+                                    v.scaleY = scale
+                                }
+                            }
+
+                            vp.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
+                                override fun onPageSelected(position: Int) {
+                                    updateDots(position)
+                                }
+                            })
+
+                            updateDots(vp.currentItem)
+                        } else {
+                            dots.visibility = View.GONE
+                        }
+                    }
+                }
+            }
+        }
+
         // Draft handling
         val isDraft = showDrafts && if (item is FeedItem.Experience) item.entry.isDraft else false
         holder.draftBadge?.visibility = if (isDraft) View.VISIBLE else View.GONE
@@ -157,15 +250,15 @@ class FeedAdapter(
         holder.btnConfirmDraft?.setOnClickListener { onConfirmDraft(item) }
         holder.btnRemoveDraft?.setOnClickListener { onRemoveDraft(item) }
 
-        holder.ivTypeIcon.setColorFilter(activeColor)
+        holder.ivTypeIcon?.setColorFilter(activeColor)
 
         if (item is FeedItem.Experience) {
-            holder.ivTypeIcon.setImageResource(R.drawable.ic_feed)
+            holder.ivTypeIcon?.setImageResource(R.drawable.ic_feed)
             holder.tvTrackingBadge?.visibility = View.GONE
             holder.feedRating?.rating = item.entry.rating?.toFloat() ?: 0f
             holder.ivHasNotes?.alpha = if (!item.entry.notes.isNullOrBlank()) 1.0f else 0.3f
         } else {
-            holder.ivTypeIcon.setImageResource(R.drawable.ic_marker)
+            holder.ivTypeIcon?.setImageResource(R.drawable.ic_marker)
             if (item is FeedItem.TripItem) {
                 holder.tvTrackingBadge?.visibility = if (item.trip.isTrackingActive) View.VISIBLE else View.GONE
             }
@@ -181,12 +274,7 @@ class FeedAdapter(
         val sdfDateTime = SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
 
         holder.tvFeedDateTime.visibility = View.VISIBLE
-        holder.btnExpandTrip?.visibility = View.GONE
         holder.rvStopsPreview?.visibility = View.GONE
-        holder.image2?.visibility = View.GONE
-        holder.image3?.visibility = View.GONE
-        holder.tvMediaCount?.visibility = View.GONE
-        holder.extraMediaContainer?.visibility = View.GONE
 
         if (item is FeedItem.Experience) {
             holder.tvFeedDateTime.text = if (currentViewMode == ViewMode.COMPACT) sdfDate.format(Date(item.date)) else sdfDateTime.format(Date(item.date))
@@ -195,21 +283,7 @@ class FeedAdapter(
             val coverPath = item.coverImage
             val otherMedia = media.filter { it != coverPath }
 
-            if (otherMedia.isNotEmpty() && currentViewMode == ViewMode.STANDARD) {
-                holder.extraMediaContainer?.visibility = View.VISIBLE
-                holder.image2?.visibility = View.VISIBLE
-                holder.image2?.let { Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(it) }
-
-                if (otherMedia.size > 1) {
-                    holder.image3?.visibility = View.VISIBLE
-                    holder.image3?.let { Glide.with(context).load(File(otherMedia[1])).override(400,400).centerCrop().into(it) }
-                }
-                val remaining = media.size - 3
-                if (remaining > 0) {
-                    holder.tvMediaCount?.visibility = View.VISIBLE
-                    holder.tvMediaCount?.text = "+$remaining"
-                }
-            }
+            // media preview handled by ViewPager2 slider
         } else if (item is FeedItem.TripItem) {
             var tripInfo = ""
             if (item.stops.isNotEmpty()) {
@@ -230,21 +304,7 @@ class FeedAdapter(
                     val coverPath = item.coverImage
                     val otherMedia = allMedia.filter { it != coverPath }
 
-                    if (otherMedia.isNotEmpty()) {
-                        holder.extraMediaContainer?.visibility = View.VISIBLE
-                        holder.image2?.visibility = View.VISIBLE
-                        holder.image2?.let { Glide.with(context).load(File(otherMedia[0])).override(400,400).centerCrop().into(it) }
-
-                        if (otherMedia.size > 1) {
-                            holder.image3?.visibility = View.VISIBLE
-                            holder.image3?.let { Glide.with(context).load(File(otherMedia[1])).override(400,400).centerCrop().into(it) }
-                        }
-                        val totalMediaCount = allMedia.size
-                        if (totalMediaCount > 3) {
-                            holder.tvMediaCount?.visibility = View.VISIBLE
-                            holder.tvMediaCount?.text = "+${totalMediaCount - 3}"
-                        }
-                    }
+                    // media preview handled by ViewPager2 slider
                 }
             } else {
                 tripInfo = sdfDate.format(Date(item.date))
@@ -274,9 +334,7 @@ class FeedAdapter(
                     }
                 }
 
-                holder.btnExpandTrip?.visibility = View.VISIBLE
                 val isExpanded = expandedTrips.contains(item.id)
-                holder.btnExpandTrip?.rotation = if (isExpanded) 180f else 0f
                 holder.rvStopsPreview?.visibility = if (isExpanded) View.VISIBLE else View.GONE
 
                 if (isExpanded) {
@@ -285,28 +343,21 @@ class FeedAdapter(
                         onItemClick(item, stop.id)
                     }
                 }
-
-                holder.btnExpandTrip?.setOnClickListener {
-                    if (expandedTrips.contains(item.id)) {
-                        expandedTrips.remove(item.id)
-                    } else {
-                        expandedTrips.add(item.id)
-                    }
-                    notifyItemChanged(position)
-                }
             }
         }
 
         val coverPath = item.coverImage
         if (coverPath != null) {
-            Glide.with(context)
-                .load(File(coverPath))
-                .override(if (currentViewMode == ViewMode.COMPACT) 200 else 800)
-                .centerCrop()
-                .placeholder(R.drawable.placeholder)
-                .into(holder.image)
+            holder.image?.let {
+                Glide.with(context)
+                    .load(File(coverPath))
+                    .override(if (currentViewMode == ViewMode.COMPACT) 200 else 800)
+                    .centerCrop()
+                    .placeholder(R.drawable.placeholder)
+                    .into(it)
+            }
         } else {
-            holder.image.setImageResource(R.drawable.vorschaubild)
+            holder.image?.setImageResource(R.drawable.vorschaubild)
         }
 
         holder.itemView.setOnClickListener {

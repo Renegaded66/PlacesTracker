@@ -137,10 +137,30 @@
 
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     viewer.resolutionScale = 1 / pixelRatio;
-    viewer.scene.globe.tileLoadProgressEvent.addEventListener(queuedTileCount => {
-        const spinner = document.getElementById("tile-loader");
-        if (spinner) spinner.style.display = queuedTileCount > 0 ? "block" : "none";
-    });
+    let lastTileActivity = Date.now();
+
+viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
+
+    const spinner = document.getElementById("tile-loader");
+
+    if (!spinner) return;
+
+    if (count > 0) {
+        lastTileActivity = Date.now();
+        spinner.style.display = "block";
+    } else {
+
+        // kleine Verzögerung verhindert Flackern
+        setTimeout(() => {
+
+            // nur verstecken wenn wirklich nichts mehr lädt
+            if (Date.now() - lastTileActivity > 300) {
+                spinner.style.display = "none";
+            }
+
+        }, 300);
+    }
+});
 
     viewer.scene.fog.enabled = false; viewer.scene.globe.showGroundAtmosphere = false;
     viewer.scene.skyAtmosphere.show = false; viewer.scene.highDynamicRange = false;
@@ -149,22 +169,24 @@
     viewer.scene.requestRenderMode = true;
     viewer.scene.maximumRenderTimeChange = Infinity;
 
-    // Earth Glow Effect
-    viewer.scene.primitives.add(new Cesium.Primitive({
-        geometryInstances: new Cesium.GeometryInstance({ geometry: new Cesium.EllipsoidGeometry({ radii: new Cesium.Cartesian3(6800000.0, 6800000.0, 6800000.0) }) }),
-        appearance: new Cesium.EllipsoidSurfaceAppearance({
-            material: new Cesium.Material({
-                fabric: { type: 'EarthGlow', uniforms: { color: new Cesium.Color(0.0, 0.5, 1.0, 1.0) },
-                    source: `czm_material czm_getMaterial(czm_materialInput materialInput) {
-                        czm_material material = czm_getDefaultMaterial(materialInput);
-                        float v = abs(dot(normalize(materialInput.positionToEyeEC), normalize(materialInput.normalEC)));
-                        float intensity = pow(1.0 - v, 1.5);
-                        material.emission = color.rgb * intensity * 2.0; material.alpha = intensity * 0.7; return material;
-                    }`
-                }
-            }), aboveGround: true, translucent: true
-        })
-    }));
+    // Earth Glow Effect - Only if log depth is safe (older/Adreno devices often fail here)
+    if (useLogDepth) {
+        viewer.scene.primitives.add(new Cesium.Primitive({
+            geometryInstances: new Cesium.GeometryInstance({ geometry: new Cesium.EllipsoidGeometry({ radii: new Cesium.Cartesian3(6378137.0 + 200000.0, 6378137.0 + 200000.0, 6378137.0 + 200000.0) }) }),
+            appearance: new Cesium.EllipsoidSurfaceAppearance({
+                material: new Cesium.Material({
+                    fabric: { type: 'EarthGlow', uniforms: { color: new Cesium.Color(0.0, 0.5, 1.0, 1.0) },
+                        source: `czm_material czm_getMaterial(czm_materialInput materialInput) {
+                            czm_material material = czm_getDefaultMaterial(materialInput);
+                            float v = abs(dot(normalize(materialInput.positionToEyeEC), normalize(materialInput.normalEC)));
+                            float intensity = pow(1.0 - v, 1.5);
+                            material.emission = color.rgb * intensity * 2.0; material.alpha = intensity * 0.7; return material;
+                        }`
+                    }
+                }), aboveGround: true, translucent: true
+            })
+        }));
+    }
 
     viewer.imageryLayers.removeAll();
 
@@ -196,30 +218,30 @@
 
 
     // Smooth Fade beim Zoomen
-    viewer.scene.preRender.addEventListener(function () {
 
-        const height = viewer.camera.positionCartographic.height;
+    viewer.camera.changed.addEventListener(function () {
 
-        const fadeStart = 1200000.0; // beginnt
-        const fadeEnd   = 250000.0;  // voll sichtbar
+    const height = viewer.camera.positionCartographic.height;
 
-        let alpha;
+    const fadeStart = 1200000.0;
+    const fadeEnd = 250000.0;
 
-        if (height > fadeStart) {
-            alpha = 0.0;
-        }
-        else if (height < fadeEnd) {
-            alpha = 1.0;
-        }
-        else {
-            alpha = 1.0 - ((height - fadeEnd) / (fadeStart - fadeEnd));
-        }
+    let alpha;
 
-        labelLayer.alpha = alpha;
+    if (height > fadeStart) {
+        alpha = 0.0;
+    }
+    else if (height < fadeEnd) {
+        alpha = 1.0;
+    }
+    else {
+        alpha = 1.0 - ((height - fadeEnd) / (fadeStart - fadeEnd));
+    }
 
-    });
+    labelLayer.alpha = alpha;
 
-
+    viewer.scene.requestRender();
+});
 
     viewer.camera.setView({ destination: Cesium.Cartesian3.fromDegrees(10, 50, 14000000), orientation: { heading: 0, pitch: -Math.PI / 2, roll: 0 } });
 
@@ -246,7 +268,7 @@
             if (clusterImageUrl) {
                 cluster.billboard.show = true;
                 cluster.billboard.image = clusterImageUrl;
-                cluster.billboard.width = 55; cluster.billboard.height = 55;
+                cluster.billboard.width = 49; cluster.billboard.height = 49;
                 cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
                 cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
                 // 🌟 FIX: Cluster bleiben beim Rauszoomen immer sichtbar!
@@ -518,25 +540,61 @@
                     detailEntities.push(viewer.entities.add({ position: midPos, billboard: { image: getCustomTransportIcon(item.transportMode), width: 28, height: 28, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY, distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, maxVisibility) } }));
                 }
                 if (!item.isMini) {
+
                     const color = "#FF0000";
+
                     const entity = viewer.entities.add({
                         position: pos,
-                        point: { pixelSize: 15, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 3, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY } // 🌟 FIX
+                        point: {
+                            pixelSize: 15,
+                            color: Cesium.Color.RED,
+                            outlineColor: Cesium.Color.WHITE,
+                            outlineWidth: 3,
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                            disableDepthTestDistance: Number.POSITIVE_INFINITY
+                        }
                     });
+
                     if(item.id) entity._customId = "stop_" + item.id;
+
                     entity._itemData = item;
+
                     detailEntities.push(entity);
+
                     if (item.image && item.image !== "" && item.image !== "null") {
+
                         createRoundImage(item.image, color).then(img => {
+
                             if (img) {
-                                entity.billboard = { image: img, width: 56, height: 56, verticalOrigin: Cesium.VerticalOrigin.CENTER, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY };
+
+                                entity.billboard = {
+                                    image: img,
+                                    width: 56,
+                                    height: 56,
+                                    verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                                    heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                                };
+
                                 entity.point = undefined;
+
                                 viewer.scene.requestRender();
                             }
                         });
+
                     }
+
                 } else {
-                    detailEntities.push(viewer.entities.add({ position: pos, point: { pixelSize: 8, color: Cesium.Color.WHITE.withAlpha(0.8), heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: 0 } }));
+
+                    detailEntities.push(viewer.entities.add({
+                        position: pos,
+                        point: {
+                            pixelSize: 8,
+                            color: Cesium.Color.WHITE.withAlpha(0.8),
+                            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                            disableDepthTestDistance: 0
+                        }
+                    }));
                 }
                 prevPos = pos;
             }
