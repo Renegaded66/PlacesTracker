@@ -331,4 +331,6 @@
     <string name="select_folder">Select folder</string>
     <string name="new_folder">New folder</string>
     <string name="folder_name_hint">Folder name</string>
+
+    <string name="weather_icon">Weather icon</string>
 </resources>

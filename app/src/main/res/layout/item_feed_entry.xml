@@ -44,20 +44,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <com.google.android.material.tabs.TabLayout
+            <LinearLayout
                 android:id="@+id/feedDotsIndicator"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|center_horizontal"
                 android:layout_marginBottom="12dp"
-                android:background="@android:color/transparent"
-                app:tabBackground="@null"
-                app:tabGravity="center"
-                app:tabIndicator="@null"
-                app:tabIndicatorHeight="0dp"
-                app:tabRippleColor="@android:color/transparent"
-                app:tabPaddingStart="6dp"
-                app:tabPaddingEnd="6dp" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:padding="4dp" />
 
             <TextView
                 android:id="@+id/tvTrackingActiveBadge"
@@ -112,6 +107,29 @@
                     android:textSize="18sp"
                     android:layout_marginStart="8dp"
                     tools:text="🇩🇪 🇫🇷" />
+
+                <!-- Weather display -->
+                <LinearLayout
+                    android:id="@+id/llWeather"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginStart="8dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:id="@+id/ivWeatherIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:contentDescription="@string/weather_icon" />
+
+                    <TextView
+                        android:id="@+id/tvWeatherTemp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textSize="14sp" />
+                </LinearLayout>
             </LinearLayout>
 
             <TextView

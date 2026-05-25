@@ -15,8 +15,9 @@ android {
         applicationId = "com.d_drostes_apps.placestracker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 7
+        versionName = "1.6"
+        buildConfigField("String", "OPENWEATHER_KEY", "\"4e6cd004c9ab94cad2ae879db455ee49\"") // TODO: Replace "YOUR_API_KEY" with your actual OpenWeather API key
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,6 +42,7 @@ android {
         compose = true
         viewBinding = true
         dataBinding = false
+        buildConfig = true
     }
     packaging {
         resources.excludes.add("META-INF/INDEX.LIST")
@@ -91,7 +93,10 @@ dependencies {
     kapt("com.github.bumptech.glide:compiler:4.15.1")
 
     implementation(libs.androidx.media3.exoplayer)
+implementation("com.squareup.retrofit2:retrofit:2.9.0")
+implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:0.8.0")
     implementation(libs.androidx.media3.ui)
+implementation("com.squareup.retrofit2:converter-gson:2.9.0") // optional if needed
     implementation(libs.androidx.media3.common)
     
     implementation(libs.androidx.exifinterface)

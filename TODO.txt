@@ -1,0 +1,12 @@
+- [ ] Add Retrofit dependencies to build.gradle
+- [ ] Create Weather API service (WeatherApiService.kt)
+- [ ] Define weather data models (WeatherModels.kt)
+- [ ] Add WeatherCache entity and DAO (WeatherCache.kt, WeatherDao.kt)
+- [ ] Extend AppDatabase with WeatherCache and WeatherDao
+- [ ] Implement WeatherRepository for caching and API calls
+- [ ] Create WeatherIconMapper for local icons
+- [ ] Add local drawable icons for weather conditions
+- [ ] Update TripStopDetailFragment UI to display weather
+- [ ] Update FeedAdapter and feed item layouts to show weather for experiences/diary
+- [ ] Handle API key configuration (placeholder)
+- [ ] Test integration

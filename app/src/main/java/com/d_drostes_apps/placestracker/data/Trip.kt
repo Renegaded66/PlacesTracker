@@ -16,6 +16,8 @@ data class Trip(
     val isTrackingActive: Boolean = false,
     val friendId: String? = null,
     val isAutoTrip: Boolean = false,
+    val rating: Float = 0f,
+    val people: List<String> = emptyList(),
     val lastModified: Long = System.currentTimeMillis(),
     val supabaseId: String = UUID.randomUUID().toString(),
     val isPublic: Boolean = false

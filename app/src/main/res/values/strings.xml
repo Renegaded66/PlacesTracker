@@ -332,4 +332,6 @@
     <string name="select_folder">Ordner wählen</string>
     <string name="new_folder">Neuer Ordner</string>
     <string name="folder_name_hint">Name des Ordners</string>
+
+    <string name="weather_icon">Wetter Icon</string>
 </resources>

@@ -277,6 +277,15 @@
             app:destination="@id/newTripFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/travelPartnerFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.statistics.TravelPartnerFragment"
+        android:label="Travel Partner">
+        <argument
+            android:name="person"
+            app:argType="string" />
+    </fragment>
+
     <dialog
         android:id="@+id/tripStopDetailFragment"
         android:name="com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment"

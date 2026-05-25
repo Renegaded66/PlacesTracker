@@ -9,14 +9,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 // 🌟 Schema geändert (BucketItem.folderName). Neue Migration nötig
-@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class], version = 48, exportSchema = false)
+@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class, WeatherCache::class], version = 50, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao
     abstract fun userDao(): UserDao
     abstract fun tripDao(): TripDao
     abstract fun friendDao(): FriendDao
-    abstract fun bucketDao(): BucketDao
+abstract fun bucketDao(): BucketDao
+abstract fun weatherDao(): WeatherDao
 
     companion object {
         @Volatile
@@ -67,6 +68,35 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Migration 48 → 49 (Trip rating + people)
+        private val MIGRATION_48_49 = object : Migration(48, 49) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE trips ADD COLUMN rating REAL NOT NULL DEFAULT 0.0")
+                } catch (_: Exception) {}
+                try {
+                    db.execSQL("ALTER TABLE trips ADD COLUMN people TEXT NOT NULL DEFAULT ''")
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Migration 49 → 50 (WeatherCache table)
+        private val MIGRATION_49_50 = object : Migration(49, 50) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS weather_cache (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        lat REAL NOT NULL,
+                        lon REAL NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        temperature REAL NOT NULL,
+                        condition TEXT NOT NULL,
+                        iconCode TEXT NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -75,7 +105,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "places_tracker_db"
                 )
                     // 🌟 FIX 3: MIGRATION_46_47 zum Builder hinzugefügt!
-                    .addMigrations(MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48)
+                    .addMigrations(MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50)
                     .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance

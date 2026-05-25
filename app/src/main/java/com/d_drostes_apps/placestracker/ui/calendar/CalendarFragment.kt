@@ -48,9 +48,11 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
         recyclerView.layoutManager = GridLayoutManager(requireContext(), 7)
 
         lifecycleScope.launch {
-            combine(entryRepository.allEntries, tripDao.getAllTripStops()) { entries, stops ->
+            combine(entryRepository.allEntries, tripDao.getAllTrips(), tripDao.getAllTripStops()) { entries, trips, stops ->
                 allEntries = entries
-                allTripStops = stops
+                val validTripIds = trips.map { it.id }.toSet()
+                // filter orphan stops that belong to deleted trips
+                allTripStops = stops.filter { it.tripId in validTripIds }
                 updateCalendar()
             }.collectLatest { }
         }

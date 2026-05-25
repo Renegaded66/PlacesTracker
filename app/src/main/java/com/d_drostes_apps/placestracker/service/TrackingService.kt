@@ -75,9 +75,8 @@ class TrackingService : Service() {
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
-        // Set to 15 minutes as requested
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 15 * 60 * 1000L)
-            .setMinUpdateIntervalMillis(5 * 60 * 1000L)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5 * 60 * 1000L)
+            .setMinUpdateIntervalMillis(2 * 60 * 1000L)
             .build()
 
         fusedLocationClient.requestLocationUpdates(
@@ -96,17 +95,32 @@ class TrackingService : Service() {
         
         serviceScope.launch {
             val database = AppDatabase.getDatabase(applicationContext)
-            val lastLocation = database.tripDao().getLastLocationForTrip(currentTripId)
+            val tripDao = database.tripDao()
+            val lastLocation = tripDao.getLastLocationForTrip(currentTripId)
+            val lastStop = tripDao.getStopsForTripSync(currentTripId).lastOrNull()
+            
+            var lastLat: Double? = null
+            var lastLon: Double? = null
+            
+            // We need to compare against the ABSOLUTE LATEST point (either a real stop or a mini-stop)
+            val locTime = lastLocation?.timestamp ?: 0L
+            val stopTime = lastStop?.date ?: 0L
+            
+            if (locTime > stopTime && lastLocation != null) {
+                lastLat = lastLocation.latitude
+                lastLon = lastLocation.longitude
+            } else if (lastStop != null) {
+                val coords = lastStop.location?.split(",")
+                if (coords?.size == 2) {
+                    lastLat = coords[0].toDoubleOrNull()
+                    lastLon = coords[1].toDoubleOrNull()
+                }
+            }
             
             var shouldSave = true
-            if (lastLocation != null) {
+            if (lastLat != null && lastLon != null) {
                 val results = FloatArray(1)
-                Location.distanceBetween(
-                    lastLocation.latitude, lastLocation.longitude,
-                    location.latitude, location.longitude,
-                    results
-                )
-                // Only save if distance is > 500 meters from last mini-stop
+                Location.distanceBetween(lastLat, lastLon, location.latitude, location.longitude, results)
                 if (results[0] < 500) {
                     shouldSave = false
                 }
@@ -119,7 +133,7 @@ class TrackingService : Service() {
                     longitude = location.longitude,
                     timestamp = System.currentTimeMillis()
                 )
-                database.tripDao().insertLocation(tripLocation)
+                tripDao.insertLocation(tripLocation)
             }
         }
     }

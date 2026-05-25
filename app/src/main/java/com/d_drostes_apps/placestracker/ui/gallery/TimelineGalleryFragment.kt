@@ -311,6 +311,10 @@ class TimelineGalleryFragment : Fragment(R.layout.fragment_timeline_gallery) {
                     if (photo != null) {
                         view?.findViewById<MaterialButtonToggleGroup>(R.id.toggleViewMode)?.check(R.id.btnViewGallery)
                         scrollToPhoto(photo)
+                        // open the photo directly after scrolling
+                        recyclerView.postDelayed({
+                            showPhotoDetail(photo)
+                        }, 200)
                     }
                 }
             }

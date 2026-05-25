@@ -116,9 +116,16 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:lineSpacingExtra="4dp"
+                    android:lineSpacingExtra="6dp"
                     android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
-                    tools:text="🇩🇪 Deutschland, 🇫🇷 Frankreich" />
+                    tools:text="🇩🇪 Deutschland\n🇫🇷 Frankreich" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvTravelPartners"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    tools:listitem="@android:layout/simple_list_item_1" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

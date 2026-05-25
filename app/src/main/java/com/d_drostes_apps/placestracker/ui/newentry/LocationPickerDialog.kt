@@ -60,7 +60,7 @@ class LocationPickerDialog(
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
-                // Map ready
+                webView.evaluateJavascript("javascript:if(window.setPickerMode) window.setPickerMode(true);", null)
             }
         }
 

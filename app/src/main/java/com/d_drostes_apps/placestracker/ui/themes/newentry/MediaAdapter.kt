@@ -54,6 +54,8 @@ class MediaAdapter(
             Glide.with(holder.itemView.context)
                 .load(File(path))
                 .centerCrop()
+                .override(300,300)
+                .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.AUTOMATIC)
                 .into(holder.imageView)
 
             holder.btnRemove.setOnClickListener { onRemove(path) }

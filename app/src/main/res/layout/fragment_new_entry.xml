@@ -20,6 +20,16 @@
             android:padding="24dp"
             android:animateLayoutChanges="true">
 
+            <ImageButton
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="#FFFFFF"
+                android:contentDescription="back"
+                android:layout_marginBottom="8dp"/>
+
             <TextView
                 android:id="@+id/tvHeaderType"
                 android:layout_width="wrap_content"
@@ -174,6 +184,30 @@
                 android:textColor="#99FFFFFF"
                 android:textSize="12sp"
                 android:layout_marginBottom="32dp"/>
+
+            <RatingBar
+                android:id="@+id/ratingExperience"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:numStars="5"
+                android:stepSize="0.5"
+                android:layout_marginBottom="24dp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/etExperiencePeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Person hinzufügen"
+                android:layout_marginBottom="8dp"
+                android:imeOptions="actionDone"
+                android:singleLine="true"
+                android:inputType="textPersonName" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupExperiencePeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp" />
 
             <EditText
                 android:id="@+id/inputNotes"

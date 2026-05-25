@@ -13,12 +13,14 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.data.Trip
+import com.d_drostes_apps.placestracker.data.TripDao
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.google.android.material.button.MaterialButton
@@ -42,6 +44,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
     private lateinit var tvEntryCount: TextView
     private lateinit var tvStopCount: TextView
     private lateinit var tvTotalDistance: TextView
+    private lateinit var rvTravelPartners: androidx.recyclerview.widget.RecyclerView
     private lateinit var btnYearSummary: MaterialButton
     private lateinit var progressBar: ProgressBar
 
@@ -59,17 +62,18 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         tvEntryCount = view.findViewById(R.id.tvEntryCount)
         tvStopCount = view.findViewById(R.id.tvStopCount)
         tvTotalDistance = view.findViewById(R.id.tvTotalDistance)
+        rvTravelPartners = view.findViewById(R.id.rvTravelPartners)
         btnYearSummary = view.findViewById(R.id.btnYearSummary)
         progressBar = view.findViewById(R.id.progressBarStats)
 
-        btnYearSummary.setOnClickListener {
-            showYearSummaryDialog()
-        }
-
-        val app = requireActivity().application as PlacesApplication
+        val app = (activity?.application as? PlacesApplication) ?: return
         val entryRepository = app.repository
         val tripRepository = app.tripRepository
         val tripDao = app.database.tripDao()
+
+        btnYearSummary.setOnClickListener {
+            showYearSummaryDialog(tripDao)
+        }
 
         lifecycleScope.launch {
             combine(
@@ -80,12 +84,12 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             ) { entries, trips, stops, _ ->
                 Triple(entries, trips, stops)
             }.collect { (entries, trips, stops) ->
-                updateStatistics(entries, trips, stops)
+                updateStatistics(entries, trips, stops, tripDao)
             }
         }
     }
 
-    private fun updateStatistics(entries: List<Entry>, trips: List<Trip>, stops: List<TripStop>) {
+    private fun updateStatistics(entries: List<Entry>, trips: List<Trip>, stops: List<TripStop>, tripDao: TripDao) {
         // Lade-Icon anzeigen
         progressBar.visibility = View.VISIBLE
 
@@ -96,10 +100,13 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         // 🌟 FIX: Alle schweren Aufgaben im Hintergrund-Thread ausführen!
         lifecycleScope.launch(Dispatchers.IO) {
             val countries = getVisitedCountries(entries, stops)
-            val totalDistance = calculateTotalDistance(trips)
+            val totalDistance = calculateTotalDistance(trips, tripDao)
 
             // Wenn fertig, zurück auf den UI-Thread wechseln
             withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                
+                progressBar.visibility = View.GONE
                 val countryCount = countries.size
                 val percentage = (countryCount.toFloat() / 195f * 100f).toInt()
 
@@ -107,10 +114,55 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                 tvCountryPercentage.text = "$percentage%"
                 progressCountries.setProgress(percentage, true)
 
-                val flagsText = countries.entries.joinToString(", ") { (code, name) ->
-                    "${getFlagEmoji(code)} $name"
+                if (countries.isEmpty()) {
+                    tvFlagList.text = getString(R.string.no_countries_visited)
+                } else {
+                    val sorted = countries.entries.sortedBy { it.value }
+                    val lines = sorted.joinToString("\n") { (code, name) ->
+                        "${getFlagEmoji(code)}   $name"
+                    }
+                    tvFlagList.text = lines
                 }
-                tvFlagList.text = if (flagsText.isEmpty()) getString(R.string.no_countries_visited) else flagsText
+
+                // --- travel partners statistics ---
+                val peopleCount = mutableMapOf<String, Int>()
+
+                // count shared diary/experience entries
+                entries.forEach { entry ->
+                    entry.people.forEach { person ->
+                        if (person.isNotBlank()) {
+                            peopleCount[person] = (peopleCount[person] ?: 0) + 1
+                        }
+                    }
+                }
+
+                // count trips as well
+                trips.forEach { trip ->
+                    trip.people.forEach { person ->
+                        if (person.isNotBlank()) {
+                            peopleCount[person] = (peopleCount[person] ?: 0) + 1
+                        }
+                    }
+                }
+
+                val topPeople = peopleCount.entries
+                    .sortedByDescending { it.value }
+                    .take(5)
+
+                if (topPeople.isEmpty()) {
+                    rvTravelPartners.visibility = View.GONE
+                } else {
+                    rvTravelPartners.visibility = View.VISIBLE
+                    rvTravelPartners.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
+
+                    val items = topPeople.map { it.key to it.value }
+
+                    rvTravelPartners.adapter = TravelPartnerAdapter(items) { person ->
+                        val bundle = Bundle().apply { putString("person", person) }
+                        findNavController().navigate(R.id.travelPartnerFragment, bundle)
+                    }
+                }
+
                 tvTotalDistance.text = String.format(Locale.getDefault(), "%.1f", totalDistance / 1000.0)
 
                 // Lade-Icon wieder verstecken
@@ -119,7 +171,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         }
     }
 
-    private fun showYearSummaryDialog() {
+    private fun showYearSummaryDialog(tripDao: TripDao) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_year_summary, null)
         val dialog = AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Light_NoActionBar_Fullscreen)
             .setView(dialogView)
@@ -151,7 +203,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                 .setTitle(R.string.select_year)
                 .setItems(years) { _, which ->
                     val selectedYear = years[which].toInt()
-                    loadYearSummary(selectedYear, listContainer, tvYearTitle, statsGrid, tvYearTrips, tvYearEntries, tvYearDistance, tvYearCountries, tvYearFlags, tvPhotosTitle, tvNoData, dialogProgressBar)
+                    loadYearSummary(selectedYear, listContainer, tvYearTitle, statsGrid, tvYearTrips, tvYearEntries, tvYearDistance, tvYearCountries, tvYearFlags, tvPhotosTitle, tvNoData, dialogProgressBar, tripDao)
                 }.show()
         }
 
@@ -170,7 +222,8 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         tvFlags: TextView,
         tvPhotosTitle: TextView,
         tvNoData: TextView,
-        dialogProgressBar: ProgressBar?
+        dialogProgressBar: ProgressBar?,
+        tripDao: TripDao
     ) {
         val calendar = Calendar.getInstance()
         calendar.set(year, Calendar.JANUARY, 1, 0, 0, 0)
@@ -181,12 +234,12 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         dialogProgressBar?.visibility = View.VISIBLE
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val app = requireActivity().application as PlacesApplication
+            val app = (activity?.application as? PlacesApplication) ?: return@launch
             val allEntries = app.repository.allEntries.first().filter { it.date in startOfYear..endOfYear }
             val allTrips = app.tripRepository.allTrips.first().filter { it.date in startOfYear..endOfYear }
             val allStops = app.tripRepository.allTripStops.first()
 
-            val distance = calculateTotalDistance(allTrips)
+            val distance = calculateTotalDistance(allTrips, tripDao)
             val countries = getVisitedCountries(allEntries, allStops.filter { it.date in startOfYear..endOfYear })
 
             withContext(Dispatchers.Main) {
@@ -333,9 +386,8 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
     }
 
     // 🌟 FIX: Das "suspend" Wörtchen ist wieder da!
-    private suspend fun calculateTotalDistance(trips: List<Trip>): Double {
+    private suspend fun calculateTotalDistance(trips: List<Trip>, tripDao: TripDao): Double {
         var totalDist = 0.0
-        val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
 
         trips.forEach { trip ->
             val locations = tripDao.getLocationsForTripSync(trip.id)

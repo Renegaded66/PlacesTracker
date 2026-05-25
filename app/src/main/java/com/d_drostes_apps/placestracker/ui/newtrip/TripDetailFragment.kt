@@ -120,9 +120,15 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbarTrip)
         val tvTitle = view.findViewById<TextView>(R.id.tvTripDetailTitle)
+        val ivHero = view.findViewById<android.widget.ImageView>(R.id.ivTripHero)
+        val tvTripStats = view.findViewById<TextView>(R.id.tvTripStats)
         tvTripNotes = view.findViewById(R.id.tvTripDetailNotes)
         cvTripNotes = view.findViewById(R.id.cvTripNotes)
         rvStops = view.findViewById(R.id.rvTripDetailStops)
+
+        val chipGroupPeople = view.findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupTripPeopleDetail)
+        val ratingBar = view.findViewById<android.widget.RatingBar>(R.id.ratingTripDetail)
+        val ratingLayout = view.findViewById<View>(R.id.layoutTripRating)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
         nestedScroll = view.findViewById(R.id.tripNestedScroll)
 
@@ -226,7 +232,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     putLong("preLocationId", location.id)
                     putBoolean("directAddStop", true)
                 }
-                findNavController().navigate(R.id.action_tripDetailFragment_to_newTripFragment, bundle)
+                val destination = if (isInline) R.id.action_feedFragment_to_newTripFragment else R.id.action_tripDetailFragment_to_newTripFragment
+                findNavController().navigate(destination, bundle)
             },
             onDeleteMiniStop = { location ->
                 lifecycleScope.launch {
@@ -370,11 +377,103 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 currentTrip = t
                 tvTitle.text = t.title
 
+                // hero image
+                if (t.coverImage != null) {
+                    com.bumptech.glide.Glide.with(this@TripDetailFragment)
+                        .load(java.io.File(t.coverImage))
+                        .centerCrop()
+                        .into(ivHero)
+                }
+
+                // compute trip stats
+                lifecycleScope.launch {
+                    val stopsForTrip = tripDao.getStopsForTrip(tripId).first()
+
+                    if (stopsForTrip.isNotEmpty()) {
+                        val days = ((stopsForTrip.maxOf { it.date } - stopsForTrip.minOf { it.date }) / (1000 * 60 * 60 * 24)).toInt() + 1
+                        val stopCount = stopsForTrip.size
+
+                        val countries = mutableSetOf<String>()
+                        var distance = 0f
+
+                        for (i in 0 until stopsForTrip.size) {
+                            val loc = stopsForTrip[i].location
+                            if (loc != null) {
+                                val parts = loc.split(",")
+                                if (parts.size == 2) {
+                                    try {
+                                        val geocoder = android.location.Geocoder(requireContext(), java.util.Locale.getDefault())
+                                        val addr = geocoder.getFromLocation(parts[0].toDouble(), parts[1].toDouble(), 1)
+                                        val code = addr?.firstOrNull()?.countryCode
+                                        if (code != null) countries.add(code)
+                                    } catch (_: Exception) {}
+                                }
+                            }
+
+                            if (i < stopsForTrip.size - 1) {
+                                val a = stopsForTrip[i].location
+                                val b = stopsForTrip[i + 1].location
+                                if (a != null && b != null) {
+                                    val pa = a.split(",")
+                                    val pb = b.split(",")
+                                    if (pa.size == 2 && pb.size == 2) {
+                                        val res = FloatArray(1)
+                                        android.location.Location.distanceBetween(
+                                            pa[0].toDouble(), pa[1].toDouble(),
+                                            pb[0].toDouble(), pb[1].toDouble(),
+                                            res
+                                        )
+                                        distance += res[0]
+                                    }
+                                }
+                            }
+                        }
+
+                        val km = (distance / 1000).toInt()
+                        tvTripStats.text = "${days} Tage · ${stopCount} Stops · ${countries.size} Länder · ${km} km"
+                    }
+                }
+
+                // hero image
+                if (t.coverImage != null) {
+                    com.bumptech.glide.Glide.with(this@TripDetailFragment)
+                        .load(java.io.File(t.coverImage))
+                        .centerCrop()
+                        .into(ivHero)
+                }
+
+                if (t.isTrackingActive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startTrackingService()
+                }
+
                 if (!t.notes.isNullOrBlank()) {
                     tvTripNotes.text = t.notes
                     cvTripNotes.visibility = View.VISIBLE
                 } else {
                     cvTripNotes.visibility = View.GONE
+                }
+
+                // rating
+                if (t.rating > 0f) {
+                    ratingBar.rating = t.rating
+                    ratingLayout.visibility = View.VISIBLE
+                } else {
+                    ratingLayout.visibility = View.GONE
+                }
+
+                // people
+                chipGroupPeople.removeAllViews()
+                if (t.people.isNotEmpty()) {
+                    chipGroupPeople.visibility = View.VISIBLE
+                    t.people.forEach { person ->
+                        val chip = com.google.android.material.chip.Chip(requireContext())
+                        chip.text = person
+                        chip.isClickable = false
+                        chip.isCheckable = false
+                        chipGroupPeople.addView(chip)
+                    }
+                } else {
+                    chipGroupPeople.visibility = View.GONE
                 }
 
                 val isShared = t.friendId != null
@@ -408,40 +507,55 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 toolbar.menu.findItem(R.id.action_share)?.isVisible = true
             }
 
+        lifecycleScope.launch {
+            combine(
+                tripDao.getStopsForTrip(tripId),
+                tripDao.getLocationsForTrip(tripId)
+            ) { stops, locations ->
+                stops to locations
+            }.collect { (stops, locations) ->
+                allStops = stops.sortedBy { it.date }
+                allLocations = locations.filter { !it.isConvertedToStop }.sortedBy { it.timestamp }
+                updateTripRoute(allStops, allLocations)
+                loadCountryFlags(allStops)
+            }
+        }
+
+        lifecycleScope.launch {
             combine(
                 tripDao.getStopsForTrip(tripId),
                 tripDao.getLocationsForTrip(tripId),
                 expandedSections
             ) { stops, locations, expanded ->
-                allStops = stops.sortedBy { it.date }
-                allLocations = locations.filter { !it.isConvertedToStop }.sortedBy { it.timestamp }
+                val sortedStops = stops.sortedBy { it.date }
+                val sortedLocations = locations.filter { !it.isConvertedToStop }.sortedBy { it.timestamp }
 
                 val items = mutableListOf<TripItem>()
 
-                if (allStops.isEmpty()) {
-                    items.addAll(allLocations.map { TripItem.MiniStop(it) })
+                if (sortedStops.isEmpty()) {
+                    items.addAll(sortedLocations.map { TripItem.MiniStop(it) })
                 } else {
-                    val beforeFirst = allLocations.filter { it.timestamp < allStops.first().date }
+                    val beforeFirst = sortedLocations.filter { it.timestamp < sortedStops.first().date }
                     if (beforeFirst.isNotEmpty()) {
                         items.add(TripItem.MiniStopExpand(expanded.contains("start"), beforeFirst.size, "start"))
                         if (expanded.contains("start")) items.addAll(beforeFirst.map { TripItem.MiniStop(it) })
                     }
 
-                    allStops.forEachIndexed { index, stop ->
+                    sortedStops.forEachIndexed { index, stop ->
                         items.add(TripItem.Stop(stop))
 
-                        if (index < allStops.size - 1) {
-                            val nextStop = allStops[index + 1]
+                        if (index < sortedStops.size - 1) {
+                            val nextStop = sortedStops[index + 1]
                             items.add(TripItem.Transport(stop.id, nextStop.id, nextStop.transportMode))
 
-                            val between = allLocations.filter { it.timestamp > stop.date && it.timestamp < nextStop.date }
+                            val between = sortedLocations.filter { it.timestamp > stop.date && it.timestamp < nextStop.date }
                             if (between.isNotEmpty()) {
                                 val sectionId = "after_${stop.id}"
                                 items.add(TripItem.MiniStopExpand(expanded.contains(sectionId), between.size, sectionId))
                                 if (expanded.contains(sectionId)) items.addAll(between.map { TripItem.MiniStop(it) })
                             }
                         } else {
-                            val afterLast = allLocations.filter { it.timestamp > stop.date }
+                            val afterLast = sortedLocations.filter { it.timestamp > stop.date }
                             if (afterLast.isNotEmpty()) {
                                 val sectionId = "after_last"
                                 items.add(TripItem.MiniStopExpand(expanded.contains(sectionId), afterLast.size, sectionId))
@@ -453,9 +567,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 items
             }.collect { items ->
                 tripAdapter?.updateItems(items)
-                updateTripRoute()
-                loadCountryFlags(allStops)
             }
+        }
         }
 
         toolbar.setOnMenuItemClickListener { menuItem ->
@@ -559,7 +672,6 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     lifecycleScope.launch {
                         (requireActivity().application as PlacesApplication).database.tripDao()
                             .updateTransportMode(stopId, selectedMode)
-                        updateTripRoute()
                     }
                 }
             }
@@ -574,14 +686,12 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 lifecycleScope.launch {
                     val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
                     tripDao.updateAllTransportModes(tripId, mode)
-                    updateTripRoute()
                 }
             }
             .setNegativeButton("Nein") { _, _ ->
                 lifecycleScope.launch {
                     val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
                     tripDao.updateTransportMode(stopId, mode)
-                    updateTripRoute()
                 }
             }
             .show()
@@ -683,7 +793,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         mapboxWebView?.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 if (!isAdded) return
-                updateTripRoute()
+                updateTripRoute(allStops, allLocations)
                 startUserLocationUpdates()
             }
         }
@@ -694,15 +804,11 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         mapboxWebView?.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
     }
 
-    private fun updateTripRoute() {
+    private fun updateTripRoute(stops: List<TripStop>, locations: List<TripLocation>) {
         lifecycleScope.launch {
-            val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
-            val stopsFromDb = tripDao.getStopsForTripSync(tripId)
-            val locationsFromDb = tripDao.getLocationsForTripSync(tripId).filter { !it.isConvertedToStop }
-
             val jsonArray = withContext(Dispatchers.Default) {
                 val array = JSONArray()
-                val allPoints = (stopsFromDb.map { it.date to it } + locationsFromDb.map { it.timestamp to it })
+                val allPoints = (stops.map { it.date to it } + locations.map { it.timestamp to it })
                     .sortedBy { it.first }
 
                 allPoints.forEach { (_, item) ->
@@ -821,8 +927,14 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             .setMessage(R.string.delete_confirm)
             .setPositiveButton(R.string.save) { _, _ ->
                 lifecycleScope.launch {
-                    val trip = app.database.tripDao().getTripById(tripId)
-                    trip?.let { app.database.tripDao().deleteTrip(it) }
+                    val tripDao = app.database.tripDao()
+                    val trip = tripDao.getTripById(tripId)
+                    trip?.let {
+                        // ensure everything belonging to the trip is removed
+                        tripDao.deleteStopsForTrip(tripId)
+                        tripDao.deleteLocationsForTrip(tripId)
+                        tripDao.deleteTrip(it)
+                    }
                     if (isAdded) {
                         if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail() else findNavController().navigateUp()
                     }

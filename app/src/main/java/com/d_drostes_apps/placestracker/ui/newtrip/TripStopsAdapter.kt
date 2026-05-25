@@ -258,8 +258,8 @@ class TripStopsAdapter(
         private val ivIcon: ImageView = view.findViewById(R.id.ivExpandIcon)
 
         fun bind(item: TripItem.MiniStopExpand) {
-            tvInfo.text = "${item.count} Mini-Stopps"
-            ivIcon.setImageResource(if (item.isExpanded) android.R.drawable.ic_input_delete else android.R.drawable.ic_input_add)
+            tvInfo.text = "${item.count} Stopps"
+            ivIcon.setImageResource(if (item.isExpanded) android.R.drawable.ic_menu_close_clear_cancel else android.R.drawable.ic_input_add)
             itemView.setOnClickListener { onToggleExpand(item.id) }
         }
     }

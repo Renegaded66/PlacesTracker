@@ -31,6 +31,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -58,6 +59,10 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
     //private lateinit var switchPublic: SwitchMaterial
     private lateinit var inputTitle: android.widget.EditText
     private lateinit var inputNotes: android.widget.EditText
+    private lateinit var scrollView: NestedScrollView
+    private lateinit var etPeople: android.widget.AutoCompleteTextView
+    private lateinit var chipGroupPeople: com.google.android.material.chip.ChipGroup
+    private val selectedPeople = mutableSetOf<String>()
 
     val mediaPicker = registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach { uri ->
@@ -79,10 +84,43 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
         inputTitle = view.findViewById(R.id.inputTitle)
         inputNotes = view.findViewById(R.id.inputNotes)
+        scrollView = view.findViewById(R.id.newEntryScrollView)
+
+        // keyboard‑aware auto scroll so focused field stays visible
+        val rootView = view.rootView
+        val rect = android.graphics.Rect()
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            rootView.getWindowVisibleDisplayFrame(rect)
+            val screenHeight = rootView.height
+            val keypadHeight = screenHeight - rect.bottom
+
+            if (keypadHeight > screenHeight * 0.15) { // keyboard visible
+                val focused = view.findFocus()
+                focused?.let {
+                    scrollView.post {
+                        scrollView.smoothScrollTo(0, it.bottom)
+                    }
+                }
+            }
+        }
+        etPeople = view.findViewById(R.id.etExperiencePeople)
+        chipGroupPeople = view.findViewById(R.id.chipGroupExperiencePeople)
+
+        lifecycleScope.launch {
+            val names = mutableSetOf<String>()
+            repository.allEntries.first().forEach { names.addAll(it.people) }
+            val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names.toList())
+            etPeople.setAdapter(adapter)
+        }
         //switchPublic = view.findViewById(R.id.switchPublic)
+        val btnBack = view.findViewById<ImageButton>(R.id.btnBack)
         val btnLocation = view.findViewById<MaterialButton>(R.id.btnLocation)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
+
+        btnBack.setOnClickListener {
+            requireActivity().onBackPressedDispatcher.onBackPressed()
+        }
         tvCoordinates = view.findViewById(R.id.tvCoordinates)
         
         tvDateDisplay = view.findViewById(R.id.tvDateDisplay)
@@ -118,7 +156,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     inputNotes.setText(it.notes)
                     //switchPublic.isChecked = it.isPublic
                     selectedDate.timeInMillis = it.date
-                    isTimeSet = true
+                    isTimeSet = false
                     
                     selectedCoverImage = it.coverImage
                     updateDateDisplay()
@@ -160,9 +198,9 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             TimePickerDialog(requireContext(), { _, h, min ->
                 selectedDate.set(Calendar.HOUR_OF_DAY, h)
                 selectedDate.set(Calendar.MINUTE, min)
-                isTimeSet = true
+                isTimeSet = false
                 updateTimeDisplay()
-            }, selectedDate.get(Calendar.HOUR_OF_DAY), selectedDate.get(Calendar.MINUTE), true).show()
+            }, selectedDate.get(Calendar.HOUR_OF_DAY), selectedDate.get(Calendar.MINUTE), false).show()
         }
 
         btnLocation.setOnClickListener {
@@ -170,6 +208,51 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 updateLocation(lat, lon)
             }
             dialog.show(parentFragmentManager, "LocationPicker")
+        }
+
+        // scroll when keyboard opens for people input
+        etPeople.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                scrollView.post {
+                    scrollView.smoothScrollTo(0, v.bottom)
+                }
+            }
+        }
+
+        // add person chips when pressing enter
+        etPeople.setOnEditorActionListener { v, actionId, event ->
+            val isEnter = event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
+                event.action == android.view.KeyEvent.ACTION_DOWN
+            val isDone = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+
+            if (isEnter || isDone) {
+                val raw = v.text.toString().trim()
+                if (raw.isEmpty()) return@setOnEditorActionListener true
+
+                val name = raw.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+                val exists = selectedPeople.any { it.equals(name, ignoreCase = true) }
+                if (!exists) {
+                    selectedPeople.add(name)
+
+                    val chip = com.google.android.material.chip.Chip(requireContext())
+                    chip.text = name
+                    chip.isCloseIconVisible = true
+                    chip.setOnCloseIconClickListener {
+                        selectedPeople.removeIf { it.equals(name, ignoreCase = true) }
+                        chipGroupPeople.removeView(chip)
+                    }
+
+                    chipGroupPeople.addView(chip)
+                    etPeople.setText("")
+
+                    scrollView.post { scrollView.smoothScrollTo(0, chip.bottom) }
+                }
+
+                return@setOnEditorActionListener true
+            }
+
+            false
         }
 
         btnSave.setOnClickListener {
@@ -185,6 +268,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             }
 
             val entry = Entry(
+                people = selectedPeople.toList(),
                 id = if (editingEntryId != -1) editingEntryId else 0,
                 title = title,
                 date = selectedDate.timeInMillis,
@@ -217,7 +301,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             }
             btnSave?.visibility = View.GONE
             linearLayout.setPadding(0, 0, 0, 0)
-            nestedScrollView?.isFillViewport = true
+            nestedScrollView?.isFillViewport = false
             
             val params = cardMap.layoutParams as LinearLayout.LayoutParams
             params.height = ViewGroup.LayoutParams.MATCH_PARENT
@@ -243,11 +327,11 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
     private fun setupMapboxWebView() {
         mapboxWebView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            allowFileAccessFromFileURLs = true
-            allowUniversalAccessFromFileURLs = true
+            javaScriptEnabled = false
+            domStorageEnabled = false
+            allowFileAccess = false
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
         mapboxWebView.addJavascriptInterface(object {
@@ -320,7 +404,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     val sdf = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault())
                     sdf.parse(dt)?.let {
                         selectedDate.time = it
-                        isTimeSet = true
+                        isTimeSet = false
                         updateDateDisplay()
                         updateTimeDisplay()
                     }

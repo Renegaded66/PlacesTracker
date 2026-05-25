@@ -101,20 +101,7 @@
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Map Preview -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="250dp"
-                app:cardBackgroundColor="#1E1E1E"
-                app:cardCornerRadius="20dp"
-                app:strokeWidth="0dp"
-                android:layout_marginBottom="32dp"
-                android:visibility="gone">
-                <android.webkit.WebView
-                    android:id="@+id/tripMapPreview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </com.google.android.material.card.MaterialCardView>
+
 
             <!-- Stations Header -->
             <TextView
@@ -145,6 +132,27 @@
                 app:iconTint="?attr/colorPrimary"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="32dp"/>
+
+            <RatingBar
+                android:id="@+id/ratingTrip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:numStars="5"
+                android:stepSize="0.5"
+                android:layout_marginBottom="16dp" />
+
+            <AutoCompleteTextView
+                android:id="@+id/etTripPeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Person hinzufügen"
+                android:layout_marginBottom="8dp" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chipGroupTripPeople"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp" />
 
             <!-- Notizen -->
             <EditText

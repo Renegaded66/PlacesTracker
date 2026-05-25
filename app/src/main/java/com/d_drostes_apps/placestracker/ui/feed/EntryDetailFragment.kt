@@ -54,7 +54,8 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         super.onViewCreated(view, savedInstanceState)
 
         val entryId = arguments?.getInt("entryId") ?: return
-        val app = (requireActivity().application as PlacesApplication)
+        val activity = activity ?: return
+        val app = (activity.application as PlacesApplication)
         val repository = app.repository
         val userDao = app.userDao
 
@@ -169,6 +170,35 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 }
                 if (!isInline) updateGlobePosition()
                 loadCountryFlag(e.location)
+
+                // Weather display
+                val ivWeatherIcon = view.findViewById<android.widget.ImageView>(R.id.ivWeatherIcon)
+                val tvWeatherTemp = view.findViewById<TextView>(R.id.tvWeatherTemp)
+
+                if (!e.location.isNullOrBlank()) {
+                    val coords = e.location.split(",")
+                    if (coords.size == 2) {
+                        val lat = coords[0].toDoubleOrNull()
+                        val lon = coords[1].toDoubleOrNull()
+
+                        if (lat != null && lon != null) {
+                            lifecycleScope.launch {
+                                val weather = app.weatherRepository.getWeather(
+                                    lat,
+                                    lon,
+                                    e.date,
+                                    com.d_drostes_apps.placestracker.BuildConfig.OPENWEATHER_KEY
+                                )
+
+                                ivWeatherIcon.setImageResource(
+                                    com.d_drostes_apps.placestracker.data.WeatherIconMapper
+                                        .getIconResId(weather.iconCode)
+                                )
+                                tvWeatherTemp.text = "${weather.temperature.toInt()}°C"
+                            }
+                        }
+                    }
+                }
             }
         }
 

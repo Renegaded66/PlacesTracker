@@ -90,9 +90,9 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> getString(R.string.all)
-                1 -> getString(R.string.open)
-                2 -> getString(R.string.completed)
+                0 -> getString(R.string.open)
+                1 -> getString(R.string.completed)
+                2 -> getString(R.string.all)
                 else -> ""
             }
         }.attach()
@@ -139,7 +139,8 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
     private fun updatePager() {
         val active = allItems.filter { !it.isCompleted }
         val completed = allItems.filter { it.isCompleted }
-        pagerAdapter.setData(allItems, active, completed)
+        // order must match tabs: open, completed, all
+        pagerAdapter.setData(active, completed, allItems)
     }
 
     private fun showDeleteConfirmation(item: BucketItem) {

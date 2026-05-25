@@ -11,6 +11,7 @@ import java.io.File
 
 class DetailMediaAdapter(
     private val mediaPaths: List<String>,
+    private val layoutResId: Int = R.layout.item_detail_media,
     private val onMediaClick: (String, View) -> Unit
 ) : RecyclerView.Adapter<DetailMediaAdapter.MediaViewHolder>() {
 
@@ -19,17 +20,24 @@ class DetailMediaAdapter(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MediaViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_detail_media, parent, false)
+        val view = LayoutInflater.from(parent.context).inflate(layoutResId, parent, false)
         return MediaViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: MediaViewHolder, position: Int) {
         val path = mediaPaths[position]
         
-        Glide.with(holder.itemView.context)
-            .load(File(path))
-            .centerCrop()
-            .into(holder.imageView)
+        if (path == "placeholder") {
+            Glide.with(holder.itemView.context)
+                .load(R.drawable.placeholder)
+                .centerCrop()
+                .into(holder.imageView)
+        } else {
+            Glide.with(holder.itemView.context)
+                .load(File(path))
+                .centerCrop()
+                .into(holder.imageView)
+        }
 
         holder.imageView.transitionName = "media_$path"
 

@@ -256,8 +256,9 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
     const markerDataSource = new Cesium.CustomDataSource('markers');
     viewer.dataSources.add(markerDataSource);
 
-    markerDataSource.clustering.enabled = false;
-    markerDataSource.clustering.pixelRange = 5; // Clustert nur, wenn sie WIRKLICH übereinander liegen
+    // enable clustering for dense friend markers
+    markerDataSource.clustering.enabled = true;
+    markerDataSource.clustering.pixelRange = -30; // cluster only when markers overlap ~50%
     markerDataSource.clustering.minimumClusterSize = 3;
     markerDataSource.clustering.clusterEvent.addEventListener(async function(clusteredEntities, cluster) {
         const count = clusteredEntities.length; const firstEntity = clusteredEntities[0];
@@ -268,7 +269,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             if (clusterImageUrl) {
                 cluster.billboard.show = true;
                 cluster.billboard.image = clusterImageUrl;
-                cluster.billboard.width = 49; cluster.billboard.height = 49;
+                cluster.billboard.width = 40; cluster.billboard.height = 40;
                 cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
                 cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
                 // 🌟 FIX: Cluster bleiben beim Rauszoomen immer sichtbar!
@@ -447,8 +448,8 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                 if (finalImageUrl) {
                     entity.billboard = {
                         image: finalImageUrl,
-                        width: 49,
-                        height: 49,
+                        width: 40,
+                        height: 40,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -527,7 +528,8 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
         } catch(e){}
     };
 
-    window.setTripPath = function(data) {
+    // Original trip path (used by TripDetail)
+window.setTripPath = function(data) {
         clearDetails(); polylineEntities.forEach(e => viewer.entities.remove(e)); polylineEntities = []; hidePopup();
         try {
             const items = typeof data === 'string' ? JSON.parse(data) : data;
@@ -569,11 +571,12 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
 
                                 entity.billboard = {
                                     image: img,
-                                    width: 56,
-                                    height: 56,
+                                    width: 40,
+                                    height: 40,
                                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-                                    disableDepthTestDistance: Number.POSITIVE_INFINITY
+                                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                                    scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.4)
                                 };
 
                                 entity.point = undefined;
@@ -605,6 +608,53 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             viewer.scene.requestRender();
         } catch(e) {}
     };
+
+// -------- FRIEND MAP (separate markers + routes) --------
+window.setFriendData = function(points, routes) {
+    clearDetails();
+    polylineEntities.forEach(e => viewer.entities.remove(e));
+    polylineEntities = [];
+
+    try {
+        const markerItems = typeof points === 'string' ? JSON.parse(points) : points;
+        const routeItems = typeof routes === 'string' ? JSON.parse(routes) : routes;
+
+        // markers
+        markerItems.forEach(p => {
+            const pos = Cesium.Cartesian3.fromDegrees(p.lon, p.lat);
+            viewer.entities.add({
+                position: pos,
+                point:{
+                    pixelSize:12,
+                    color:Cesium.Color.CYAN,
+                    outlineColor:Cesium.Color.WHITE,
+                    outlineWidth:2,
+                    disableDepthTestDistance:Number.POSITIVE_INFINITY
+                }
+            });
+        });
+
+        // animated routes (only stops)
+        routeItems.forEach(r => {
+            const a = Cesium.Cartesian3.fromDegrees(r.from.lon, r.from.lat);
+            const b = Cesium.Cartesian3.fromDegrees(r.to.lon, r.to.lat);
+
+            const entity = viewer.entities.add({
+                polyline:{
+                    positions:[a,b],
+                    width:4,
+                    // animated travel route
+                    material:Cesium.Color.ORANGE,
+                    clampToGround:true
+                }
+            });
+
+            polylineEntities.push(entity);
+        });
+
+        viewer.scene.requestRender();
+    } catch(e){}
+};
 
     const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
     handler.setInputAction(function(click){

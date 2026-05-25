@@ -15,8 +15,12 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.fragment.app.Fragment
+import android.widget.ImageView
+import kotlin.math.roundToInt
+import com.d_drostes_apps.placestracker.data.WeatherIconMapper
+
 import androidx.lifecycle.lifecycleScope
+import com.d_drostes_apps.placestracker.BuildConfig
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
@@ -24,6 +28,7 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.feed.DetailMediaAdapter
 import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
+import com.d_drostes_apps.placestracker.data.WeatherRepository
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.appbar.MaterialToolbar
@@ -57,7 +62,8 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val stopId = arguments?.getInt("stopId") ?: return
-        val app = (requireActivity().application as PlacesApplication)
+        val activity = activity ?: return
+        val app = (activity.application as PlacesApplication)
         val tripDao = app.database.tripDao()
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
@@ -85,7 +91,10 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         } else {
             mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             setupCesiumWebView()
-            toolbar.setNavigationOnClickListener { activity?.onBackPressed() }
+            toolbar.setNavigationOnClickListener {
+                // When opened from calendar we must close the bottom sheet instead of using activity back
+                if (isAdded) dismiss()
+            }
         }
 
         // Animation für den Content
@@ -123,8 +132,8 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                 val sdf = java.text.SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
                 tvDate.text = sdf.format(Date(it.date))
 
-                rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
-                rvMedia.adapter = DetailMediaAdapter(it.media) { path, transitionView ->
+rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
+                rvMedia.adapter = DetailMediaAdapter(it.media) { path, _ ->
                     val dialog = MediaDialogFragment().apply {
                         arguments = Bundle().apply {
                             putStringArrayList("mediaPaths", ArrayList(it.media))
@@ -133,8 +142,34 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                     }
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
+
                 if (!isInline) updateGlobePosition()
                 loadCountryFlag(it.location)
+
+                // Weather display for this stop
+                val ivWeatherIcon = view.findViewById<ImageView>(R.id.ivWeatherIcon)
+                val tvWeatherTemp = view.findViewById<TextView>(R.id.tvWeatherTemp)
+
+                if (!it.location.isNullOrBlank()) {
+                    val coords = it.location.split(",")
+                    if (coords.size == 2) {
+                        val lat = coords[0].toDoubleOrNull()
+                        val lon = coords[1].toDoubleOrNull()
+
+                        if (lat != null && lon != null) {
+                            lifecycleScope.launch {
+                                val weather = app.weatherRepository.getWeather(
+                                    lat,
+                                    lon,
+                                    it.date,
+                                    BuildConfig.OPENWEATHER_KEY
+                                )
+                                ivWeatherIcon.setImageResource(WeatherIconMapper.getIconResId(weather.iconCode))
+                                tvWeatherTemp.text = "${weather.temperature.roundToInt()}°C"
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -193,7 +228,9 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         mapboxWebView.webChromeClient = WebChromeClient()
         mapboxWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
-                updateGlobePosition()
+                view?.postDelayed({
+                    updateGlobePosition()
+                }, 200)
             }
         }
         val html = try {

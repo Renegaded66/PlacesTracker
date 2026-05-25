@@ -10,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -24,6 +25,9 @@ import kotlinx.coroutines.*
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import com.d_drostes_apps.placestracker.BuildConfig
+import com.d_drostes_apps.placestracker.data.WeatherIconMapper
+import kotlin.math.roundToInt
 import java.util.concurrent.TimeUnit
 import android.util.TypedValue
 import com.google.android.material.shape.CornerFamily
@@ -80,10 +84,12 @@ class FeedAdapter(
         val title: TextView = view.findViewById(R.id.feedTitle)
         val image: ImageView? = view.findViewById(R.id.feedImage)
         val viewPager: ViewPager2? = view.findViewById(R.id.feedViewPager)
-        val dotsIndicator: com.google.android.material.tabs.TabLayout? = view.findViewById(R.id.feedDotsIndicator)
+        val dotsIndicator: LinearLayout? = view.findViewById(R.id.feedDotsIndicator)
         val tvFeedDateTime: TextView = view.findViewById(R.id.tvFeedDateTime)
         val ivTypeIcon: ImageView? = view.findViewById(R.id.ivTypeIcon)
         val tvLocationFlags: TextView = view.findViewById(R.id.tvLocationFlags)
+        val ivWeatherIcon: ImageView? = view.findViewById(R.id.ivWeatherIcon)
+        val tvWeatherTemp: TextView? = view.findViewById(R.id.tvWeatherTemp)
         val tvNumStops: TextView? = view.findViewById(R.id.tvNumStops)
         val feedDescription: TextView? = view.findViewById(R.id.feedDescription)
 
@@ -114,8 +120,22 @@ class FeedAdapter(
     override fun getItemCount(): Int = items.size
 
     fun updateItems(newItems: List<FeedItem>) {
+        val diff = object : androidx.recyclerview.widget.DiffUtil.Callback() {
+            override fun getOldListSize() = items.size
+            override fun getNewListSize() = newItems.size
+
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return items[oldItemPosition].id == newItems[newItemPosition].id
+            }
+
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+                return items[oldItemPosition] == newItems[newItemPosition]
+            }
+        }
+
+        val result = androidx.recyclerview.widget.DiffUtil.calculateDiff(diff)
         items = newItems
-        notifyDataSetChanged()
+        result.dispatchUpdatesTo(this)
     }
 
     override fun onBindViewHolder(holder: FeedViewHolder, position: Int) {
@@ -151,6 +171,42 @@ class FeedAdapter(
 
         holder.title.text = item.title
 
+        // Weather display
+        val app = context.applicationContext as PlacesApplication
+        val location = when(item) {
+            is FeedItem.Experience -> item.entry.location
+            is FeedItem.TripItem -> item.stops.firstOrNull()?.location
+        }
+
+        if (!location.isNullOrBlank()) {
+            val coords = location.split(",")
+            if (coords.size == 2) {
+                val lat = coords[0].toDoubleOrNull()
+                val lon = coords[1].toDoubleOrNull()
+
+                if (lat != null && lon != null) {
+                    adapterScope.launch {
+                        val weather = app.weatherRepository.getWeather(
+                            lat,
+                            lon,
+                            when(item) {
+                                is FeedItem.Experience -> item.entry.date
+                                is FeedItem.TripItem -> item.trip.date
+                            },
+                            BuildConfig.OPENWEATHER_KEY
+                        )
+
+                        withContext(Dispatchers.Main) {
+                            holder.ivWeatherIcon?.setImageResource(
+                                WeatherIconMapper.getIconResId(weather.iconCode)
+                            )
+                            holder.tvWeatherTemp?.text = "${weather.temperature.roundToInt()}°C"
+                        }
+                    }
+                }
+            }
+        }
+
         // Airbnb style adjustments
         if (currentViewMode == ViewMode.STANDARD) {
             holder.cardView.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, context.resources.displayMetrics).toInt()
@@ -175,7 +231,7 @@ class FeedAdapter(
             }
 
             // Media Slider (ViewPager2)
-            val allMedia = when(item) {
+            var allMedia = when(item) {
                 is FeedItem.Experience -> item.entry.media
                 is FeedItem.TripItem -> {
                     val media = item.stops.flatMap { it.media }.distinct().toMutableList()
@@ -187,43 +243,55 @@ class FeedAdapter(
                 }
             }
             
+            val isPlaceholder = allMedia.isEmpty()
+            if (isPlaceholder) {
+                allMedia = listOf("placeholder")
+            }
+
             if (allMedia.isNotEmpty()) {
                 val vp: ViewPager2? = holder.viewPager
                 if (vp != null) {
-                    val mediaAdapter = DetailMediaAdapter(allMedia) { _, _ ->
+                    val mediaAdapter = DetailMediaAdapter(allMedia, R.layout.item_feed_media) { _, _ ->
                         onItemClick(item, null)
                     }
                     vp.adapter = mediaAdapter
 
                     val dots = holder.dotsIndicator
-                    if (dots != null && dots is com.google.android.material.tabs.TabLayout) {
-                        if (allMedia.size > 1) {
+                    if (dots != null) {
+                        if (allMedia.size > 1 && !isPlaceholder) {
                             dots.visibility = View.VISIBLE
-                            val mediator = TabLayoutMediator(dots, vp) { tab, _ ->
-                                val dot = View(context)
-                                val size = (context.resources.displayMetrics.density * 6).toInt()
-                                val params = ViewGroup.LayoutParams(size, size)
-                                dot.layoutParams = params
-                                dot.setBackgroundResource(R.drawable.feed_dot_indicator)
-                                tab.customView = dot
-                            }
-                            mediator.attach()
-
+                            
                             fun updateDots(position: Int) {
-                                val count = dots.tabCount
-                                for (i in 0 until count) {
-                                    val tab = dots.getTabAt(i) ?: continue
-                                    val v = tab.customView ?: continue
-                                    val visible = when {
-                                        count <= 2 -> true
-                                        position == 0 -> i <= 1
-                                        position == count - 1 -> i >= count - 2
-                                        else -> i in (position - 1)..(position + 1)
+                                dots.removeAllViews()
+                                val count = allMedia.size
+                                
+                                val start = when {
+                                    count <= 3 -> 0
+                                    position == 0 -> 0
+                                    position == count - 1 -> count - 3
+                                    else -> position - 1
+                                }
+                                val end = (start + 2).coerceAtMost(count - 1)
+                                
+                                for (i in start..end) {
+                                    val dot = View(context)
+                                    val size = (context.resources.displayMetrics.density * 6).toInt()
+                                    val params = LinearLayout.LayoutParams(size, size).apply {
+                                        setMargins((context.resources.displayMetrics.density * 3).toInt(), 0, (context.resources.displayMetrics.density * 3).toInt(), 0)
                                     }
-                                    v.visibility = if (visible) View.VISIBLE else View.GONE
-                                    val scale = if (i == position) 1.6f else 1f
-                                    v.scaleX = scale
-                                    v.scaleY = scale
+                                    dot.layoutParams = params
+                                    dot.setBackgroundResource(R.drawable.feed_dot_indicator)
+                                    
+                                    if (i == position) {
+                                        dot.alpha = 1.0f
+                                        dot.scaleX = 1.2f
+                                        dot.scaleY = 1.2f
+                                    } else {
+                                        dot.alpha = 0.5f
+                                        dot.scaleX = 1.0f
+                                        dot.scaleY = 1.0f
+                                    }
+                                    dots.addView(dot)
                                 }
                             }
 
@@ -352,7 +420,9 @@ class FeedAdapter(
                 Glide.with(context)
                     .load(File(coverPath))
                     .override(if (currentViewMode == ViewMode.COMPACT) 200 else 800)
+                    .thumbnail(0.25f)
                     .centerCrop()
+                    .diskCacheStrategy(com.bumptech.glide.load.engine.DiskCacheStrategy.AUTOMATIC)
                     .placeholder(R.drawable.placeholder)
                     .into(it)
             }

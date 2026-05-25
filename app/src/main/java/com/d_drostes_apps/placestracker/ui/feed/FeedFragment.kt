@@ -59,6 +59,13 @@ import androidx.core.view.isVisible
 
 class FeedFragment : Fragment(R.layout.fragment_feed) {
 
+    override fun onResume() {
+        super.onResume()
+        if (::cesiumWebView.isInitialized) {
+            cesiumWebView.post { updateGlobeData() }
+        }
+    }
+
     private lateinit var recycler: RecyclerView
     private lateinit var cesiumWebView: WebView
     private var adapter: FeedAdapter? = null

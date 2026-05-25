@@ -77,17 +77,30 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
 
                     context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                         ZipOutputStream(BufferedOutputStream(outputStream)).use { zipOut ->
-                            // 1. Alle Datenbanken sichern (enthält Name, Land, Home, UUID, Freunde, Trips, Entries)
+
+                            // 0. Backup metadata (helps verify completeness later)
+                            val meta = """
+                                {
+                                  "created": ${System.currentTimeMillis()},
+                                  "app": "PlacesTracker"
+                                }
+                            """.trimIndent()
+
+                            zipOut.putNextEntry(ZipEntry("backup_metadata.json"))
+                            zipOut.write(meta.toByteArray())
+                            zipOut.closeEntry()
+
+                            // 1. Database (contains trips, stops, entries, people, ratings, coords, times)
                             if (dbFolder != null && dbFolder.exists()) {
                                 addFileOrDirectoryToZip(dbFolder, "databases/", zipOut)
                             }
 
-                            // 2. Alle Mediendateien sichern (Profilbilder, Fotos der Erlebnisse)
+                            // 2. Media files (photos, covers etc.)
                             if (filesDir.exists()) {
                                 addFileOrDirectoryToZip(filesDir, "files/", zipOut)
                             }
 
-                            // 3. Alle App-Einstellungen sichern
+                            // 3. Shared preferences (settings)
                             if (prefsDir.exists() && prefsDir.isDirectory) {
                                 addFileOrDirectoryToZip(prefsDir, "shared_prefs/", zipOut)
                             }

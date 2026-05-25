@@ -32,6 +32,9 @@ interface TripDao {
     @Delete
     suspend fun deleteTrip(trip: Trip)
 
+    @Query("UPDATE trips SET isTrackingActive = 0")
+    suspend fun deactivateAllTracking()
+
     @Query("UPDATE trips SET isTrackingActive = :isActive WHERE id = :tripId")
     suspend fun updateTrackingStatus(tripId: Int, isActive: Boolean)
 

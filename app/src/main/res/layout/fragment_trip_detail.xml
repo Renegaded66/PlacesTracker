@@ -136,6 +136,32 @@
                         android:paddingHorizontal="16dp"
                         android:paddingBottom="100dp">
 
+                        <FrameLayout
+                            android:id="@+id/cvTripHero"
+                            android:layout_width="match_parent"
+                            android:layout_height="210dp"
+                            android:layout_marginTop="8dp">
+
+                            <FrameLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent">
+
+                                <ImageView
+                                    android:id="@+id/ivTripHero"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:scaleType="centerCrop"
+                                    android:src="@drawable/vorschaubild" />
+
+                                <View
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:background="#30000000" />
+
+                            </FrameLayout>
+
+                        </FrameLayout>
+
                         <TextView
                             android:id="@+id/tvTripDetailTitle"
                             android:layout_width="match_parent"
@@ -144,6 +170,48 @@
                             android:textSize="32sp"
                             android:textStyle="bold"
                             tools:text="Sommerurlaub 2024" />
+
+                        <TextView
+                            android:id="@+id/tvTripStats"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:textColor="?android:attr/textColorSecondary"
+                            android:textSize="14sp"
+                            tools:text="5 Tage · 8 Stops · 3 Länder · 1240 km" />
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/chipGroupTripPeopleDetail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            app:singleLine="false" />
+
+                        <LinearLayout
+                            android:id="@+id/layoutTripRating"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="⭐"
+                                android:textSize="18sp"
+                                android:layout_marginEnd="6dp"/>
+
+                            <RatingBar
+                                android:id="@+id/ratingTripDetail"
+                                style="?android:attr/ratingBarStyleSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:numStars="5"
+                                android:stepSize="0.5"
+                                android:isIndicator="true" />
+
+                        </LinearLayout>
 
                         <com.google.android.material.card.MaterialCardView
                             android:id="@+id/cvTripNotes"
@@ -192,6 +260,7 @@
                                 android:paddingVertical="4dp"
                                 android:textSize="12sp"
                                 tools:text="Deutschland" />
+
                         </com.google.android.material.card.MaterialCardView>
 
                         <androidx.recyclerview.widget.RecyclerView
