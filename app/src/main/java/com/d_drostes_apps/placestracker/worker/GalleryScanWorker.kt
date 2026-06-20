@@ -55,11 +55,11 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         val prefs = applicationContext.getSharedPreferences("gallery_scan_prefs", Context.MODE_PRIVATE)
         val lastScanTime = prefs.getLong("last_scan_time", System.currentTimeMillis() - 86400000)
         
-        Log.d("GalleryScanWorker", "Scanning photos since: ${Date(lastScanTime)}")
-        val newPhotos = queryNewPhotos(lastScanTime)
-        Log.d("GalleryScanWorker", "Found ${newPhotos.size} new photos total")
+        Log.d("GalleryScanWorker", "Scanning media since: ${Date(lastScanTime)}")
+        val newMedia = queryNewMedia(lastScanTime)
+        Log.d("GalleryScanWorker", "Found ${newMedia.size} new media items total")
 
-        if (newPhotos.isEmpty()) {
+        if (newMedia.isEmpty()) {
             prefs.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
             return Result.success()
         }
@@ -67,7 +67,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         val groups = mutableListOf<PhotoGroup>()
         val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-        newPhotos.forEach { (uri, dateTaken) ->
+        newMedia.forEach { (uri, dateTaken) ->
             try {
                 applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
                     val exif = ExifInterface(inputStream)
@@ -159,16 +159,18 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         }
     }
 
-    private fun queryNewPhotos(since: Long): List<Pair<Uri, Long>> {
-        val photos = mutableListOf<Pair<Uri, Long>>()
-        val projection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED)
+    private fun queryNewMedia(since: Long): List<Pair<Uri, Long>> {
+        val media = mutableListOf<Pair<Uri, Long>>()
+
+        // Images
+        val imgProjection = arrayOf(MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED)
         val selection = "${MediaStore.Images.Media.DATE_ADDED} >= ?"
         val selectionArgs = arrayOf((since / 1000).toString())
         val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
         applicationContext.contentResolver.query(
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            projection,
+            imgProjection,
             selection,
             selectionArgs,
             sortOrder
@@ -176,20 +178,46 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
             val dateColumn = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
             val addedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
-            
+
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 var date = cursor.getLong(dateColumn)
                 if (date == 0L) date = cursor.getLong(addedColumn) * 1000
-                
-                photos.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()) to date)
+
+                media.add(Uri.withAppendedPath(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id.toString()) to date)
             }
         }
-        return photos
+
+        // Videos
+        val vidProjection = arrayOf(MediaStore.Video.Media._ID, MediaStore.Video.Media.DATE_TAKEN, MediaStore.Video.Media.DATE_ADDED)
+
+        applicationContext.contentResolver.query(
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            vidProjection,
+            "${MediaStore.Video.Media.DATE_ADDED} >= ?",
+            selectionArgs,
+            "${MediaStore.Video.Media.DATE_ADDED} DESC"
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+            val dateColumn = cursor.getColumnIndex(MediaStore.Video.Media.DATE_TAKEN)
+            val addedColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATE_ADDED)
+
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                var date = cursor.getLong(dateColumn)
+                if (date == 0L) date = cursor.getLong(addedColumn) * 1000
+
+                media.add(Uri.withAppendedPath(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id.toString()) to date)
+            }
+        }
+
+        return media
     }
 
     private fun copyToInternalStorage(uri: Uri): File {
-        val fileName = "auto_${UUID.randomUUID()}.jpg"
+        val mime = applicationContext.contentResolver.getType(uri) ?: "image/jpeg"
+        val extension = if (mime.startsWith("video")) ".mp4" else ".jpg"
+        val fileName = "auto_${UUID.randomUUID()}$extension"
         val destFile = File(applicationContext.filesDir, fileName)
         applicationContext.contentResolver.openInputStream(uri)?.use { input ->
             destFile.outputStream().use { output ->

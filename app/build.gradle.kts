@@ -15,8 +15,8 @@ android {
         applicationId = "com.d_drostes_apps.placestracker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
         buildConfigField("String", "OPENWEATHER_KEY", "\"4e6cd004c9ab94cad2ae879db455ee49\"") // TODO: Replace "YOUR_API_KEY" with your actual OpenWeather API key
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

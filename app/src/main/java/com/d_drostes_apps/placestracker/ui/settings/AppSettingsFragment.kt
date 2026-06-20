@@ -41,7 +41,10 @@ class AppSettingsFragment : Fragment(R.layout.fragment_app_settings) {
     private val languages by lazy {
         listOf(
             LanguageItem("de", getString(R.string.german)),
-            LanguageItem("en", getString(R.string.english))
+            LanguageItem("en", getString(R.string.english)),
+            LanguageItem("es", getString(R.string.spanish)),
+            LanguageItem("fr", getString(R.string.french)),
+            LanguageItem("pt", getString(R.string.portuguese))
         )
     }
 

@@ -92,8 +92,18 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             setupCesiumWebView()
             toolbar.setNavigationOnClickListener {
-                // When opened from calendar we must close the bottom sheet instead of using activity back
-                if (isAdded) dismiss()
+                stop?.let { s ->
+                    val bundle = Bundle().apply {
+                        putInt("tripId", s.tripId)
+                    }
+                    dismiss()
+                    (activity.supportFragmentManager
+                        .findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment)
+                        ?.navController
+                        ?.navigate(R.id.tripDetailFragment, bundle)
+                } ?: run {
+                    if (isAdded) dismiss()
+                }
             }
         }
 

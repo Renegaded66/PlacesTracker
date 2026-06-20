@@ -21,6 +21,11 @@
     <string name="select_language">Sprache auswählen</string>
     <string name="german">Deutsch</string>
     <string name="english">Englisch</string>
+    <string name="spanish">Spanisch</string>
+    <string name="french">Französisch</string>
+    <string name="bengali">Bengali</string>
+    <string name="hindi">Hindi</string>
+    <string name="portuguese">Portugiesisch</string>
     <string name="toggle_fullscreen_map">Toggle fullscreen map</string>
     <string name="help">Hilfe</string>
     <string name="help_title">Erklärungen</string>
@@ -181,7 +186,7 @@
     <string name="open">Offen</string>
     <string name="completed">Erledigt</string>
     <string name="delete_item_title">Element löschen</string>
-    <string name="delete_item_msg">Möchtest du \'%1$s\' wirklich von der Bucket List entfernen?</string>
+    <string name="delete_item_msg">Möchtest du &quot;%1$s&quot; wirklich von der Bucket List entfernen?</string>
     <string name="bucket_type_experience">ERLEBNIS</string>
     <string name="bucket_type_trip">REISE</string>
 
@@ -332,6 +337,9 @@
     <string name="select_folder">Ordner wählen</string>
     <string name="new_folder">Neuer Ordner</string>
     <string name="folder_name_hint">Name des Ordners</string>
+
+    <string name="battery_optimization_disabled">Akku-Optimierung ist deaktiviert – die App kann zuverlässig im Hintergrund laufen.</string>
+    <string name="battery_optimization_enabled">Akku-Optimierung ist aktiv – Hintergrundfunktionen können eingeschränkt sein.</string>
 
     <string name="weather_icon">Wetter Icon</string>
 </resources>

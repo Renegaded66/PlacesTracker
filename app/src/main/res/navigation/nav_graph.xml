@@ -220,6 +220,11 @@
         android:label="@string/app_settings" />
 
     <fragment
+        android:id="@+id/backgroundOptimizationFragment"
+        android:name="com.d_drostes_apps.placestracker.ui.settings.BackgroundOptimizationFragment"
+        android:label="Hintergrundbetrieb" />
+
+    <fragment
         android:id="@+id/newTripFragment"
         android:name="com.d_drostes_apps.placestracker.ui.newtrip.NewTripFragment"
         android:label="{title}">

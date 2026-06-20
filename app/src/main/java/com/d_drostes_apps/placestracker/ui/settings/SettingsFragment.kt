@@ -36,6 +36,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val cardAutoDetection = view.findViewById<View>(R.id.cardAutoDetection)
         val cardBackup = view.findViewById<View>(R.id.cardBackup)
         val cardVisions = view.findViewById<View>(R.id.cardVisions)
+        val cardBackground = view.findViewById<View>(R.id.cardBackgroundOptimization)
         val btnHelp = view.findViewById<View>(R.id.btnHelp)
 
         lifecycleScope.launch {
@@ -76,6 +77,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
         cardVisions.setOnClickListener {
             findNavController().navigate(R.id.visionsFragment)
+        }
+
+        cardBackground.setOnClickListener {
+            findNavController().navigate(R.id.backgroundOptimizationFragment)
         }
 
         btnHelp.setOnClickListener {

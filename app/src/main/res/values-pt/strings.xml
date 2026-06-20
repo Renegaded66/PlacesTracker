@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PlacesTracker</string>
+    <string name="default_username">Usuário</string>
+    <string name="settings_title">Configurações</string>
+    <string name="profile_edit">Editar perfil</string>
+    <string name="app_settings">Configurações do app</string>
+    <string name="language">Idioma</string>
+    <string name="save">Salvar</string>
+    <string name="new_entry">Nova entrada</string>
+    <string name="edit_entry">Editar entrada</string>
+    <string name="title_hint">Título</string>
+    <string name="notes_hint">Notas (opcional)</string>
+    <string name="notes">Notas</string>
+    <string name="date_hint">Selecionar data</string>
+    <string name="time_hint">Hora (opcional)</string>
+    <string name="location_hint">Selecionar local</string>
+    <string name="save_entry">Salvar entrada</string>
+    <string name="delete_entry">Excluir entrada</string>
+    <string name="delete_confirm">Você realmente deseja excluir esta entrada permanentemente?</string>
+    <string name="select_language">Selecionar idioma</string>
+    <string name="german">Alemão</string>
+    <string name="english">Inglês</string>
+    <string name="spanish">Espanhol</string>
+    <string name="french">Francês</string>
+    <string name="bengali">Bengali</string>
+    <string name="hindi">Hindi</string>
+    <string name="portuguese">Português</string>
+    <string name="toggle_fullscreen_map">Alternar mapa em tela cheia</string>
+    <string name="help">Ajuda</string>
+    <string name="help_title">Explicações</string>
+    <string name="help_content">• Experiência: Um local com fotos e notas.\n\n• Viagem: Uma viagem com várias paradas planejadas manualmente.\n\n• Viagem automática: Selecione várias fotos da galeria e o app cria automaticamente uma viagem com base nas datas das fotos.</string>
+    <string name="add_to_my_feed">Adicionar ao meu feed</string>
+    <string name="add_to_my_feed_confirm_entry">Deseja adicionar esta experiência ao seu feed pessoal?</string>
+    <string name="add_to_my_feed_confirm_trip">Deseja adicionar esta viagem ao seu feed pessoal?</string>
+    <string name="added_to_my_feed_success">Adicionado ao feed com sucesso</string>
+
+    <!-- UI Strings -->
+    <string name="friends">Amigos</string>
+    <string name="search_hint">Pesquisar…</string>
+    <string name="filter_type">Tipo</string>
+    <string name="filter_date">Data</string>
+    <string name="filter_location">Local</string>
+    <string name="filter_reset">Redefinir</string>
+    <string name="trip">Viagem</string>
+    <string name="auto_trip">Viagem automática</string>
+    <string name="add">Adicionar</string>
+    <string name="auto_detection">Detecção automática</string>
+    <string name="auto_detection_desc">Varredura da galeria e local de origem</string>
+    <string name="backup">Backup</string>
+    <string name="backup_desc">Salvar e restaurar dados</string>
+    <string name="support_developer">Apoiar desenvolvedor</string>
+    <string name="no_coordinates">Sem coordenadas</string>
+    <string name="media">Mídia</string>
+    <string name="add_trip_cover">Adicionar capa da viagem</string>
+    <string name="trip_title_hint">Título da viagem</string>
+    <string name="auto_trip_switch">Viagem automática</string>
+    <string name="timepoints_stations">Pontos / Estações</string>
+    <string name="add_another_timepoint">Adicionar outro ponto</string>
+    <string name="save_trip">Salvar viagem</string>
+    <string name="travel_stats">Estatísticas de viagem</string>
+    <string name="year_summary">Resumo do ano</string>
+    <string name="countries">Países</string>
+    <string name="visited_countries">Países visitados:</string>
+    <string name="activities">Atividades</string>
+    <string name="trips">Viagens</string>
+    <string name="experiences">Experiências</string>
+    <string name="stops">Paradas</string>
+    <string name="distance">Distância</string>
+    <string name="total_distance_desc">Distância total percorrida em suas viagens</string>
+    <string name="bucket_list">Lista de desejos</string>
+    <string name="add_timepoint">Adicionar ponto de tempo</string>
+    <string name="stop_title_hint">Título desta parada</string>
+    <string name="no_location_selected">Nenhum local selecionado</string>
+    <string name="add_stop_confirm">Adicionar parada</string>
+    <string name="delete_stop">Excluir parada</string>
+    <string name="app_color">Cor do app</string>
+    <string name="pick_color">Escolher cor</string>
+    <string name="enable_timeline_gallery">Ativar galeria da linha do tempo</string>
+    <string name="username_hint">Nome de usuário</string>
+    <string name="home_country_hint">País de origem</string>
+    <string name="backup_instruction">Salve suas viagens, fotos e configurações em um arquivo para restaurar ou transferir depois.</string>
+    <string name="create_backup">Criar backup</string>
+    <string name="upload_backup">Enviar backup</string>
+    <string name="add_new_entry_empty">Adicionar nova entrada</string>
+    <string name="home_location">Local de origem</string>
+    <string name="home_location_instruction">Toque no mapa para marcar sua casa</string>
+    <string name="auto_scan_gallery">Escanear galeria automaticamente</string>
+    <string name="home_radius">Raio de casa (km)</string>
+    <string name="home_distance_hint">Distância da casa</string>
+    <string name="home_radius_desc">O app cria rascunhos de novos locais quando fotos são tiradas fora do raio de casa.</string>
+    <string name="feed">Feed</string>
+    <string name="calendar">Calendário</string>
+    <string name="statistics">Estatísticas</string>
+    <string name="options">Opções</string>
+    <string name="share">Compartilhar</string>
+    <string name="details">Detalhes</string>
+    <string name="stop_details">Detalhes da parada</string>
+    <string name="trip_details">Detalhes da viagem</string>
+    <string name="fullscreen">Tela cheia</string>
+    <string name="no_location_available">Nenhum local disponível</string>
+    <string name="draft_badge">RASCUNHO - Detectado automaticamente</string>
+    <string name="live">AO VIVO</string>
+    <string name="remove">Remover</string>
+    <string name="confirm">Confirmar</string>
+    <string name="import_text">Importar</string>
+    <string name="add_bucket_item_title">Adicionar item à lista de desejos</string>
+    <string name="bucket_title_hint">O que você quer viver?</string>
+    <string name="bucket_desc_hint">Descrição (opcional)</string>
+    <string name="bucket_date_hint">Selecionar data (opcional)</string>
+    <string name="is_trip_checkbox">É uma viagem</string>
+    <string name="select_photo_from_gallery">Selecionar foto da galeria</string>
+    <string name="add_to_bucket_list_btn">Adicionar à lista de desejos</string>
+    <string name="no_entries_available">Nenhuma entrada disponível</string>
+
+    <string name="select_year">Selecionar ano</string>
+    <string name="memories">Memórias</string>
+    <string name="km_distance">km de distância</string>
+    <string name="no_data_for_year">Sem dados para este ano.</string>
+    <string name="media_options">Opções de mídia</string>
+    <string name="remove_media">Remover mídia</string>
+    <string name="use_location_from_image">Usar localização desta imagem</string>
+    <string name="set_as_cover">Definir como capa</string>
+    <string name="take_date_time">Usar data e hora</string>
+    <string name="map">Mapa</string>
+    <string name="gallery">Galeria</string>
+    <string name="select_period">Selecionar período</string>
+    <string name="title">Título</string>
+    <string name="date">Data</string>
+    <string name="delete_mini_stop">Excluir mini parada</string>
+    <string name="mini_stop">Mini parada</string>
+    <string name="draft">Rascunho</string>
+    <string name="photo_details">Detalhes da foto</string>
+    <string name="close">Fechar</string>
+
+    <string name="mon">Seg</string>
+    <string name="tue">Ter</string>
+    <string name="wed">Qua</string>
+    <string name="thu">Qui</string>
+    <string name="fri">Sex</string>
+    <string name="sat">Sáb</string>
+    <string name="sun">Dom</string>
+    <string name="date_label">Data:</string>
+    <string name="location_label">Local:</string>
+
+    <string name="auto_trip_confirm_msg">Deseja criar uma viagem automática a partir de %1$d fotos selecionadas? As fotos serão agrupadas por localização (raio de 1 km).</string>
+    <string name="processing_images">Processando imagens…</string>
+    <string name="no_valid_images_found">Nenhuma imagem válida encontrada.</string>
+    <string name="auto_trip_default_title">Viagem automática</string>
+    <string name="stop_at_date">Parada em %1$s</string>
+    <string name="error_message">Erro: %1$s</string>
+    <string name="filter_all">Todos</string>
+    <string name="filter_experiences">Experiências</string>
+    <string name="filter_trips">Viagens</string>
+    <string name="select_type">Selecionar tipo</string>
+    <string name="no_locations_available_yet">Ainda não há locais disponíveis.</string>
+    <string name="select_countries">Selecionar países</string>
+    <string name="filter">Filtrar</string>
+    <string name="deselect_all">Desmarcar todos</string>
+    <string name="understood">Entendi</string>
+    <string name="edit_auto_trip">Editar viagem automática</string>
+    <string name="no_countries_visited">Ainda não há países visitados</string>
+    <string name="your_year">Seu ano %1$d</string>
+    <string name="import_success">Importação de %1$s bem-sucedida</string>
+    <string name="import_error_invalid">Erro de importação: arquivo inválido</string>
+
+    <string name="confirm_draft">Confirmar rascunho</string>
+    <string name="save_changes">Salvar alterações</string>
+    <string name="enter_title_error">Por favor, insira um título</string>
+    <string name="location_from_image_taken">Local obtido da imagem</string>
+    <string name="date_time_taken">Data e hora obtidas</string>
+    <string name="error_reading_date">Erro ao ler data</string>
+    <string name="cover_image_set">Capa definida</string>
+
+    <string name="title_required">Título obrigatório</string>
+    <string name="stop_delete_confirm_title">Excluir parada</string>
+    <string name="stop_delete_confirm_msg">Deseja excluir esta parada?</string>
+    <string name="delete">Excluir</string>
+    <string name="stop_saved">Parada salva</string>
+
+    <string name="cancel">Cancelar</string>
+    <string name="yes_create">Sim, criar</string>
+    <string name="pick_color_title">Escolher cor</string>
+
+    <string name="all">Todos</string>
+    <string name="open">Aberto</string>
+    <string name="completed">Concluído</string>
+    <string name="delete_item_title">Excluir item</string>
+    <string name="delete_item_msg">Deseja remover \'%1$s\' da lista de desejos?</string>
+    <string name="bucket_type_experience">Experiência</string>
+    <string name="bucket_type_trip">Viagem</string>
+
+    <string name="creating_backup">Criando backup…</string>
+    <string name="backup_success">Backup criado com sucesso</string>
+    <string name="backup_error">Erro no backup: %1$s</string>
+    <string name="restoring_data">Restaurando dados…</string>
+    <string name="restore_success">Restauração concluída. O app será reiniciado…</string>
+    <string name="restore_error">Erro na restauração: %1$s</string>
+
+    <string name="create_profile_first">Crie um perfil primeiro</string>
+    <string name="feed_from">Feed de %1$s</string>
+    <string name="shared_experiences_count">%1$d experiências compartilhadas</string>
+    <string name="friend">Amigo</string>
+
+    <string name="gallery_permissions_required">Permissão de galeria necessária</string>
+    <string name="location_permission_required">Permissão de localização necessária.</string>
+    <string name="mark_home_instruction">Marque sua casa no mapa primeiro!</string>
+    <string name="settings_saved">Configurações salvas</string>
+    <string name="location_error_gps">Não foi possível obter a localização. GPS ativado?</string>
+    <string name="no_location_set">Nenhum local definido</string>
+    <string name="profile_saved">Perfil salvo</string>
+    <string name="enter_name_error">Por favor, insira um nome</string>
+
+    <string name="jan">Jan</string>
+    <string name="feb">Fev</string>
+    <string name="mar">Mar</string>
+    <string name="apr">Abr</string>
+    <string name="may">Mai</string>
+    <string name="jun">Jun</string>
+    <string name="jul">Jul</string>
+    <string name="aug">Ago</string>
+    <string name="sep">Set</string>
+    <string name="oct">Out</string>
+    <string name="nov">Nov</string>
+    <string name="dec">Dez</string>
+
+    <string name="edit_trip">Editar viagem</string>
+    <string name="unknown">Desconhecido</string>
+    <string name="select_transport_mode">Selecionar meio de transporte</string>
+    <string name="apply_to_all_trip">Aplicar a toda a viagem?</string>
+    <string name="yes">Sim</string>
+    <string name="no">Não</string>
+    <string name="car">Carro</string>
+    <string name="bike">Bicicleta</string>
+    <string name="plane">Avião</string>
+    <string name="train">Trem</string>
+    <string name="walk">A pé</string>
+    <string name="none">Nenhum</string>
+
+    <!-- Help Dialog Content -->
+    <string name="help_local_title">100% local e privado</string>
+    <string name="help_local_desc">Seus dados ficam apenas no dispositivo, sem nuvem ou servidor.</string>
+
+    <string name="help_types_title">Experiência vs Viagem</string>
+    <string name="help_types_desc">Uma experiência é um local. Uma viagem tem várias paradas.</string>
+
+    <string name="help_auto_trip_title">Viagem automática</string>
+    <string name="help_auto_trip_desc">Selecione fotos e o app cria uma viagem automaticamente.</string>
+
+    <string name="help_friends_title">Sistema de amigos</string>
+    <string name="help_friends_desc">Compartilhe e importe viagens de amigos.</string>
+
+    <string name="help_calendar_title">Calendário</string>
+    <string name="help_calendar_desc">Mostra todas as suas atividades.</string>
+
+    <string name="help_stats_title">Estatísticas</string>
+    <string name="help_stats_desc">Analisa suas viagens e experiências.</string>
+
+    <string name="help_bucket_title">Lista de desejos</string>
+    <string name="help_bucket_desc">Salve lugares dos sonhos.</string>
+
+    <string name="help_auto_detect_title">Detecção automática</string>
+    <string name="help_auto_detect_desc">Detecta novas fotos automaticamente.</string>
+
+    <string name="help_backup_title">Sistema de backup</string>
+    <string name="help_backup_desc">Exportar e restaurar dados facilmente.</string>
+
+    <string name="help_personalize_title">Personalização e linha do tempo</string>
+    <string name="help_personalize_desc">Tema e timeline personalizáveis.</string>
+
+    <string name="help_donate_title">Apoiar desenvolvimento</string>
+    <string name="help_donate_desc">Você pode apoiar com doações.</string>
+    <string name="btn_donate_kofi">Apoiar no Ko-fi</string>
+
+    <string name="visions">Visões</string>
+    <string name="visions_desc">O que o app deve aprender</string>
+    <string name="vision_item_1">Curtir e comentar viagens</string>
+
+    <string name="pc_edit_title">Editor PC</string>
+    <string name="pc_edit_description">Edite suas viagens no computador.</string>
+    <string name="pc_edit_enable">Ativar servidor local</string>
+    <string name="pc_edit_url_instruction">Abra esta URL no navegador:</string>
+    <string name="pc_edit_status_active">Servidor ativo</string>
+    <string name="pc_edit_status_inactive">Servidor inativo</string>
+    <string name="pc_edit">Editor PC</string>
+    <string name="pc_edit_desc">Editor PC</string>
+    <string name="edit">Editar</string>
+
+    <string name="diary">Diário</string>
+
+    <string name="diary_title_hint">Título da sua história…</string>
+    <string name="diary_add_time">Adicionar hora</string>
+    <string name="diary_add_image">Adicionar imagem</string>
+    <string name="diary_rate_day">Como foi seu dia?</string>
+    <string name="diary_where_were_you">Onde você estava?</string>
+    <string name="diary_location_hint">Inserir local…</string>
+    <string name="diary_who_with">Com quem você estava?</string>
+    <string name="diary_name_hint">Inserir nome…</string>
+    <string name="diary_your_thoughts">Seus pensamentos</string>
+    <string name="diary_notes_hint">Escreva sobre seu dia…</string>
+    <string name="diary_save_entry">Salvar entrada</string>
+
+    <string name="experience_title">Experiência</string>
+    <string name="experience_title_hint">Onde você estava?</string>
+    <string name="choose_location">Escolher local</string>
+    <string name="experience_notes_hint">Suas notas…</string>
+    <string name="media_title">Mídia</string>
+    <string name="save_experience">Salvar experiência</string>
+    <string name="setting_vision_underscore">O que o app deve aprender</string>
+
+    <string name="view_mode_select">Selecionar visualização</string>
+    <string name="view_mode_standard">Padrão</string>
+    <string name="view_mode_compact">Compacto</string>
+    <string name="view_mode_visual">Visual</string>
+
+    <string name="add_selection_title">O que você deseja adicionar?</string>
+    <string name="add_selection_experience">Experiência</string>
+    <string name="add_selection_experience_desc">Uma experiência de um dia.</string>
+    <string name="add_selection_trip">Viagem</string>
+    <string name="add_selection_trip_desc">Uma viagem de vários dias.</string>
+    <string name="add_selection_diary">Diário</string>
+    <string name="add_selection_diary_desc">Anote seus pensamentos.</string>
+
+    <string name="trip_selection_title">Que tipo de viagem?</string>
+    <string name="trip_selection_tracker">Rastreamento de viagem</string>
+    <string name="trip_selection_auto">Viagem completa</string>
+
+    <string name="plus_symbol">+</string>
+
+    <string name="num_stops">%1$d paradas</string>
+    <string name="bucket_folder">Pasta</string>
+    <string name="no_folder">Sem pasta</string>
+    <string name="select_folder">Selecionar pasta</string>
+    <string name="new_folder">Nova pasta</string>
+    <string name="folder_name_hint">Nome da pasta</string>
+
+    <string name="battery_optimization_disabled">Otimização de bateria desativada</string>
+    <string name="battery_optimization_enabled">Otimização de bateria ativada</string>
+
+    <string name="weather_icon">Ícone do clima</string>
+    <string name="trip_selection_tracker_desc">Acompanhe sua viagem ao vivo</string>
+    <string name="trip_selection_auto_desc">Adicione imagens com dados de localização para gerar uma viagem completa</string>
+    <string name="add_more_images">Adicionar mais imagens</string>
+</resources>
