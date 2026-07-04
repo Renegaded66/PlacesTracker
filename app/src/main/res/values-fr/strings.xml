@@ -59,7 +59,9 @@
     <string name="add_another_timepoint">Ajouter un autre point temporel</string>
     <string name="save_trip">Enregistrer le voyage</string>
     <string name="travel_stats">Statistiques de voyage</string>
+    <string name="travel_stats_subtitle">Vos pays, trajets et meilleurs souvenirs en un coup d’œil.</string>
     <string name="year_summary">Résumé de l’année</string>
+    <string name="year_summary_subtitle">Choisissez une année et redécouvrez vos voyages, pays et souvenirs.</string>
     <string name="countries">Pays</string>
     <string name="visited_countries">Pays visités :</string>
     <string name="activities">Activités</string>
@@ -331,6 +333,12 @@
 
     <string name="plus_symbol">+</string>
 
+    <string name="previous_month">Mois précédent</string>
+    <string name="next_month">Mois suivant</string>
+    <string name="globe_symbol" translatable="false">🌍</string>
+    <string name="feed_empty_title">Votre voyage commence ici</string>
+    <string name="feed_empty_desc">Ajoutez une expérience, un voyage ou une note de journal et découvrez vos lieux sur le globe.</string>
+    <string name="feed_empty_action">Ajouter une première expérience</string>
     <string name="num_stops">%1$d étapes</string>
     <string name="bucket_folder">Dossier</string>
     <string name="no_folder">Aucun dossier</string>

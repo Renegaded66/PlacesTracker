@@ -23,6 +23,7 @@ import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripDao
 import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import kotlinx.coroutines.Dispatchers
@@ -173,9 +174,8 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
 
     private fun showYearSummaryDialog(tripDao: TripDao) {
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_year_summary, null)
-        val dialog = AlertDialog.Builder(requireContext(), android.R.style.Theme_Material_Light_NoActionBar_Fullscreen)
-            .setView(dialogView)
-            .create()
+        val dialog = android.app.Dialog(requireContext(), android.R.style.Theme_Material_NoActionBar)
+        dialog.setContentView(dialogView)
 
         val toolbar = dialogView.findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbarYearSummary)
         val btnSelectYear = dialogView.findViewById<MaterialButton>(R.id.btnSelectYear)
@@ -189,6 +189,15 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         val tvPhotosTitle = dialogView.findViewById<TextView>(R.id.tvYearPhotosTitle)
         val tvNoData = dialogView.findViewById<TextView>(R.id.tvNoData)
         val listContainer = dialogView.findViewById<LinearLayout>(R.id.llYearListContainer)
+        val bottomNav = dialogView.findViewById<BottomNavigationView>(R.id.bottomNavYearSummary)
+
+        bottomNav.selectedItemId = R.id.statisticsFragment
+        bottomNav.setOnItemSelectedListener { item ->
+            if (item.itemId == R.id.statisticsFragment) return@setOnItemSelectedListener true
+            dialog.dismiss()
+            findNavController().navigate(item.itemId)
+            true
+        }
 
         // Versucht das Lade-Icon im Dialog zu finden (falls du es im XML eingefügt hast)
         val dialogProgressBar = dialogView.findViewById<ProgressBar>(R.id.progressBarStats)
@@ -208,6 +217,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         }
 
         dialog.show()
+        dialog.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
     }
 
     private fun loadYearSummary(

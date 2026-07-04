@@ -142,7 +142,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
-                    android:paddingBottom="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="10dp"
                     android:scrollbars="none">
 
                     <LinearLayout
@@ -156,8 +157,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="4dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:padding="8dp"
+                            android:background="@drawable/bg_fab_label"
+                            android:padding="10dp"
                             android:src="@drawable/ic_gallery"
                             app:tint="?attr/colorOnSurface" />
 
@@ -166,8 +167,8 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
-                            android:background="?attr/selectableItemBackgroundBorderless"
-                            android:padding="8dp"
+                            android:background="@drawable/bg_fab_label"
+                            android:padding="10dp"
                             android:src="@drawable/ic_search"
                             app:tint="?attr/colorOnSurface" />
 
@@ -176,7 +177,7 @@
                             android:layout_width="200dp"
                             android:layout_height="wrap_content"
                             android:layout_marginEnd="8dp"
-                            android:background="@null"
+                            android:background="@drawable/bg_fab_label"
                             android:hint="@string/search_hint"
                             android:imeOptions="actionSearch"
                             android:paddingHorizontal="4dp"
@@ -259,7 +260,55 @@
                         android:layout_height="match_parent"
                         android:clipToPadding="false"
                         android:paddingHorizontal="8dp"
-                        android:paddingBottom="440dp" />
+                        android:paddingTop="8dp"
+                        android:paddingBottom="180dp" />
+
+                    <LinearLayout
+                        android:id="@+id/feedEmptyState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="top|center_horizontal"
+                        android:layout_margin="24dp"
+                        android:background="@drawable/bg_feed_empty_state"
+                        android:elevation="6dp"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:padding="24dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/globe_symbol"
+                            android:textSize="42sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center"
+                            android:text="@string/feed_empty_title"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center"
+                            android:text="@string/feed_empty_desc"
+                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnEmptyAddExperience"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="18dp"
+                            android:text="@string/feed_empty_action"
+                            app:icon="@drawable/ic_add" />
+                    </LinearLayout>
                 </FrameLayout>
             </LinearLayout>
 
@@ -282,7 +331,7 @@
         android:orientation="vertical"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="32dp"
+        android:layout_marginBottom="56dp"
         android:elevation="20dp">
 
         <LinearLayout
@@ -297,8 +346,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
+                android:background="@drawable/bg_fab_label"
+                android:elevation="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="@string/help"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -325,8 +376,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
+                android:background="@drawable/bg_fab_label"
+                android:elevation="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="@string/new_entry"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -351,8 +404,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
+                android:background="@drawable/bg_fab_label"
+                android:elevation="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="@string/trip"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -377,8 +432,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
+                android:background="@drawable/bg_fab_label"
+                android:elevation="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="@string/auto_trip"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />
@@ -403,8 +460,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/rounded_corners"
-                android:padding="4dp"
+                android:background="@drawable/bg_fab_label"
+                android:elevation="4dp"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="6dp"
                 android:text="@string/diary"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold" />

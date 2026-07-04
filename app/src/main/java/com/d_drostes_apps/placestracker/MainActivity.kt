@@ -21,6 +21,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import android.content.res.ColorStateList
 import com.google.android.material.color.MaterialColors
+import android.graphics.Color
 
 class MainActivity : AppCompatActivity() {
 
@@ -77,6 +78,13 @@ class MainActivity : AppCompatActivity() {
                     // Wendet deine Custom-Farbe auf Icons und Text der Navbar an!
                     bottomNav.itemIconTintList = colorStateList
                     bottomNav.itemTextColor = colorStateList
+                    
+                    // Force transparent active indicator (to remove "gray wall" behind text)
+                    try {
+                        bottomNav.itemActiveIndicatorColor = ColorStateList.valueOf(Color.TRANSPARENT)
+                    } catch (e: Exception) {}
+                    bottomNav.clipToPadding = false
+                    bottomNav.clipChildren = false
                 }
             }
         }

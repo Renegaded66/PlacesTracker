@@ -6,50 +6,128 @@
     <title>Places Tracker - PC Editor</title>
     <style>
         :root {
-            --bg-color: #121212;
-            --surface: #1e1e1e;
-            --primary: #BB86FC;
+            --bg-color: #0b1020;
+            --surface: rgba(255, 255, 255, 0.08);
+            --surface-strong: rgba(255, 255, 255, 0.14);
+            --primary: #9ad1ff;
+            --accent: #ff8fb3;
             --text: #ffffff;
-            --text-secondary: #aaaaaa;
-            --border: #333333;
+            --text-secondary: rgba(255, 255, 255, 0.72);
+            --border: rgba(255, 255, 255, 0.14);
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text); margin: 0; padding: 0; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Inter, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(122, 92, 255, 0.45), transparent 32rem),
+                radial-gradient(circle at top right, rgba(255, 111, 145, 0.30), transparent 28rem),
+                var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+        }
 
-        .navbar { background: var(--surface); padding: 16px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 100;}
-        .navbar h1 { margin: 0; font-size: 20px; }
-        .back-btn { background: transparent; color: var(--primary); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; cursor: pointer; display: none; }
-        .back-btn:hover { background: rgba(187, 134, 252, 0.1); }
+        .navbar {
+            align-items: center;
+            backdrop-filter: blur(18px);
+            background: rgba(11, 16, 32, 0.72);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 16px;
+            padding: 16px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar h1 { font-size: 20px; letter-spacing: 0.2px; margin: 0; }
+        .back-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--primary);
+            cursor: pointer;
+            display: none;
+            padding: 9px 16px;
+        }
+        .back-btn:hover { background: var(--surface-strong); }
 
-        .container { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
-
+        .container { max-width: 1120px; margin: 28px auto; padding: 0 18px 40px; }
         .view { display: none; }
         .view.active { display: block; }
 
-        .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-        .card { background: var(--surface); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 1px solid var(--border);}
-        .card:hover { transform: translateY(-4px); border-color: #555; }
-        .card img { width: 100%; height: 160px; object-fit: cover; background: #2c2c2c;}
-        .card-content { padding: 16px; }
-        .card-title { font-size: 18px; font-weight: bold; margin: 0 0 8px 0; }
-        .card-subtitle { font-size: 14px; color: var(--text-secondary); }
+        .hero {
+            background: linear-gradient(135deg, rgba(154, 209, 255, 0.22), rgba(255, 143, 179, 0.18));
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            margin-bottom: 22px;
+            padding: 28px;
+        }
+        .hero h2 { font-size: clamp(28px, 4vw, 44px); margin: 0; }
+        .hero p { color: var(--text-secondary); margin: 10px 0 0; }
+        .toolbar-row { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+        .search-input {
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--text);
+            flex: 1;
+            min-width: 240px;
+            padding: 13px 18px;
+        }
 
-        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .btn { background: var(--primary); color: #000; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn:hover { opacity: 0.9; }
+        .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s, background 0.2s;
+        }
+        .card:hover { background: var(--surface-strong); border-color: rgba(154, 209, 255, 0.55); transform: translateY(-5px); }
+        .card img { background: #20283f; height: 180px; object-fit: cover; width: 100%; }
+        .card-content { padding: 16px; }
+        .card-title { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; }
+        .card-subtitle { color: var(--text-secondary); font-size: 14px; }
+
+        .detail-header {
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding: 20px;
+        }
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none;
+            border-radius: 999px;
+            color: #07101f;
+            cursor: pointer;
+            font-weight: 800;
+            padding: 11px 20px;
+        }
+        .btn:hover { opacity: 0.92; }
         .btn:disabled { background: #555; cursor: not-allowed; }
 
-        .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px;}
-        .gallery-grid img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; border: 1px solid #444;}
+        .gallery-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); margin-top: 16px; }
+        .gallery-grid img { border: 1px solid var(--border); border-radius: 18px; height: 210px; object-fit: cover; width: 100%; }
 
         .stop-list { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
-        .stop-item { background: #2c2c2c; padding: 16px; border-radius: 8px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer;}
-        .stop-item:hover { background: #383838; }
+        .stop-item { align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; cursor: pointer; display: flex; justify-content: space-between; padding: 16px; }
+        .stop-item:hover { background: var(--surface-strong); }
 
         .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; margin-bottom: 8px; color: var(--text-secondary); }
-        .form-control { width: 100%; box-sizing: border-box; background: #2c2c2c; border: 1px solid var(--border); color: white; padding: 12px; border-radius: 8px; font-family: inherit;}
+        .form-group label { color: var(--text-secondary); display: block; margin-bottom: 8px; }
+        .form-control { background: rgba(255, 255, 255, 0.09); border: 1px solid var(--border); border-radius: 16px; color: white; font-family: inherit; padding: 13px; width: 100%; }
         textarea.form-control { height: 150px; resize: vertical; }
-        input[type="file"] { background: transparent; padding: 0; border: none;}
+        input[type="file"] { background: transparent; border: none; padding: 0; }
+        .empty-hint { color: var(--text-secondary); padding: 24px; text-align: center; }
     </style>
 </head>
 <body>
@@ -63,7 +141,13 @@
     <div id="loading" style="display: none; text-align: center; padding: 40px; color: var(--primary);">Lade Daten...</div>
 
     <div id="view-feed" class="view active">
-        <h2>Deine Timeline</h2>
+        <section class="hero">
+            <h2>Deine Timeline</h2>
+            <p>Bearbeite Erlebnisse, Reisen und Stopps bequem am großen Bildschirm.</p>
+            <div class="toolbar-row">
+                <input id="feed-search" class="search-input" type="search" placeholder="Titel, Typ oder Datum suchen…" oninput="renderFeed()">
+            </div>
+        </section>
         <div class="feed-grid" id="feed-list"></div>
     </div>
 
@@ -147,6 +231,7 @@
     let currentEntry = null;
     let currentTrip = null;
     let currentStop = null;
+    let feedItems = [];
 
     let activeView = 'view-feed';
     const backMap = {
@@ -187,6 +272,45 @@
         return `/api/thumbnail?path=${encodeURIComponent(path)}`;
     }
 
+    function renderFeed() {
+        const listDiv = document.getElementById('feed-list');
+        const query = (document.getElementById('feed-search')?.value || '').toLowerCase();
+        const filtered = feedItems.filter(item => {
+            const dateStr = new Date(item.date).toLocaleDateString('de-DE');
+            return `${item.title} ${item.type} ${dateStr}`.toLowerCase().includes(query);
+        });
+
+        listDiv.innerHTML = '';
+        if (filtered.length === 0) {
+            listDiv.innerHTML = '<div class="empty-hint">Keine passenden Einträge gefunden.</div>';
+            return;
+        }
+
+        filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const dateStr = new Date(item.date).toLocaleDateString('de-DE');
+            const imgUrl = item.coverImage ? getThumbUrl(item.coverImage) : '';
+            const imgTag = imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<div style="height:180px; background:#20283f; display:flex; align-items:center; justify-content:center; color:var(--text-secondary);">Kein Bild</div>`;
+
+            card.innerHTML = `
+                ${imgTag}
+                <div class="card-content">
+                    <div class="card-title">${item.title}</div>
+                    <div class="card-subtitle">${item.type === 'trip' ? '🚗 Trip' : '📝 Erlebnis'} • ${dateStr} ${item.stopCount ? `(${item.stopCount} Stopps)` : ''}</div>
+                </div>
+            `;
+
+            card.onclick = () => {
+                if (item.type === 'experience') openEntry(item.id);
+                else if (item.type === 'trip') openTrip(item.id);
+            };
+
+            listDiv.appendChild(card);
+        });
+    }
+
     async function loadFeed() {
         const listDiv = document.getElementById('feed-list');
         listDiv.innerHTML = '';
@@ -194,34 +318,10 @@
 
         try {
             const response = await fetch('/api/feed');
-            const data = await response.json();
-
-            data.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-
-                const dateStr = new Date(item.date).toLocaleDateString('de-DE');
-                // 🌟 FIX: Nutzen jetzt Thumbnails für den Feed
-                const imgUrl = item.coverImage ? getThumbUrl(item.coverImage) : '';
-                const imgTag = imgUrl ? `<img src="${imgUrl}" loading="lazy">` : `<div style="height:160px; background:#333; display:flex; align-items:center; justify-content:center; color:#666;">Kein Bild</div>`;
-
-                card.innerHTML = `
-                    ${imgTag}
-                    <div class="card-content">
-                        <div class="card-title">${item.title}</div>
-                        <div class="card-subtitle">${item.type === 'trip' ? '🚗 Trip' : '📝 Erlebnis'} • ${dateStr} ${item.stopCount ? `(${item.stopCount} Stopps)` : ''}</div>
-                    </div>
-                `;
-
-                card.onclick = () => {
-                    if (item.type === 'experience') openEntry(item.id);
-                    else if (item.type === 'trip') openTrip(item.id);
-                };
-
-                listDiv.appendChild(card);
-            });
+            feedItems = await response.json();
+            renderFeed();
         } catch (error) {
-            listDiv.innerHTML = `<p style="color: #ff5252;">Fehler: Server nicht erreichbar.</p>`;
+            listDiv.innerHTML = `<p style="color: #ff8a8a;">Fehler: Server nicht erreichbar.</p>`;
         } finally {
             document.getElementById('loading').style.display = 'none';
         }

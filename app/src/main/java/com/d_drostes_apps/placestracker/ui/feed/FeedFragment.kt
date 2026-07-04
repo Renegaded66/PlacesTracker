@@ -71,6 +71,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private var adapter: FeedAdapter? = null
     private var isFabMenuOpen = false
     private var lastItems: List<FeedItem> = emptyList()
+    private var currentFilteredItems: List<FeedItem> = emptyList()
 
     private var filterType: String? = null
     private var filterDateStart: Long? = null
@@ -84,6 +85,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private lateinit var feedListLayout: View
     private lateinit var detailContainer: View
+    private lateinit var feedEmptyState: View
 
     private var selectedAutoTripUris = mutableListOf<Uri>()
 
@@ -113,6 +115,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val tvGlobalFlag = view.findViewById<TextView>(R.id.tvGlobalUserFlag)
         val btnFriends = view.findViewById<MaterialButton>(R.id.btnFriends)
         val btnTimelineGallery = view.findViewById<ImageButton>(R.id.btnTimelineGallery)
+        feedEmptyState = view.findViewById(R.id.feedEmptyState)
+        val btnEmptyAddExperience = view.findViewById<MaterialButton>(R.id.btnEmptyAddExperience)
+
+        btnEmptyAddExperience.setOnClickListener {
+            findNavController().navigate(R.id.newEntryFragment)
+        }
 
         btnFriends.setOnClickListener {
             findNavController().navigate(R.id.action_feedFragment_to_friendsFragment)
@@ -315,6 +323,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     items
                 }.collect { combinedItems ->
                     lastItems = combinedItems
+                    if (currentFilteredItems.isEmpty()) currentFilteredItems = combinedItems
                     applyFilters()
                 }
             }
@@ -626,7 +635,11 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         viewLifecycleOwner.lifecycleScope.launch {
             var filtered = lastItems; filterType?.let { type -> filtered = filtered.filter { if (type == "Experience") it is FeedItem.Experience else it is FeedItem.TripItem } }; if (filterDateStart != null && filterDateEnd != null) filtered = filtered.filter { it.date in filterDateStart!!..filterDateEnd!! }
             if (filterCountries.isNotEmpty() || searchQuery.isNotEmpty()) { val geocoder = Geocoder(requireContext(), Locale.getDefault()); filtered = withContext(Dispatchers.IO) { filtered.filter { item -> var matchesSearch = true; var matchesCountry = true; if (searchQuery.isNotEmpty()) matchesSearch = checkSearchMatch(item, searchQuery, geocoder); if (filterCountries.isNotEmpty()) { val loc = when (item) { is FeedItem.Experience -> item.entry.location; is FeedItem.TripItem -> item.stops.firstOrNull()?.location }; val code = loc?.let { getGeocodedData(it, geocoder).first }; matchesCountry = code != null && filterCountries.contains(code) }; matchesSearch && matchesCountry } } }
-            adapter?.updateItems(filtered); updateGlobeData()
+            
+            currentFilteredItems = filtered
+            adapter?.updateItems(filtered)
+            feedEmptyState.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
+            updateGlobeData()
         }
     }
 
@@ -687,7 +700,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         viewLifecycleOwner.lifecycleScope.launch {
             val jsonArray = withContext(Dispatchers.Default) {
                 val array = JSONArray()
-                lastItems.forEach { item ->
+                currentFilteredItems.forEach { item ->
                     if (item is FeedItem.Experience && !item.entry.location.isNullOrBlank()) {
                         val obj = JSONObject()
                         if (item.entry.entryType == "diary") {
@@ -924,9 +937,35 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private fun setupExpandableFab(view: View) {
         val fabAdd = view.findViewById<FloatingActionButton>(R.id.fabAdd)
-        fabAdd.setOnClickListener {
-            showAddSelectionDialog()
+        val layoutHelp = view.findViewById<View>(R.id.layoutHelp)
+        val layoutExperience = view.findViewById<View>(R.id.layoutAddExperience)
+        val layoutTrip = view.findViewById<View>(R.id.layoutAddTrip)
+        val layoutAutoTrip = view.findViewById<View>(R.id.layoutAutoTrip)
+        val layoutDiary = view.findViewById<View>(R.id.layoutAddDiary)
+        val fabHelp = view.findViewById<FloatingActionButton>(R.id.fabHelp)
+        val fabExperience = view.findViewById<FloatingActionButton>(R.id.fabExperience)
+        val fabTrip = view.findViewById<FloatingActionButton>(R.id.fabTrip)
+        val fabAutoTrip = view.findViewById<FloatingActionButton>(R.id.fabAutoTrip)
+        val fabDiary = view.findViewById<FloatingActionButton>(R.id.fabDiary)
+        val layouts = listOf(layoutHelp, layoutExperience, layoutTrip, layoutAutoTrip, layoutDiary)
+
+        fun closeAndRun(action: () -> Unit) {
+            closeFabMenu(fabAdd, layouts)
+            action()
         }
+
+        fabAdd.setOnClickListener {
+            if (isFabMenuOpen) {
+                closeFabMenu(fabAdd, layouts)
+            } else {
+                openFabMenu(fabAdd, layouts)
+            }
+        }
+        fabHelp.setOnClickListener { closeAndRun { showHelpDialog() } }
+        fabExperience.setOnClickListener { closeAndRun { findNavController().navigate(R.id.newEntryFragment) } }
+        fabTrip.setOnClickListener { closeAndRun { showTripSelectionDialog() } }
+        fabAutoTrip.setOnClickListener { closeAndRun { autoTripPicker.launch(arrayOf("image/*")) } }
+        fabDiary.setOnClickListener { closeAndRun { findNavController().navigate(R.id.newDiaryEntryFragment) } }
     }
 
     private fun showHelpDialog() {
@@ -935,6 +974,23 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .setMessage(getString(R.string.help_content))
             .setPositiveButton("Verstanden", null)
             .show()
+    }
+
+    private fun openFabMenu(mainFab: FloatingActionButton, layouts: List<View?>) {
+        isFabMenuOpen = true
+        mainFab.animate().rotation(45f).setDuration(220).start()
+
+        layouts.filterNotNull().forEachIndexed { index, layout ->
+            layout.alpha = 0f
+            layout.translationY = 40f
+            layout.visibility = View.VISIBLE
+            layout.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(220)
+                .setStartDelay((index * 45).toLong())
+                .start()
+        }
     }
 
     private fun closeFabMenu(mainFab: FloatingActionButton, layouts: List<View?>) {

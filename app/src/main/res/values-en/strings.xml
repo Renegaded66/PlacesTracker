@@ -59,7 +59,9 @@
     <string name="add_another_timepoint">Add another timepoint</string>
     <string name="save_trip">Save trip</string>
     <string name="travel_stats">Travel statistics</string>
+    <string name="travel_stats_subtitle">Your countries, routes, and favorite memories at a glance.</string>
     <string name="year_summary">Year summary</string>
+    <string name="year_summary_subtitle">Choose a year and rediscover your trips, countries, and memories.</string>
     <string name="countries">Countries</string>
     <string name="visited_countries">Visited countries:</string>
     <string name="activities">Activities</string>
@@ -332,6 +334,12 @@
 
     <string name="plus_symbol">+</string>
 
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="globe_symbol" translatable="false">🌍</string>
+    <string name="feed_empty_title">Your journey starts here</string>
+    <string name="feed_empty_desc">Add an experience, trip, or diary entry and discover your places on the globe.</string>
+    <string name="feed_empty_action">Add first experience</string>
     <string name="num_stops">%1$d stops</string>
     <string name="bucket_folder">Folder</string>
     <string name="no_folder">No folder</string>

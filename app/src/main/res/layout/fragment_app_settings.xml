@@ -11,16 +11,14 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="24dp" />
-
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            android:layout_marginTop="24dp"
             app:navigationIcon="@drawable/ic_arrow_back"
-            app:title="@string/app_settings" />
+            app:title="@string/app_settings"
+            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -32,7 +30,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingHorizontal="24dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="24dp">
 
             <TextView
                 android:layout_width="match_parent"

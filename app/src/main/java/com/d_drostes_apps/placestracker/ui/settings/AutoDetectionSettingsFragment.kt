@@ -19,6 +19,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.UserProfile
@@ -84,6 +85,9 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
         spinnerDistance = view.findViewById(R.id.spinnerDistance)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveAutoSettings)
         val btnCurrentLocation = view.findViewById<FloatingActionButton>(R.id.btnCurrentLocation) // 🌟 NEU
+        val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+
+        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         setupWebView()
 

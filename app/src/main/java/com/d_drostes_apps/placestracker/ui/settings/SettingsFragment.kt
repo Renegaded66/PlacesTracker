@@ -38,6 +38,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val cardVisions = view.findViewById<View>(R.id.cardVisions)
         val cardBackground = view.findViewById<View>(R.id.cardBackgroundOptimization)
         val btnHelp = view.findViewById<View>(R.id.btnHelp)
+        val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+
+        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
         lifecycleScope.launch {
             userDao.getUserProfile().collectLatest { profile ->
