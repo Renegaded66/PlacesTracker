@@ -35,24 +35,51 @@
         #custom-popup {
             position: absolute; background: rgba(25, 28, 30, 0.95); color: white;
             border-radius: 16px; padding: 16px; width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);
-            display: none; z-index: 1000; transform: translate(-50%, -100%); margin-top: -35px;
+            display: none; z-index: 1000; transform: translate(-50%, -100%) scale(0.6); margin-top: -35px;
             pointer-events: auto; font-family: sans-serif; border: 1px solid rgba(255,255,255,0.1);
             backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease-out;
+        }
+        #custom-popup.popup-visible {
+            opacity: 1;
+            transform: translate(-50%, -100%) scale(1);
+        }
+        #custom-popup.popup-hiding {
+            opacity: 0;
+            transform: translate(-50%, -100%) scale(0.75);
+            transition: transform 0.15s ease-in, opacity 0.15s ease-in;
         }
         #custom-popup .close-btn {
             position: absolute; top: 12px; right: 12px; cursor: pointer;
             font-size: 14px; color: #aaa; width: 24px; height: 24px;
             display: flex; align-items: center; justify-content: center;
+            transition: color 0.15s ease, transform 0.15s ease;
         }
+        #custom-popup .close-btn:hover { color: #fff; transform: rotate(90deg); }
         #custom-popup .title { font-size: 16px; font-weight: bold; margin-bottom: 4px; padding-right: 24px; line-height: 1.2;}
         #custom-popup .subtitle { font-size: 12px; color: #ccc; margin-bottom: 12px;}
         #custom-popup .images { display: flex; gap: 6px; margin-bottom: 8px; }
-        #custom-popup .images img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); }
+        #custom-popup .images img {
+            width: 45px; height: 45px; object-fit: cover; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            opacity: 0; transform: scale(0.5);
+            animation: imgPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        #custom-popup .images img:nth-child(2) { animation-delay: 0.06s; }
+        #custom-popup .images img:nth-child(3) { animation-delay: 0.12s; }
+        @keyframes imgPop {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
         #custom-popup .nav-btn {
             background: #BB86FC; color: black; border-radius: 8px; padding: 8px 0; text-align: center;
             font-weight: bold; font-size: 14px; cursor: pointer; margin-top: 8px; display: flex;
             align-items: center; justify-content: center; gap: 4px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
         }
+        #custom-popup .nav-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(187,134,252,0.4); }
+        #custom-popup .nav-btn:active { transform: scale(0.97); }
     </style>
 </head>
 <body>
@@ -309,7 +336,13 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
     }
 
     function hidePopup() {
-        popupEl.style.display = 'none';
+        if (popupEl.style.display === 'none') { activePopupEntity = null; return; }
+        popupEl.classList.add('popup-hiding');
+        popupEl.classList.remove('popup-visible');
+        setTimeout(() => {
+            popupEl.style.display = 'none';
+            popupEl.classList.remove('popup-hiding');
+        }, 150);
         activePopupEntity = null;
         viewer.scene.requestRender();
     }
@@ -689,7 +722,14 @@ window.setFriendData = function(points, routes) {
                 });
             }
 
-            popupEl.style.display = 'block';
+            // Popup mit Pop-in-Animation zeigen (nur wenn nicht bereits sichtbar)
+            if (popupEl.style.display !== 'block') {
+                popupEl.style.display = 'block';
+                requestAnimationFrame(() => { popupEl.classList.add('popup-visible'); });
+            } else {
+                popupEl.classList.add('popup-visible');
+                popupEl.classList.remove('popup-hiding');
+            }
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(data.lon, data.lat, viewer.camera.positionCartographic.height),
                 duration: 0.5

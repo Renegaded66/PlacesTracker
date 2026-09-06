@@ -11,6 +11,7 @@ data class Trip(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val title: String,
     val date: Long,
+    val endDate: Long? = null,
     val notes: String? = null,
     val coverImage: String? = null,
     val isTrackingActive: Boolean = false,
@@ -21,7 +22,11 @@ data class Trip(
     val lastModified: Long = System.currentTimeMillis(),
     val supabaseId: String = UUID.randomUUID().toString(),
     val isPublic: Boolean = false
-)
+) {
+    /** Ein Trip gilt als "offen", solange kein endDate gesetzt ist oder es in der Zukunft liegt. */
+    fun isOngoing(now: Long = System.currentTimeMillis()): Boolean =
+        endDate == null || endDate >= now
+}
 
 @Serializable
 @Entity(tableName = "trip_stops")

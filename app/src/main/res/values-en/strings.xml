@@ -351,4 +351,23 @@
     <string name="battery_optimization_enabled">Battery optimization is enabled – background features may be limited.</string>
 
     <string name="weather_icon">Weather icon</string>
+
+    <!-- UX Overhaul -->
+    <string name="trip_end_open">Open — journey running</string>
+    <string name="draft_chip">DRAFT</string>
+    <string name="unsaved_changes_title">Discard changes?</string>
+    <string name="unsaved_changes_message">If you go back now, all unsaved changes will be lost.</string>
+    <string name="discard">Discard</string>
+    <string name="keep_editing">Keep editing</string>
+    <string name="trip_delete_confirm_title">Delete trip?</string>
+    <string name="trip_delete_confirm_msg">This trip with all its stops, photos and recordings will be permanently deleted. This cannot be undone.</string>
+    <string name="entry_delete_confirm_title">Delete experience?</string>
+    <string name="entry_delete_confirm_msg">This experience with all its photos will be permanently deleted. This cannot be undone.</string>
+    <string name="draft_remove_confirm_title">Remove suggestion?</string>
+    <string name="draft_remove_confirm_msg">The automatically created suggestion will be permanently deleted — including the photos already copied.</string>
+    <string name="live_tracking_banner">Journey is being recorded live</string>
+    <string name="live_tracking_tap">Tap to view</string>
+    <string name="trip_section_period">Period</string>
+    <string name="trip_end_set">Set end date</string>
+    <string name="stop_saved_title">Saved</string>
 </resources>

@@ -265,6 +265,12 @@
             app:destination="@id/feedFragment"
             app:popUpTo="@id/feedFragment"
             app:popUpToInclusive="true" />
+        <!-- Speichern: Editor vom Stack nehmen, damit Back aus dem Detail wieder im Feed landet -->
+        <action
+            android:id="@+id/action_newTripFragment_to_tripDetailFragment"
+            app:destination="@id/tripDetailFragment"
+            app:popUpTo="@id/newTripFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -302,6 +308,12 @@
             android:name="isFromDraft"
             app:argType="boolean"
             android:defaultValue="false" />
+        <!-- Zurück zum Trip-Detail: altes Detail vom Stack nehmen, kein Doppel-Back -->
+        <action
+            android:id="@+id/action_tripStopDetailFragment_to_tripDetailFragment"
+            app:destination="@id/tripDetailFragment"
+            app:popUpTo="@id/tripDetailFragment"
+            app:popUpToInclusive="true" />
     </dialog>
 
 </navigation>

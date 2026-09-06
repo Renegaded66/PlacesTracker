@@ -19,6 +19,7 @@ import androidx.core.widget.NestedScrollView
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
@@ -46,6 +47,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
     private var selectedDate: Calendar = Calendar.getInstance()
     private var isTimeSet: Boolean = false
+    private var isDirty: Boolean = false
     private var selectedLocation: Pair<Double, Double>? = null
     private var selectedCoverImage: String? = null
     private var editingEntryId: Int = -1
@@ -114,13 +116,33 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         }
         //switchPublic = view.findViewById(R.id.switchPublic)
         val btnBack = view.findViewById<ImageButton>(R.id.btnBack)
-        val btnLocation = view.findViewById<MaterialButton>(R.id.btnLocation)
+        val btnLocation = view.findViewById<View>(R.id.btnLocation)
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSave)
         val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
 
         btnBack.setOnClickListener {
-            requireActivity().onBackPressedDispatcher.onBackPressed()
+            handleBackPressed()
         }
+        // Dirty-Erkennung: Änderungen im Entry-Editor tracken
+        inputTitle.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { isDirty = true }
+        })
+        inputNotes.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { isDirty = true }
+        })
+
+        // System-Back: ungespeicherte Änderungen nicht still verwerfen
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { handleBackPressed() }
+        })
+
+        // Dirty zurücksetzen, wenn ein Entry geladen wurde (Laden feuert die TextWatcher)
+        // (direkt nach dem Lade-Block unten via isDirtyFlag[0] = false)
+
         tvCoordinates = view.findViewById(R.id.tvCoordinates)
         
         tvDateDisplay = view.findViewById(R.id.tvDateDisplay)
@@ -156,8 +178,12 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     inputNotes.setText(it.notes)
                     //switchPublic.isChecked = it.isPublic
                     selectedDate.timeInMillis = it.date
-                    isTimeSet = false
-                    
+                    // EXIF-/Eintrags-Uhrzeit unverändert übernehmen (nicht auf 00:00 nullen)
+                    val cal = Calendar.getInstance().apply { timeInMillis = it.date }
+                    isTimeSet = cal.get(Calendar.HOUR_OF_DAY) != 0 || cal.get(Calendar.MINUTE) != 0
+                    if (isTimeSet) {
+                        updateTimeDisplay()
+                    }
                     selectedCoverImage = it.coverImage
                     updateDateDisplay()
                     updateTimeDisplay()
@@ -181,6 +207,8 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     mediaAdapter.notifyDataSetChanged()
                     
                     btnSave.text = "Änderungen speichern"
+                    // Laden feuert die TextWatcher → Dirty-Flag zurücksetzen
+                    isDirty = false
                 }
             }
         }
@@ -198,7 +226,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             TimePickerDialog(requireContext(), { _, h, min ->
                 selectedDate.set(Calendar.HOUR_OF_DAY, h)
                 selectedDate.set(Calendar.MINUTE, min)
-                isTimeSet = false
+                isTimeSet = true
                 updateTimeDisplay()
             }, selectedDate.get(Calendar.HOUR_OF_DAY), selectedDate.get(Calendar.MINUTE), false).show()
         }
@@ -283,8 +311,23 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
             lifecycleScope.launch {
                 repository.insert(entry)
+                isDirty = false
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }
+        }
+    }
+
+    /** Back im Entry-Editor: bei ungespeicherten Änderungen nachfragen. */
+    private fun handleBackPressed() {
+        if (isDirty) {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                .setTitle(getString(R.string.unsaved_changes_title))
+                .setMessage(getString(R.string.unsaved_changes_message))
+                .setPositiveButton(getString(R.string.discard)) { _, _ -> findNavController().navigateUp() }
+                .setNegativeButton(getString(R.string.keep_editing), null)
+                .show()
+        } else {
+            findNavController().navigateUp()
         }
     }
 
@@ -327,11 +370,14 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
 
     private fun setupMapboxWebView() {
         mapboxWebView.settings.apply {
-            javaScriptEnabled = false
-            domStorageEnabled = false
-            allowFileAccess = false
-            allowFileAccessFromFileURLs = false
-            allowUniversalAccessFromFileURLs = false
+            // JS MUSS aktiv sein — die Cesium-Globe-HTML rendert per WebGL/JS
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            allowFileAccess = true
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
         mapboxWebView.addJavascriptInterface(object {
@@ -404,7 +450,8 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     val sdf = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.getDefault())
                     sdf.parse(dt)?.let {
                         selectedDate.time = it
-                        isTimeSet = false
+                        // EXIF liefert Datum UND Uhrzeit — beides übernehmen
+                        isTimeSet = true
                         updateDateDisplay()
                         updateTimeDisplay()
                     }

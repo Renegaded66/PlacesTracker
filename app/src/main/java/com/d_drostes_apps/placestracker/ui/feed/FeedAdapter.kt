@@ -148,10 +148,11 @@ class FeedAdapter(
 
         // Apply shapes only in Standard/Diary mode
         if (currentViewMode == ViewMode.STANDARD) {
-            val radiusNormal = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 16f, context.resources.displayMetrics)
+            val radiusNormal = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 28f, context.resources.displayMetrics)
             val radiusCut = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32f, context.resources.displayMetrics)
 
             if (item is FeedItem.TripItem) {
+                // Trip-Karte: ein Cut-Corner als Alleinstellungsmerkmal (Polarstep-Differenzierung)
                 holder.cardView.shapeAppearanceModel = ShapeAppearanceModel.builder()
                     .setTopLeftCorner(CornerFamily.ROUNDED, radiusNormal)
                     .setTopRightCorner(CornerFamily.CUT, radiusCut)
@@ -207,10 +208,8 @@ class FeedAdapter(
             }
         }
 
-        // Airbnb style adjustments
+        // Modern flat style: keine Elevation-Linien mehr, Trip-Stroke bleibt als Akzent
         if (currentViewMode == ViewMode.STANDARD) {
-            holder.cardView.strokeWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, context.resources.displayMetrics).toInt()
-            holder.cardView.strokeColor = Color.parseColor("#1A000000")
             holder.cardView.cardElevation = 0f
             
             // Description handling
@@ -310,11 +309,15 @@ class FeedAdapter(
             }
         }
 
-        // Draft handling
-        val isDraft = showDrafts && if (item is FeedItem.Experience) item.entry.isDraft else false
+        // Draft handling — auch für Trips mit Draft-Stops und in der Kompaktansicht
+        val isDraft = showDrafts && when (item) {
+            is FeedItem.Experience -> item.entry.isDraft
+            is FeedItem.TripItem -> item.stops.any { it.isDraft }
+            else -> false
+        }
         holder.draftBadge?.visibility = if (isDraft) View.VISIBLE else View.GONE
-        holder.draftOverlay?.visibility = if (isDraft) View.VISIBLE else View.GONE
-        holder.draftActions?.visibility = if (isDraft) View.VISIBLE else View.GONE
+        holder.draftOverlay?.visibility = if (isDraft && currentViewMode == ViewMode.COMPACT) View.VISIBLE else View.GONE
+        holder.draftActions?.visibility = if (isDraft && currentViewMode == ViewMode.STANDARD) View.VISIBLE else View.GONE
         holder.btnConfirmDraft?.setOnClickListener { onConfirmDraft(item) }
         holder.btnRemoveDraft?.setOnClickListener { onRemoveDraft(item) }
 
@@ -355,8 +358,9 @@ class FeedAdapter(
         } else if (item is FeedItem.TripItem) {
             var tripInfo = ""
             if (item.stops.isNotEmpty()) {
+                // Zeitraum: Start = frühester Stopp, Ende = letzter Stopp ODER gesetztes endDate
                 val minDate = item.stops.minOf { it.date }
-                val maxDate = item.stops.maxOf { it.date }
+                val maxDate = maxOf(item.stops.maxOf { it.date }, item.trip.endDate ?: 0L)
                 val dateStr = if (sdfDate.format(Date(minDate)) == sdfDate.format(Date(maxDate))) {
                     sdfDate.format(Date(minDate))
                 } else {

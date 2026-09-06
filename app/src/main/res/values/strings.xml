@@ -351,4 +351,23 @@
     <string name="battery_optimization_enabled">Akku-Optimierung ist aktiv – Hintergrundfunktionen können eingeschränkt sein.</string>
 
     <string name="weather_icon">Wetter Icon</string>
+
+    <!-- UX Overhaul -->
+    <string name="trip_end_open">Offen — Reise läuft</string>
+    <string name="draft_chip">ENTWURF</string>
+    <string name="unsaved_changes_title">Änderungen verwerfen?</string>
+    <string name="unsaved_changes_message">Wenn du jetzt zurückkehrst, gehen alle nicht gespeicherten Änderungen verloren.</string>
+    <string name="discard">Verwerfen</string>
+    <string name="keep_editing">Weiter bearbeiten</string>
+    <string name="trip_delete_confirm_title">Reise löschen?</string>
+    <string name="trip_delete_confirm_msg">Diese Reise mit allen Stationen, Fotos und Aufzeichnungen wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="entry_delete_confirm_title">Erlebnis löschen?</string>
+    <string name="entry_delete_confirm_msg">Dieses Erlebnis mit allen Fotos wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.</string>
+    <string name="draft_remove_confirm_title">Vorschlag entfernen?</string>
+    <string name="draft_remove_confirm_msg">Der automatisch erstellte Vorschlag wird dauerhaft gelöscht — inklusive der bereits kopierten Fotos.</string>
+    <string name="live_tracking_banner">Reise wird live aufgezeichnet</string>
+    <string name="live_tracking_tap">Antippen zum Ansehen</string>
+    <string name="trip_section_period">Zeitraum</string>
+    <string name="trip_end_set">Enddatum setzen</string>
+    <string name="stop_saved_title">Gespeichert</string>
 </resources>

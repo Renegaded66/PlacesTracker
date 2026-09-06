@@ -256,6 +256,19 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val destination = if (isInline) R.id.action_feedFragment_to_newTripFragment else R.id.action_tripDetailFragment_to_newTripFragment
                 findNavController().navigate(destination, bundle)
             },
+            onRemoveDraft = { stop ->
+                // Bestätigung vor dem Löschen des automatisch erkannten Stop-Entwurfs
+                androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                    .setTitle(getString(R.string.draft_remove_confirm_title))
+                    .setMessage(getString(R.string.draft_remove_confirm_msg))
+                    .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                        lifecycleScope.launch {
+                            tripDao.deleteStop(stop)
+                        }
+                    }
+                    .setNegativeButton(getString(R.string.cancel), null)
+                    .show()
+            },
             onAddStopClick = {
                 val currentContext = context ?: return@TripStopsAdapter
                 val fusedLocationClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(currentContext)
@@ -390,7 +403,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                     val stopsForTrip = tripDao.getStopsForTrip(tripId).first()
 
                     if (stopsForTrip.isNotEmpty()) {
-                        val days = ((stopsForTrip.maxOf { it.date } - stopsForTrip.minOf { it.date }) / (1000 * 60 * 60 * 24)).toInt() + 1
+                        val minDate = stopsForTrip.minOf { it.date }
+                        val maxDate = maxOf(stopsForTrip.maxOf { it.date }, t.endDate ?: 0L)
+                        val days = ((maxDate - minDate) / (1000 * 60 * 60 * 24)).toInt() + 1
                         val stopCount = stopsForTrip.size
 
                         val countries = mutableSetOf<String>()
@@ -481,6 +496,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val fabEdit = view.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabEditTrip)
                 fabEdit?.visibility = View.VISIBLE
                 fabEdit?.setOnClickListener {
+                    // Inline-Detail schließen, damit nach dem Speichern kein Doppel-Stack entsteht
+                    if (isInline) (parentFragment as? FeedFragment)?.closeDetail()
                     val bundle = Bundle().apply {
                         putInt("tripId", tripId)
                         putString("title", "Trip bearbeiten")
@@ -574,6 +591,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_edit -> {
+                    // Inline-Detail schließen, damit nach dem Speichern kein Doppel-Stack entsteht
+                    if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail()
                     val bundle = Bundle().apply {
                         putInt("tripId", tripId)
                         putString("title", "Trip bearbeiten")
@@ -923,9 +942,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     private fun showDeleteConfirmation(app: PlacesApplication) {
         val currentContext = context ?: return
         AlertDialog.Builder(currentContext)
-            .setTitle(R.string.delete_entry)
-            .setMessage(R.string.delete_confirm)
-            .setPositiveButton(R.string.save) { _, _ ->
+            .setTitle(R.string.trip_delete_confirm_title)
+            .setMessage(R.string.trip_delete_confirm_msg)
+            .setPositiveButton(R.string.delete) { _, _ ->
                 lifecycleScope.launch {
                     val tripDao = app.database.tripDao()
                     val trip = tripDao.getTripById(tripId)

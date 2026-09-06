@@ -17,6 +17,7 @@ import com.d_drostes_apps.placestracker.MainActivity
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
+import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripStop
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -45,10 +46,23 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             return Result.success()
         }
 
-        // 🌟 POINT 3: Check if travel tracking is active
+        // 🌟 POINT 3: Live-Trip läuft → Fotos werden als Stop-Entwürfe dem Trip zugeordnet.
+        // Ein separater Home-Distanz-Check ist während der Reise sinnlos (man ist ja unterwegs),
+        // deshalb scannen wir bewusst weiter und gruppieren nach Tag+Ort.
         val activeTrip = tripDao.getActiveTrackingTrip()
         if (activeTrip != null) {
-            Log.d("GalleryScanWorker", "Travel tracking is active for trip: ${activeTrip.title}. Skipping scan.")
+            Log.d("GalleryScanWorker", "Travel tracking is active for trip: ${activeTrip.title}. Scanning for stop drafts.")
+            val prefsWhileTracking = applicationContext.getSharedPreferences("gallery_scan_prefs", Context.MODE_PRIVATE)
+            val lastScan = prefsWhileTracking.getLong("last_scan_time", System.currentTimeMillis() - 86400000)
+            val newMediaWhileTracking = queryNewMedia(lastScan)
+
+            if (newMediaWhileTracking.isNotEmpty()) {
+                val groups = groupPhotosByDayAndLocation(newMediaWhileTracking)
+                groups.forEach { group ->
+                    createDraft(group.uris, group.lat, group.lon, group.timestamp, activeTrip)
+                }
+            }
+            prefsWhileTracking.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
             return Result.success()
         }
 
@@ -113,28 +127,72 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
         Log.d("GalleryScanWorker", "Created ${groups.size} location groups")
 
         groups.forEach { group ->
-            createDraft(group.uris, group.lat, group.lon, group.timestamp)
+            createDraft(group.uris, group.lat, group.lon, group.timestamp, null)
         }
 
         prefs.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
         return Result.success()
     }
 
-    private suspend fun createDraft(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long) {
+    /**
+     * Gruppiert Medien nach Tag UND Ort (500m). Wird für den Live-Trip-Pfad genutzt,
+     * wo es keinen Home-Filter gibt — jedes Cluster ergibt einen Stop-Entwurf.
+     */
+    private fun groupPhotosByDayAndLocation(media: List<Pair<Uri, Long>>): List<PhotoGroup> {
+        val groups = mutableListOf<PhotoGroup>()
+        val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+
+        media.forEach { (uri, dateTaken) ->
+            try {
+                applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val exif = ExifInterface(inputStream)
+                    val latLong = FloatArray(2)
+
+                    if (exif.getLatLong(latLong)) {
+                        val photoLat = latLong[0].toDouble()
+                        val photoLon = latLong[1].toDouble()
+                        val photoDay = sdfDay.format(Date(dateTaken))
+
+                        var foundGroup = false
+                        for (group in groups) {
+                            val groupDay = sdfDay.format(Date(group.timestamp))
+                            if (photoDay == groupDay) {
+                                val distToGroup = FloatArray(1)
+                                Location.distanceBetween(group.lat, group.lon, photoLat, photoLon, distToGroup)
+                                if (distToGroup[0] < 500) {
+                                    group.uris.add(uri)
+                                    foundGroup = true
+                                    break
+                                }
+                            }
+                        }
+                        if (!foundGroup) {
+                            groups.add(PhotoGroup(photoLat, photoLon, mutableListOf(uri), dateTaken))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("GalleryScanWorker", "Error reading EXIF for $uri", e)
+            }
+        }
+        return groups
+    }
+
+    private suspend fun createDraft(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long, activeTrip: Trip?) {
         val app = applicationContext as PlacesApplication
         val tripDao = app.database.tripDao()
         val entryDao = app.database.entryDao()
         
-        val activeTrip = tripDao.getActiveTrackingTrip()
+        val trip = activeTrip ?: tripDao.getActiveTrackingTrip()
         val internalFilePaths = photoUris.mapNotNull { uri ->
             try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
         }
         
         if (internalFilePaths.isEmpty()) return
-
-        if (activeTrip != null) {
+        
+        if (trip != null) {
             val draftStop = TripStop(
-                tripId = activeTrip.id,
+                tripId = trip.id,
                 title = "Neuer Stopp (Entwurf)",
                 date = timestamp,
                 location = "$lat,$lon",
@@ -143,7 +201,7 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
                 coverImage = internalFilePaths.firstOrNull()
             )
             tripDao.insertStop(draftStop)
-            sendNotification("Neuer Stopp erkannt!", "Möchtest du ${internalFilePaths.size} Fotos deinem aktuellen Trip hinzufügen?", activeTrip.id, true)
+            sendNotification("Neuer Stopp erkannt!", "Möchtest du ${internalFilePaths.size} Fotos deinem aktuellen Trip hinzufügen?", trip.id, true)
         } else {
             val draftEntry = Entry(
                 title = "Neues Erlebnis (Entwurf)",

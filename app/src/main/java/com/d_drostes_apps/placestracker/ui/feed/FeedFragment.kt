@@ -1,5 +1,6 @@
 package com.d_drostes_apps.placestracker.ui.feed
 
+import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.location.Geocoder
 import androidx.exifinterface.media.ExifInterface
@@ -158,47 +159,31 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         recycler = view.findViewById(R.id.feedRecycler)
 
-        // 1. Größe beim Wischen anpassen
+        // Sheet-Zustandswechsel sind diskret — der Globe wird nur DANN resized (nicht per Frame).
+        // Das per-Frame-Layout in onSlide war die Hauptursache für Ruckler + Überlappungsgefühl.
         bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-            override fun onStateChanged(bottomSheet: View, newState: Int) {}
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                bottomSheet.post { resizeGlobeToSheet(bottomSheet) }
+            }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                val layoutParams = cesiumWebView.layoutParams
-                layoutParams.height = bottomSheet.top
-                cesiumWebView.layoutParams = layoutParams
+                // bewusst leer: kein per-Frame-Resize des WebGL-Surfaces
             }
         })
 
-        // 2. Größe beim allerersten Layout-Aufbau anpassen
+        // Initialgröße nach erstem Layout
         view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
                 val sheetTop = bottomSheet.top
                 if (sheetTop > 0) {
                     view.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    val layoutParams = cesiumWebView.layoutParams
-                    layoutParams.height = sheetTop
-                    cesiumWebView.layoutParams = layoutParams
+                    resizeGlobeToSheet(bottomSheet)
                 }
             }
         })
 
-        recycler.setOnTouchListener { _, event ->
-            val behavior = bottomSheetBehavior ?: return@setOnTouchListener false
-            if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) {
-                behavior.isDraggable = false
-                if (event.action == MotionEvent.ACTION_UP || event.action == MotionEvent.ACTION_CANCEL) {
-                    behavior.isDraggable = true
-                }
-            } else if (behavior.state == BottomSheetBehavior.STATE_EXPANDED) {
-                behavior.isDraggable = !recycler.canScrollVertically(-1)
-            }
-            false
-        }
-
-        view.findViewById<View>(R.id.sheetHeaderArea)?.setOnTouchListener { _, _ ->
-            bottomSheetBehavior?.isDraggable = true
-            false
-        }
+        // Kein Touch-Hack mehr: RecyclerView-Nested-Scrolling regelt standardmäßig,
+        // ob die Liste scrollt (Inhalt) oder das Sheet zieht (am Listenanfang).
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -239,6 +224,34 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         val layoutManager = LinearLayoutManager(requireContext())
         recycler.layoutManager = layoutManager
+
+        // --- Live-Tracking Banner im Sheet-Header (Punkt 15: Live muss offensichtlich sein) ---
+        val liveBanner = view.findViewById<View>(R.id.liveTrackingBanner)
+        val liveDot = view.findViewById<View>(R.id.liveDot)
+        val tvLiveTripTitle = view.findViewById<TextView>(R.id.tvLiveTripTitle)
+        var currentLiveTripId: Int = -1
+
+        // Puls-Animation für den Live-Dot (Endlos, sanft)
+        val liveDotAnimator = ObjectAnimator.ofFloat(liveDot, View.SCALE_X, 1f, 1.5f).apply {
+            duration = 700
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+            setAutoCancel(true)
+        }
+        val liveDotAlpha = ObjectAnimator.ofFloat(liveDot, View.ALPHA, 1f, 0.4f).apply {
+            duration = 700
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+            setAutoCancel(true)
+        }
+
+        liveBanner.setOnClickListener {
+            // Live-Trip direkt öffnen (inline, ohne Stack-Verbiegung)
+            if (currentLiveTripId != -1) {
+                val liveItem = lastItems.find { it is FeedItem.TripItem && it.id == currentLiveTripId }
+                if (liveItem != null) navigateToDetail(liveItem)
+            }
+        }
 
         adapter = FeedAdapter(emptyList(),
             onItemClick = { item, stopId -> navigateToDetail(item, stopId) },
@@ -324,6 +337,32 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 }.collect { combinedItems ->
                     lastItems = combinedItems
                     if (currentFilteredItems.isEmpty()) currentFilteredItems = combinedItems
+
+                    // Live-Banner: sichtbar wenn ein Trip live aufzeichnet
+                    val liveItem = combinedItems.find { it.isLive }
+                    if (liveItem is FeedItem.TripItem) {
+                        currentLiveTripId = liveItem.id
+                        tvLiveTripTitle.text = liveItem.title
+                        if (liveBanner.visibility != View.VISIBLE) {
+                            liveBanner.visibility = View.VISIBLE
+                            liveBanner.alpha = 0f
+                            liveBanner.animate().alpha(1f).setDuration(350).start()
+                            if (!liveDotAnimator.isStarted) {
+                                liveDotAnimator.start()
+                                liveDotAlpha.start()
+                            }
+                        }
+                    } else {
+                        currentLiveTripId = -1
+                        if (liveBanner.visibility == View.VISIBLE) {
+                            liveBanner.animate().alpha(0f).setDuration(350).withEndAction {
+                                liveBanner.visibility = View.GONE
+                            }.start()
+                            liveDotAnimator.cancel()
+                            liveDotAlpha.cancel()
+                        }
+                    }
+
                     applyFilters()
                 }
             }
@@ -643,9 +682,40 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
-    private fun confirmDraft(item: FeedItem) { if (item is FeedItem.Experience) findNavController().navigate(R.id.newEntryFragment, Bundle().apply { putInt("entryId", item.id); putBoolean("isFromDraft", true) }) else if (item is FeedItem.TripItem) item.stops.find { it.isDraft }?.let { findNavController().navigate(R.id.tripStopDetailFragment, Bundle().apply { putInt("stopId", it.id); putBoolean("isFromDraft", true) }) } }
+    private fun confirmDraft(item: FeedItem) {
+        if (item is FeedItem.Experience) {
+            findNavController().navigate(R.id.newEntryFragment, Bundle().apply { putInt("entryId", item.id); putBoolean("isFromDraft", true) })
+        } else if (item is FeedItem.TripItem) {
+            // Draft-Stop direkt im Editor bestätigen (Titel/Notizen prüfen, speichern entfernt Draft-Status)
+            item.stops.find { it.isDraft }?.let { stop ->
+                findNavController().navigate(R.id.newTripFragment, Bundle().apply {
+                    putInt("tripId", item.id)
+                    putBoolean("directAddStop", true)
+                    putInt("stopId", stop.id)
+                })
+            }
+        }
+    }
 
-    private fun removeDraft(item: FeedItem) { lifecycleScope.launch { if (item is FeedItem.Experience) (requireActivity().application as PlacesApplication).repository.delete(item.entry) else if (item is FeedItem.TripItem) item.stops.filter { it.isDraft }.forEach { (requireActivity().application as PlacesApplication).database.tripDao().deleteStop(it) } } }
+    private fun removeDraft(item: FeedItem) {
+        // Löschen ist destruktiv (Fotos wurden bereits kopiert) → nachfragen
+        androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+            .setTitle(getString(R.string.draft_remove_confirm_title))
+            .setMessage(getString(R.string.draft_remove_confirm_msg))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
+                lifecycleScope.launch {
+                    if (item is FeedItem.Experience) {
+                        (requireActivity().application as PlacesApplication).repository.delete(item.entry)
+                    } else if (item is FeedItem.TripItem) {
+                        item.stops.filter { it.isDraft }.forEach {
+                            (requireActivity().application as PlacesApplication).database.tripDao().deleteStop(it)
+                        }
+                    }
+                }
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
 
     private fun setupCesiumWebView() {
         cesiumWebView.settings.apply {
@@ -759,6 +829,25 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             childFragmentManager.popBackStack()
         } else {
             closeDetail()
+        }
+    }
+
+    /** Zoom den Feed-Globe sanft auf einen Ort (von Inline-Detailansichten genutzt). */
+    fun zoomGlobeTo(lat: Double, lon: Double) {
+        if (::cesiumWebView.isInitialized) {
+            cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, 0.35);", null)
+        }
+    }
+
+    /** Globe-Höhe an die aktuelle Sheet-Position anpassen (nur bei Zustandswechseln, nicht per Frame). */
+    private fun resizeGlobeToSheet(sheet: View) {
+        if (!::cesiumWebView.isInitialized) return
+        val sheetTop = sheet.top
+        if (sheetTop <= 0) return
+        val params = cesiumWebView.layoutParams
+        if (params.height != sheetTop) {
+            params.height = sheetTop
+            cesiumWebView.layoutParams = params
         }
     }
 
@@ -892,47 +981,22 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun showTripSelectionDialog() {
-        val dialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog).create()
-        val view = layoutInflater.inflate(R.layout.dialog_trip_selection, null)
-        dialog.setView(view)
+        // Modernes BottomSheet statt Radio-Dialog: eine Option = eine klare Karte
+        val bottomSheet = com.google.android.material.bottomsheet.BottomSheetDialog(requireContext())
+        val sheetView = layoutInflater.inflate(R.layout.dialog_trip_selection, null)
+        bottomSheet.setContentView(sheetView)
 
-        dialog.show()
-        val width = (resources.displayMetrics.widthPixels * 0.85).toInt()
-        dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.window?.setDimAmount(0.6f)
-
-        val radioTracker = view.findViewById<RadioButton>(R.id.radioTripTracker)
-        val radioAuto = view.findViewById<RadioButton>(R.id.radioTripAuto)
-        val btnConfirm = view.findViewById<MaterialButton>(R.id.btnConfirmTripSelection)
-
-        val radios = listOf(radioTracker, radioAuto)
-        radios.forEach { rb ->
-            rb.setOnClickListener {
-                radios.forEach { it.isChecked = false }
-                rb.isChecked = true
-            }
+        sheetView.findViewById<View>(R.id.optionTripTracker).setOnClickListener {
+            bottomSheet.dismiss()
+            findNavController().navigate(R.id.newTripFragment)
         }
 
-        view.findViewById<View>(R.id.layoutOptionTripTracker).setOnClickListener {
-            radios.forEach { it.isChecked = false }
-            radioTracker.isChecked = true
-        }
-        view.findViewById<View>(R.id.layoutOptionTripAuto).setOnClickListener {
-            radios.forEach { it.isChecked = false }
-            radioAuto.isChecked = true
+        sheetView.findViewById<View>(R.id.optionTripAuto).setOnClickListener {
+            bottomSheet.dismiss()
+            autoTripPicker.launch(arrayOf("image/*"))
         }
 
-        btnConfirm.setOnClickListener {
-            dialog.dismiss()
-            if (radioTracker.isChecked) {
-                findNavController().navigate(R.id.newTripFragment)
-            } else {
-                autoTripPicker.launch(arrayOf("image/*"))
-            }
-        }
-
-        dialog.show()
+        bottomSheet.show()
     }
 
     private fun setupExpandableFab(view: View) {

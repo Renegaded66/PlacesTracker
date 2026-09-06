@@ -9,7 +9,7 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 // 🌟 Schema geändert (BucketItem.folderName). Neue Migration nötig
-@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class, WeatherCache::class], version = 50, exportSchema = false)
+@Database(entities = [Entry::class, UserProfile::class, Trip::class, TripStop::class, TripLocation::class, Friend::class, BucketItem::class, WeatherCache::class], version = 51, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun entryDao(): EntryDao
@@ -97,6 +97,13 @@ abstract fun weatherDao(): WeatherDao
             }
         }
 
+        // Migration 50 → 51 (Trip.endDate — optionales Reiseende, null = offen)
+        private val MIGRATION_50_51 = object : Migration(50, 51) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trips ADD COLUMN endDate INTEGER DEFAULT NULL")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -105,7 +112,7 @@ abstract fun weatherDao(): WeatherDao
                     "places_tracker_db"
                 )
                     // 🌟 FIX 3: MIGRATION_46_47 zum Builder hinzugefügt!
-                    .addMigrations(MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50)
+                    .addMigrations(MIGRATION_44_45, MIGRATION_45_46, MIGRATION_46_47, MIGRATION_47_48, MIGRATION_48_49, MIGRATION_49_50, MIGRATION_50_51)
                     .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance

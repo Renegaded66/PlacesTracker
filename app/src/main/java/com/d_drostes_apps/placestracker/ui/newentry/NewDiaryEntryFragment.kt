@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.exifinterface.media.ExifInterface
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
@@ -29,6 +30,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
 
     private var selectedDate: Calendar = Calendar.getInstance()
     private var isTimeSet = false
+    private var isDirty = false
     private var selectedCoverImage: String? = null
     private val selectedPeople = mutableSetOf<String>()
     private var selectedLocation: Pair<Double, Double>? = null
@@ -89,7 +91,36 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
 
         view.findViewById<View>(R.id.btnSaveDiary).setOnClickListener { saveEntry() }
 
+        // Unsaved-Changes-Schutz (konsistent zu Trip-/Entry-Editor)
+        etTitle.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { isDirty = true }
+        })
+        etNotes.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { isDirty = true }
+        })
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { handleBackPressed() }
+        })
+
         setupPeopleAutocomplete()
+    }
+
+    /** Back im Diary-Editor: bei ungespeicherten Änderungen nachfragen. */
+    private fun handleBackPressed() {
+        if (isDirty) {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                .setTitle(getString(R.string.unsaved_changes_title))
+                .setMessage(getString(R.string.unsaved_changes_message))
+                .setPositiveButton(getString(R.string.discard)) { _, _ -> findNavController().navigateUp() }
+                .setNegativeButton(getString(R.string.keep_editing), null)
+                .show()
+        } else {
+            findNavController().navigateUp()
+        }
     }
 
     private fun loadEntryData() {
@@ -130,6 +161,8 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
                 }
                 
                 view?.findViewById<Button>(R.id.btnSaveDiary)?.text = "Änderungen speichern"
+                // Laden feuert die TextWatcher → Dirty-Flag zurücksetzen
+                isDirty = false
             }
         }
     }
@@ -305,6 +338,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
 
         lifecycleScope.launch {
             (requireActivity().application as PlacesApplication).repository.insert(entry)
+            isDirty = false
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }

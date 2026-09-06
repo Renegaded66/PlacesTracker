@@ -133,6 +133,11 @@ class MainActivity : AppCompatActivity() {
             val app = application as PlacesApplication
             val activeTrip = app.database.tripDao().getActiveTrackingTrip()
             activeTrip?.let { trip ->
+                // Übergangs-Automation: abgelaufenes Enddatum → Tracking bleibt aus, Trip wird geschlossen
+                if (trip.endDate != null && trip.endDate < System.currentTimeMillis()) {
+                    app.database.tripDao().updateTrackingStatus(trip.id, false)
+                    return@launch
+                }
                 val intent = Intent(this@MainActivity, TrackingService::class.java).apply {
                     action = TrackingService.ACTION_START_TRACKING
                     putExtra(TrackingService.EXTRA_TRIP_ID, trip.id)

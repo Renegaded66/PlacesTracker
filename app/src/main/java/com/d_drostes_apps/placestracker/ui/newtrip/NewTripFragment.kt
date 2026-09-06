@@ -68,6 +68,18 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
     private lateinit var etPeople: AutoCompleteTextView
     private lateinit var chipGroupPeople: ChipGroup
 
+    // Zeitraum (Start = trip.date, optionales Ende = trip.endDate)
+    private val tripStartDate = Calendar.getInstance()
+    private var tripEndDate: Long? = null
+    private lateinit var tvStartDateDisplay: TextView
+    private lateinit var tvEndDateDisplay: TextView
+    private lateinit var ivEndDateIcon: ImageView
+
+    // Unsaved-Changes-Erkennung
+    private var initialSnapshot: String? = null
+    private var isDirty: Boolean = false
+        set(value) { field = value }
+
     private var currentMediaAdapter: MediaAdapter? = null
     private var currentMediaList: MutableList<String>? = null
     private lateinit var mapWebView: WebView 
@@ -113,7 +125,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         val rvStops = view.findViewById<RecyclerView>(R.id.rvTripStops)
         val btnAddStop = view.findViewById<MaterialButton>(R.id.btnAddStop)
         val toolbar = view.findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbarNewTrip)
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        toolbar.setNavigationOnClickListener { handleBackPressed() }
 
         val btnSave = view.findViewById<MaterialButton>(R.id.btnSaveTrip)
         val btnAddCover = view.findViewById<MaterialButton>(R.id.btnAddTripCover)
@@ -123,6 +135,57 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
         ratingBar = view.findViewById(R.id.ratingTrip)
         etPeople = view.findViewById(R.id.etTripPeople)
         chipGroupPeople = view.findViewById(R.id.chipGroupTripPeople)
+
+        // --- Zeitraum-UI (Start optional? nein — Start ist Pflicht und default heute) ---
+        tvStartDateDisplay = view.findViewById(R.id.tvTripStartDateDisplay)
+        tvEndDateDisplay = view.findViewById(R.id.tvTripEndDateDisplay)
+        ivEndDateIcon = view.findViewById(R.id.ivEndDateIcon)
+        updateStartDateDisplay()
+        updateEndDateDisplay()
+
+        view.findViewById<View>(R.id.cardTripStartDate).setOnClickListener {
+            DatePickerDialog(requireContext(), { _, y, m, d ->
+                tripStartDate.set(y, m, d)
+                updateStartDateDisplay()
+                markDirty()
+                // Enddatum nie vor Startdatum
+                if (tripEndDate != null && tripEndDate!! < tripStartDate.timeInMillis) {
+                    tripEndDate = tripStartDate.timeInMillis
+                    updateEndDateDisplay()
+                }
+            }, tripStartDate.get(Calendar.YEAR), tripStartDate.get(Calendar.MONTH), tripStartDate.get(Calendar.DAY_OF_MONTH)).show()
+        }
+
+        view.findViewById<View>(R.id.cardTripEndDate).setOnClickListener {
+            // Bei gesetztem Enddatum: Long-Press-ähnliche Auswahl per Dialog
+            val options = if (tripEndDate == null) arrayOf("Enddatum festlegen") else arrayOf("Enddatum ändern", "Enddatum entfernen")
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                .setTitle("Reiseende")
+                .setItems(options) { _, which ->
+                    if (tripEndDate == null || which == 0) {
+                        DatePickerDialog(requireContext(), { _, y, m, d ->
+                            val cal = Calendar.getInstance().apply { set(y, m, d, 23, 59, 59) }
+                            tripEndDate = cal.timeInMillis
+                            updateEndDateDisplay()
+                            markDirty()
+                        }, tripStartDate.get(Calendar.YEAR), tripStartDate.get(Calendar.MONTH), tripStartDate.get(Calendar.DAY_OF_MONTH)).show()
+                    } else {
+                        tripEndDate = null
+                        updateEndDateDisplay()
+                        markDirty()
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+
+        // Dirty-Erkennung: jede Nutzereingabe markiert den Editor als geändert
+        setupDirtyTracking(inputTitle, inputNotes, switchAutoTrip)
+
+        // System-Back abfangen, damit ungespeicherte Änderungen nicht still verloren gehen
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { handleBackPressed() }
+        })
 
         setupPeopleAutocomplete()
 
@@ -199,7 +262,13 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 trip?.let {
                     inputTitle.setText(it.title)
                     inputNotes.setText(it.notes)
-                    switchAutoTrip.isChecked = it.isAutoTrip
+                    switchAutoTrip.isChecked = it.isTrackingActive
+
+                    // Zeitraum laden (Start + optionales Ende)
+                    tripStartDate.timeInMillis = it.date
+                    tripEndDate = it.endDate
+                    updateStartDateDisplay()
+                    updateEndDateDisplay()
 
                     // load rating
                     ratingBar.rating = it.rating
@@ -231,6 +300,9 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     stops.addAll(dbStops)
                     updateAdapterItems()
                     //updateTripMap()
+
+                    // Loading setzt via TextWatcher fälschlich isDirty → zurücksetzen
+                    isDirty = false
 
                     val directAddStop = arguments?.getBoolean("directAddStop") ?: false
                     if (directAddStop && editingTripId != -1) {
@@ -264,10 +336,17 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 return@setOnClickListener
             }
 
+            // Zeitraum-Validierung: Ende nie vor Start
+            if (tripEndDate != null && tripEndDate!! < tripStartDate.timeInMillis) {
+                tripEndDate = tripStartDate.timeInMillis
+            }
+
             lifecycleScope.launch {
                 val isTrackingNow = switchAutoTrip.isChecked
-                
-                if (isTrackingNow) {
+                // Übergangs-Automation: Tracking nur starten, wenn die Reise nicht schon vorbei ist
+                val trackingAllowed = tripEndDate == null || tripEndDate!! >= System.currentTimeMillis()
+
+                if (isTrackingNow && trackingAllowed) {
                     tripDao.deactivateAllTracking()
                 }
 
@@ -275,10 +354,11 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     id = if (editingTripId != -1) editingTripId else 0,
                     title = title,
                     notes = if (notes.isBlank()) null else notes,
-                    date = stops.minByOrNull { it.date }?.date ?: System.currentTimeMillis(),
+                    date = tripStartDate.timeInMillis,
+                    endDate = tripEndDate,
                     coverImage = tripCoverImagePath,
-                    isTrackingActive = isTrackingNow,
-                    isAutoTrip = isTrackingNow,
+                    isTrackingActive = isTrackingNow && trackingAllowed,
+                    isAutoTrip = isTrackingNow && trackingAllowed,
                     rating = ratingBar.rating,
                     people = selectedPeople.toList(),
                     isPublic = false
@@ -291,7 +371,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                     tripDao.insertTrip(trip).toInt()
                 }
                 
-                if (isTrackingNow) {
+                if (isTrackingNow && trackingAllowed) {
                     val intent = Intent(requireContext(), TrackingService::class.java).apply {
                         action = TrackingService.ACTION_START_TRACKING
                         putExtra(TrackingService.EXTRA_TRIP_ID, finalTripId)
@@ -307,6 +387,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                         action = TrackingService.ACTION_STOP_TRACKING
                     }
                     requireContext().stopService(intent)
+                    tripDao.updateTrackingStatus(finalTripId, false)
                 }
                 
                 if (editingTripId != -1) {
@@ -320,11 +401,68 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 val bundle = Bundle().apply {
                     putInt("tripId", finalTripId)
                 }
-                findNavController().navigate(
-                    R.id.tripDetailFragment,
-                    bundle
-                )
+                if (editingTripId != -1 && findNavController().previousBackStackEntry?.destination?.id == R.id.tripDetailFragment) {
+                    // Bearbeiten vom Detail aus: zurück — das Detail aktualisiert sich selbst per Flow
+                    findNavController().navigateUp()
+                } else {
+                    // Neuer Trip oder Editor kam aus anderem Kontext: zum Detail,
+                    // Editor per popUpTo vom Stack nehmen → Back landet im Feed
+                    findNavController().navigate(
+                        R.id.action_newTripFragment_to_tripDetailFragment,
+                        bundle
+                    )
+                }
             }
+        }
+    }
+
+    private fun updateStartDateDisplay() {
+        val sdf = SimpleDateFormat("dd. MMMM yyyy", Locale.getDefault())
+        tvStartDateDisplay.text = sdf.format(tripStartDate.time)
+    }
+
+    private fun updateEndDateDisplay() {
+        if (tripEndDate == null) {
+            tvEndDateDisplay.text = getString(R.string.trip_end_open)
+            tvEndDateDisplay.setTextColor(android.content.res.ColorStateList.valueOf(0xB3FFFFFF.toInt()).defaultColor)
+            ivEndDateIcon.setImageResource(R.drawable.ic_add)
+        } else {
+            val sdf = SimpleDateFormat("dd. MMMM yyyy", Locale.getDefault())
+            tvEndDateDisplay.text = sdf.format(Date(tripEndDate!!))
+            tvEndDateDisplay.setTextColor(0xFFFFFFFF.toInt())
+            ivEndDateIcon.setImageResource(R.drawable.ic_calendar)
+        }
+    }
+
+    /** Zentraler_dirty-Flag: jede Nutzerinteraktion ruft das hier. */
+    private fun markDirty() { isDirty = true }
+
+    private fun setupDirtyTracking(inputTitle: android.widget.EditText, inputNotes: android.widget.EditText, switchAutoTrip: SwitchMaterial) {
+        inputTitle.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { markDirty() }
+        })
+        inputNotes.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) { markDirty() }
+        })
+        switchAutoTrip.setOnCheckedChangeListener { _, _ -> markDirty() }
+        ratingBar.setOnRatingBarChangeListener { _, _, _ -> markDirty() }
+    }
+
+    /** Back im Editor: bei ungespeicherten Änderungen nachfragen, sonst direkt raus. */
+    private fun handleBackPressed() {
+        if (isDirty) {
+            androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                .setTitle(getString(R.string.unsaved_changes_title))
+                .setMessage(getString(R.string.unsaved_changes_message))
+                .setPositiveButton(getString(R.string.discard)) { _, _ -> findNavController().navigateUp() }
+                .setNegativeButton(getString(R.string.keep_editing), null)
+                .show()
+        } else {
+            findNavController().navigateUp()
         }
     }
 

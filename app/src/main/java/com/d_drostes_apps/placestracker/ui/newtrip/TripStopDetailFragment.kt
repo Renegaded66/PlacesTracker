@@ -82,7 +82,9 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         
         val isInline = parentFragment is FeedFragment
         if (isInline) {
-            cardMap.visibility = View.GONE
+            // Karte auch inline laden (früher GONE = "Karte lädt nicht")
+            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setupCesiumWebView()
             view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
@@ -100,7 +102,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                     (activity.supportFragmentManager
                         .findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment)
                         ?.navController
-                        ?.navigate(R.id.tripDetailFragment, bundle)
+                        ?.navigate(R.id.action_tripStopDetailFragment_to_tripDetailFragment, bundle)
                 } ?: run {
                     if (isAdded) dismiss()
                 }
@@ -153,7 +155,20 @@ rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
 
-                if (!isInline) updateGlobePosition()
+                // Karte in beiden Modi mit Position versorgen (inline + fullscreen)
+                updateGlobePosition()
+                if (isInline) {
+                    // Inline zusätzlich: Feed-Globe auf den Stop zoomen
+                    it.location?.split(",")?.let { coords ->
+                        if (coords.size == 2) {
+                            val lat = coords[0].trim().toDoubleOrNull()
+                            val lon = coords[1].trim().toDoubleOrNull()
+                            if (lat != null && lon != null) {
+                                (parentFragment as? FeedFragment)?.zoomGlobeTo(lat, lon)
+                            }
+                        }
+                    }
+                }
                 loadCountryFlag(it.location)
 
                 // Weather display for this stop

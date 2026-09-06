@@ -77,12 +77,17 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         
         val isInline = parentFragment is FeedFragment
         if (isInline) {
-            cardMap.visibility = View.GONE
-            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
+            // Karte bleibt sichtbar: Der Feed-Globe wird für Details wiederverwendet statt eines zweiten WebGL-Kontexts
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
                 (parentFragment as? FeedFragment)?.handleBack()
             }
+            // Inline: keinen eigenen WebGL-Kontext starten — der Feed-Globe zeigt den Ort,
+            // der Zoom passiert nach dem Laden des Entries (siehe Lade-Block unten).
+            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
+            // Die Mini-Karte in der Detailansicht lädt jetzt auch inline (früher: GONE = "Karte lädt nicht")
+            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            setupMapboxWebView()
             // Increase top padding to account for missing appBar space if needed
             view.findViewById<View>(R.id.llDetailContent)?.setPadding(
                 (16 * resources.displayMetrics.density).toInt(),
@@ -168,7 +173,20 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                     }
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
-                if (!isInline) updateGlobePosition()
+                // Karte in beiden Modi mit Position versorgen (inline + fullscreen)
+                updateGlobePosition()
+                if (isInline) {
+                    // Inline zusätzlich: Feed-Globe auf den Ort zoomen
+                    e.location?.split(",")?.let { coords ->
+                        if (coords.size == 2) {
+                            val lat = coords[0].trim().toDoubleOrNull()
+                            val lon = coords[1].trim().toDoubleOrNull()
+                            if (lat != null && lon != null) {
+                                (parentFragment as? FeedFragment)?.zoomGlobeTo(lat, lon)
+                            }
+                        }
+                    }
+                }
                 loadCountryFlag(e.location)
 
                 // Weather display
@@ -410,9 +428,9 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
     private fun showDeleteConfirmation(entry: Entry?, repository: com.d_drostes_apps.placestracker.data.EntryRepository) {
         entry?.let { e ->
             AlertDialog.Builder(requireContext())
-                .setTitle(R.string.delete_entry)
-                .setMessage(R.string.delete_confirm)
-                .setPositiveButton(R.string.save) { _, _ ->
+                .setTitle(R.string.entry_delete_confirm_title)
+                .setMessage(R.string.entry_delete_confirm_msg)
+                .setPositiveButton(R.string.delete) { _, _ ->
                     lifecycleScope.launch {
                         repository.delete(e)
                         if (parentFragment is FeedFragment) {

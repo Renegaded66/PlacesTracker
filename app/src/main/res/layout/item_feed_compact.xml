@@ -17,12 +17,43 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/feedImage"
+        <FrameLayout
             android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:scaleType="centerCrop"
-            app:shapeAppearanceOverlay="@style/RoundedCornersImage" />
+            android:layout_height="80dp">
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/feedImage"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:scaleType="centerCrop"
+                app:shapeAppearanceOverlay="@style/RoundedCornersImage" />
+
+            <!-- Live-Badge in der Kompaktansicht -->
+            <TextView
+                android:id="@+id/tvTrackingActiveBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:layout_margin="4dp"
+                android:background="@drawable/bg_tracking_badge"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="2dp"
+                android:text="@string/live"
+                android:textColor="@android:color/white"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <!-- Entwurf-Overlay: Vorschläge klar als Vorschlag kennzeichnen -->
+            <View
+                android:id="@+id/draftOverlay"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#66FFFFFF"
+                android:visibility="gone"
+                tools:visibility="visible"/>
+        </FrameLayout>
 
         <LinearLayout
             android:layout_width="0dp"
@@ -31,16 +62,39 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <TextView
-                android:id="@+id/feedTitle"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:ellipsize="end"
-                android:maxLines="1"
-                tools:text="Titel des Ortes" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/feedTitle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    tools:text="Titel des Ortes" />
+
+                <TextView
+                    android:id="@+id/draftBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/bg_draft_chip"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:text="@string/draft_chip"
+                    android:textColor="?attr/colorOnTertiaryContainer"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"

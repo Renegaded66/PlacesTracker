@@ -27,7 +27,7 @@ sealed class FeedItem(val id: Int, val title: String, val date: Long, val coverI
         trip.supabaseId,
         trip.isPublic
     ) {
-        override val sortDate: Long = stops.maxOfOrNull { it.date } ?: trip.date
+        override val sortDate: Long = maxOf(stops.maxOfOrNull { it.date } ?: trip.date, trip.endDate ?: 0L)
         override val isLive: Boolean = trip.isTrackingActive
     }
 }

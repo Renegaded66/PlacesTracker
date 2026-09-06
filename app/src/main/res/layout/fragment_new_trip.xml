@@ -25,14 +25,15 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="100dp"
+        android:paddingBottom="120dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="8dp"
             android:paddingBottom="24dp">
 
             <TextView
@@ -43,75 +44,236 @@
                 android:textColor="#E0E0E0"
                 android:textSize="34sp"
                 android:fontFamily="serif"
-                android:textStyle="bold"
-                android:layout_marginTop="0dp"/>
+                android:textStyle="bold" />
 
             <View
                 android:layout_width="60dp"
                 android:layout_height="4dp"
                 android:background="?attr/colorPrimary"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="32dp"/>
-
-            <!-- Titel Input -->
-            <EditText
-                android:id="@+id/inputTripTitle"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Name der Reise..."
-                android:background="@null"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#66FFFFFF"
-                android:textSize="22sp"
-                android:fontFamily="serif-medium"
-                android:inputType="textCapSentences"
                 android:layout_marginBottom="24dp"/>
 
-            <!-- Cover Image -->
+            <!-- ============ Sektion: Titel ============ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Titel"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="24dp">
+
+                <EditText
+                    android:id="@+id/inputTripTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Name der Reise..."
+                    android:background="@null"
+                    android:textColor="#FFFFFF"
+                    android:textColorHint="#66FFFFFF"
+                    android:textSize="20sp"
+                    android:fontFamily="serif-medium"
+                    android:inputType="textCapSentences"
+                    android:padding="16dp"/>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ Sektion: Zeitraum ============ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Zeitraum"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="24dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/cardTripStartDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_calendar"
+                            app:tint="?attr/colorPrimary" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Startdatum"
+                                android:textColor="#8C8C8C"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvTripStartDateDisplay"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="#FFFFFF"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_chevron_down"
+                            app:tint="#66FFFFFF" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#1AFFFFFF"/>
+
+                    <LinearLayout
+                        android:id="@+id/cardTripEndDate"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:id="@+id/ivEndDateIcon"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:src="@drawable/ic_add"
+                            app:tint="#8C8C8C" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Enddatum (optional)"
+                                android:textColor="#8C8C8C"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvTripEndDateDisplay"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Offen — Reise läuft"
+                                android:textColor="#B3FFFFFF"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ Sektion: Cover ============ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cover"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="8dp"/>
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="200dp"
                 app:cardBackgroundColor="#1E1E1E"
                 app:cardCornerRadius="20dp"
                 app:strokeWidth="0dp"
-                android:layout_marginBottom="32dp">
+                android:layout_marginBottom="24dp">
+
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
+
                     <ImageView
                         android:id="@+id/ivTripCoverPreview"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:scaleType="centerCrop"
                         android:src="@drawable/vorschaubild"/>
+
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:background="#66000000"/>
-                    <com.google.android.material.button.MaterialButton
+
+                    <LinearLayout
                         android:id="@+id/btnAddTripCover"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
-                        android:text="Cover wählen"
-                        style="@style/Widget.MaterialComponents.Button.TextButton"
-                        android:textColor="#FFFFFF"
-                        app:icon="@drawable/ic_add"
-                        app:iconTint="#FFFFFF" />
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal"
+                        android:padding="16dp"
+                        android:background="?attr/selectableItemBackground">
+
+                        <ImageView
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:src="@drawable/ic_add"
+                            app:tint="#FFFFFF" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Cover wählen"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp" />
+                    </LinearLayout>
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 
-
-
-            <!-- Stations Header -->
+            <!-- ============ Sektion: Stationen ============ -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Stationen &amp; Zeitpunkte"
-                android:textColor="#BDBDBD"
-                android:textSize="14sp"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
                 android:textAllCaps="true"
-                android:letterSpacing="0.1"
+                android:letterSpacing="0.12"
                 android:layout_marginBottom="12dp"/>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -130,53 +292,137 @@
                 android:textColor="#FFFFFF"
                 app:icon="@drawable/ic_add"
                 app:iconTint="?attr/colorPrimary"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="32dp"/>
+                app:cornerRadius="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="24dp"/>
 
-            <RatingBar
-                android:id="@+id/ratingTrip"
+            <!-- ============ Sektion: Details ============ -->
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:numStars="5"
-                android:stepSize="0.5"
-                android:layout_marginBottom="16dp" />
+                android:text="Details"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="8dp"/>
 
-            <AutoCompleteTextView
-                android:id="@+id/etTripPeople"
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="Person hinzufügen"
-                android:layout_marginBottom="8dp" />
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="24dp">
 
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chipGroupTripPeople"
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <RatingBar
+                        android:id="@+id/ratingTrip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:numStars="5"
+                        android:stepSize="0.5"
+                        android:layout_marginBottom="12dp" />
+
+                    <AutoCompleteTextView
+                        android:id="@+id/etTripPeople"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Reisepartner hinzufügen"
+                        android:background="@null"
+                        android:paddingVertical="8dp"
+                        android:inputType="textCapWords"
+                        android:layout_marginBottom="4dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroupTripPeople"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp" />
+
+                    <EditText
+                        android:id="@+id/inputTripNotes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Beschreibung der Reise..."
+                        android:background="@drawable/bg_diary_input"
+                        android:textColor="#FFFFFF"
+                        android:textColorHint="#44FFFFFF"
+                        android:textSize="16sp"
+                        android:fontFamily="serif"
+                        android:gravity="top"
+                        android:minLines="4"
+                        android:padding="16dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ Sektion: Live-Tracking ============ -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tracking"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp" />
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="16dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="8dp">
 
-            <!-- Notizen -->
-            <EditText
-                android:id="@+id/inputTripNotes"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="Beschreibung der Reise..."
-                android:background="@drawable/bg_diary_input"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#44FFFFFF"
-                android:textSize="16sp"
-                android:fontFamily="serif"
-                android:gravity="top"
-                android:minLines="4"
-                android:padding="16dp"
-                android:layout_marginBottom="32dp"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
 
+                    <ImageView
+                        android:id="@+id/ivTrackingIcon"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:src="@drawable/ic_marker"
+                        app:tint="#8C8C8C" />
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switchAutoTrip"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Automatische Reise"
-                android:textColor="#FFFFFF"/>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Live-Tracking"
+                            android:textColor="#FFFFFF"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Route im Hintergrund aufzeichnen. Endet automatisch am Enddatum."
+                            android:textColor="#8C8C8C"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switchAutoTrip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

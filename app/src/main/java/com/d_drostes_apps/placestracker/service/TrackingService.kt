@@ -43,6 +43,22 @@ class TrackingService : Service() {
         }
     }
 
+    /** Stoppt das Tracking automatisch, sobald das optionale Enddatum erreicht ist. Liefert true, wenn gestoppt wurde. */
+    private suspend fun checkTripEndDate(): Boolean {
+        if (currentTripId == -1) return false
+        val database = AppDatabase.getDatabase(applicationContext)
+        val trip = database.tripDao().getTripById(currentTripId) ?: return false
+        val now = System.currentTimeMillis()
+        if (trip.endDate != null && trip.endDate < now) {
+            database.tripDao().updateTrackingStatus(currentTripId, false)
+            stopLocationUpdates()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return true
+        }
+        return false
+    }
+
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -94,6 +110,9 @@ class TrackingService : Service() {
         if (currentTripId == -1) return
         
         serviceScope.launch {
+            // Automatischer Stopp am Enddatum (Übergangs-Automation)
+            if (checkTripEndDate()) return@launch
+
             val database = AppDatabase.getDatabase(applicationContext)
             val tripDao = database.tripDao()
             val lastLocation = tripDao.getLastLocationForTrip(currentTripId)

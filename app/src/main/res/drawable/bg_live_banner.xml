@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hintergrund des Live-Tracking-Banners: sattes Rot mit leichtem Verlauf -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:startColor="#E53935"
+        android:endColor="#B71C1C"
+        android:type="linear"/>
+    <corners android:radius="14dp"/>
+</shape>
