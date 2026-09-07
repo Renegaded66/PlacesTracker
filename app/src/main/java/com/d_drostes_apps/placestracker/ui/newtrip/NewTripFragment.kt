@@ -82,7 +82,6 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
     private var currentMediaAdapter: MediaAdapter? = null
     private var currentMediaList: MutableList<String>? = null
-    private lateinit var mapWebView: WebView 
 
     private var lastZoomedStopIndex: Int = -1 
     private var stopsExpanded = false
@@ -235,10 +234,18 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 findNavController().navigate(R.id.newTripFragment, bundle)
             },
             onDeleteMiniStop = { location ->
-                lifecycleScope.launch {
-                    tripDao.deleteLocation(location)
-                    //updateTripMap()
-                }
+                // Sicherheitsfrage vor dem Löschen eines Mini-Stops
+                androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                    .setTitle("Mini-Stopp löschen?")
+                    .setMessage("Dieser aufgezeichnete Zwischenpunkt wird dauerhaft gelöscht.")
+                    .setPositiveButton(R.string.delete) { _, _ ->
+                        lifecycleScope.launch {
+                            tripDao.deleteLocation(location)
+                            //updateTripMap()
+                        }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
             },
             onToggleExpand = { id ->
                 if (id == "stops") {
@@ -484,16 +491,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
     }
 
     private fun zoomToStop(index: Int) {
-        if (index < 0 || index >= stops.size) return
-        val stop = stops[index]
-        stop.location?.split(",")?.let { coords ->
-            if (coords.size == 2) {
-                val lat = coords[0].toDouble()
-                val lon = coords[1].toDouble()
-                mapWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon);", null)
-                lastZoomedStopIndex = index
-            }
-        }
+        // Karten-Preview im Editor entfernt — Funktion bewusst deaktiviert
     }
 
     /*

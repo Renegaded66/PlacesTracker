@@ -203,37 +203,6 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardNewEntryMap"
-                android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:visibility="gone"
-                app:cardBackgroundColor="#1E1E1E"
-                app:cardCornerRadius="20dp"
-                app:strokeWidth="0dp"
-                android:layout_marginBottom="20dp"
-                tools:visibility="visible">
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent">
-                    <android.webkit.WebView
-                        android:id="@+id/newEntryCesiumWebView"
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent" />
-                    <ImageButton
-                        android:id="@+id/btnFullscreenMap"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:layout_gravity="top|end"
-                        android:layout_margin="12dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_fullscreen"
-                        app:tint="#FFFFFF"
-                        android:elevation="4dp"
-                        android:contentDescription="@string/fullscreen"/>
-                </FrameLayout>
-            </com.google.android.material.card.MaterialCardView>
-
             <!-- ============ Sektion: Details ============ -->
             <TextView
                 android:layout_width="wrap_content"
@@ -317,7 +286,39 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                android:layout_marginBottom="32dp"/>
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Karte am Ende: erscheint erst nach Standortwahl, bricht das Formular nicht mittendrin um -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardNewEntryMap"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="#1E1E1E"
+                app:cardCornerRadius="20dp"
+                app:strokeWidth="0dp"
+                android:layout_marginBottom="32dp"
+                tools:visibility="visible">
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent">
+                    <android.webkit.WebView
+                        android:id="@+id/newEntryCesiumWebView"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                    <ImageButton
+                        android:id="@+id/btnFullscreenMap"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_gravity="top|end"
+                        android:layout_margin="12dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_fullscreen"
+                        app:tint="#FFFFFF"
+                        android:elevation="4dp"
+                        android:contentDescription="@string/fullscreen"/>
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -488,6 +488,14 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
                         scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.4)
                     };
+                    // 🌟 Pop-in-Animation: Marker skaliert beim Laden von 0.2 auf 1 (easeOutCubic)
+                    const appearStart = viewer.clock.currentTime;
+                    entity.billboard.scale = new Cesium.CallbackProperty(() => {
+                        const elapsed = viewer.clock.currentTime.secondsOfDay - appearStart.secondsOfDay;
+                        const t = Math.min(elapsed / 0.45, 1);
+                        const eased = 1 - Math.pow(1 - t, 3);
+                        return 0.2 + 0.8 * eased;
+                    }, false);
                     entity.point = undefined; // Punkt verstecken, sobald das Bild da ist
                     entity._safeImageUrl = finalImageUrl;
                     viewer.scene.requestRender();

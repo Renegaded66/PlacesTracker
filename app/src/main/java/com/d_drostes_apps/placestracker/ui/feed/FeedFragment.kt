@@ -40,10 +40,9 @@ import com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment
 import com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -81,7 +80,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     private var searchQuery: String = ""
     private val geocoderCache = mutableMapOf<String, Pair<String?, String?>>()
 
-    private var bottomSheetBehavior: BottomSheetBehavior<View>? = null
     private var lastZoomedId: String? = null
 
     private lateinit var feedListLayout: View
@@ -147,43 +145,10 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         WebView.setWebContentsDebuggingEnabled(true)
         setupCesiumWebView()
 
-        // --- Bottom Sheet Setup ---
-        val bottomSheet = view.findViewById<View>(R.id.bottomSheet)
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet).apply {
-            isHideable = false
-            peekHeight = (resources.displayMetrics.density * 120).toInt()
-            state = BottomSheetBehavior.STATE_HALF_EXPANDED
-            halfExpandedRatio = 0.6f
-            isFitToContents = false
-        }
-
         recycler = view.findViewById(R.id.feedRecycler)
 
-        // Sheet-Zustandswechsel sind diskret — der Globe wird nur DANN resized (nicht per Frame).
-        // Das per-Frame-Layout in onSlide war die Hauptursache für Ruckler + Überlappungsgefühl.
-        bottomSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                bottomSheet.post { resizeGlobeToSheet(bottomSheet) }
-            }
-
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                // bewusst leer: kein per-Frame-Resize des WebGL-Surfaces
-            }
-        })
-
-        // Initialgröße nach erstem Layout
-        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                val sheetTop = bottomSheet.top
-                if (sheetTop > 0) {
-                    view.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    resizeGlobeToSheet(bottomSheet)
-                }
-            }
-        })
-
-        // Kein Touch-Hack mehr: RecyclerView-Nested-Scrolling regelt standardmäßig,
-        // ob die Liste scrollt (Inhalt) oder das Sheet zieht (am Listenanfang).
+        // Kein BottomSheet mehr: Globe ist fixierter Header (38%), Liste scrollt darunter.
+        // Damit entfallen alle Touch-Hacks und das per-Frame-Resize — Scrollen ist natives RecyclerView-Verhalten.
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -262,7 +227,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         recycler.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                val behavior = bottomSheetBehavior ?: return
                 if (detailContainer.visibility == View.VISIBLE) return
 
                 if (!recyclerView.canScrollVertically(-1)) {
@@ -287,7 +251,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
                     if (id != lastZoomedId) {
                         lastZoomedId = id
-                        val offset = if (behavior.state == BottomSheetBehavior.STATE_HALF_EXPANDED) 0.6 else 0.0
+                        // Kein Sheet-Offset mehr — Globe ist fixierter Header
+                        val offset = 0.0
 
                         if (item is FeedItem.TripItem && item.stops.isNotEmpty()) {
                             val lats = item.stops.mapNotNull { it.location?.split(",")?.getOrNull(0)?.toDoubleOrNull() }
@@ -416,7 +381,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .create()
         
         dialog.show()
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        // Kein transparenter Hintergrund mehr — der Dialog braucht eine sichtbare Fläche
         dialog.window?.setDimAmount(0.6f)
     }
 
@@ -497,7 +462,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
                 if (imageDataList.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        progressDialog.dismiss()
+                        if (progressDialog.isShowing) progressDialog.dismiss()
+                        if (!isAdded) return@withContext
                         Toast.makeText(requireContext(), "Keine gültigen Bilder gefunden.", Toast.LENGTH_SHORT).show()
                     }
                     return@launch
@@ -589,6 +555,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
                 withContext(Dispatchers.Main) {
                     progressDialog.dismiss()
+                    if (!isAdded) return@withContext
                     findNavController().navigate(R.id.newTripFragment, Bundle().apply {
                         putInt("tripId", tripId)
                         putString("title", "Automatische Reise bearbeiten")
@@ -596,7 +563,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    progressDialog.dismiss()
+                    if (progressDialog.isShowing) progressDialog.dismiss()
+                    if (!isAdded) return@withContext
                     Toast.makeText(requireContext(), "Fehler: ${e.message}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -839,18 +807,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
-    /** Globe-Höhe an die aktuelle Sheet-Position anpassen (nur bei Zustandswechseln, nicht per Frame). */
-    private fun resizeGlobeToSheet(sheet: View) {
-        if (!::cesiumWebView.isInitialized) return
-        val sheetTop = sheet.top
-        if (sheetTop <= 0) return
-        val params = cesiumWebView.layoutParams
-        if (params.height != sheetTop) {
-            params.height = sheetTop
-            cesiumWebView.layoutParams = params
-        }
-    }
-
     fun navigateToDetail(item: FeedItem, stopId: Int? = null) {
         val fragment = when {
             stopId != null -> TripStopDetailFragment().apply {
@@ -907,8 +863,6 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
         
         transaction.commit()
-
-        bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
     }
 
     fun closeDetail() {

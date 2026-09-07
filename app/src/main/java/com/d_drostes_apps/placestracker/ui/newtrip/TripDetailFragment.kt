@@ -236,9 +236,17 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 findNavController().navigate(destination, bundle)
             },
             onDeleteMiniStop = { location ->
-                lifecycleScope.launch {
-                    tripDao.deleteLocation(location)
-                }
+                // Sicherheitsfrage vor dem Löschen eines Mini-Stops
+                androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
+                    .setTitle("Mini-Stopp löschen?")
+                    .setMessage("Dieser aufgezeichnete Zwischenpunkt wird dauerhaft gelöscht.")
+                    .setPositiveButton(R.string.delete) { _, _ ->
+                        lifecycleScope.launch {
+                            tripDao.deleteLocation(location)
+                        }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .show()
             },
             onToggleExpand = { sectionId ->
                 val current = expandedSections.value
