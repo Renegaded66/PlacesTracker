@@ -4,20 +4,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.os.Bundle
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -26,7 +17,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
-import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.SharingManager
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.appbar.AppBarLayout
@@ -43,11 +33,9 @@ import java.util.*
 class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
 
     private var entry: Entry? = null
-    private lateinit var mapboxWebView: WebView
     private lateinit var llFlags: LinearLayout
     private lateinit var cvCountryName: MaterialCardView
     private lateinit var tvCountryNamePopup: TextView
-    private var isMapFullscreen = false
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -65,16 +53,18 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
         val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
         val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
-        val btnFullscreen = view.findViewById<ImageButton>(R.id.btnFullscreenMap)
-        val cardMap = view.findViewById<MaterialCardView>(R.id.cardDetailMap)
         val appBar = view.findViewById<AppBarLayout>(R.id.appBar)
+        // Hero-Galerie (fancy Bildershow statt Karte)
+        val heroPager = view.findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.heroMediaPager)
+        val heroDots = view.findViewById<LinearLayout>(R.id.heroDotsIndicator)
+        val tvMediaCounter = view.findViewById<TextView>(R.id.tvMediaCounter)
         
         llFlags = view.findViewById(R.id.llDetailFlags)
         cvCountryName = view.findViewById(R.id.cvCountryName)
         tvCountryNamePopup = view.findViewById(R.id.tvCountryNamePopup)
         
-        mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
-        
+        // Keine eigene Karte mehr: Der Globe oben im Dashboard zeigt den Ort
+        // (zoomGlobeTo wird nach dem Laden des Entries aufgerufen)
         val isInline = parentFragment is FeedFragment
         if (isInline) {
             // Karte bleibt sichtbar: Der Feed-Globe wird für Details wiederverwendet statt eines zweiten WebGL-Kontexts
@@ -85,9 +75,6 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             // Inline: keinen eigenen WebGL-Kontext starten — der Feed-Globe zeigt den Ort,
             // der Zoom passiert nach dem Laden des Entries (siehe Lade-Block unten).
             view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
-            // Die Mini-Karte in der Detailansicht lädt jetzt auch inline (früher: GONE = "Karte lädt nicht")
-            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            setupMapboxWebView()
             // Increase top padding to account for missing appBar space if needed
             view.findViewById<View>(R.id.llDetailContent)?.setPadding(
                 (16 * resources.displayMetrics.density).toInt(),
@@ -96,8 +83,6 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 (100 * resources.displayMetrics.density).toInt()
             )
         } else {
-            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            setupMapboxWebView()
             toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         }
 
@@ -108,21 +93,8 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             animate().alpha(1f).translationY(0f).setDuration(500).setStartDelay(100).start()
         }
 
-        // Fix scrolling for WebView inside NestedScrollView
-        mapboxWebView.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP -> v.parent.requestDisallowInterceptTouchEvent(false)
-            }
-            false
-        }
-
         view.findViewById<View>(R.id.detailRootLayout).setOnClickListener {
             cvCountryName.visibility = View.GONE
-        }
-
-        btnFullscreen.setOnClickListener {
-            toggleFullscreen(cardMap, appBar, btnFullscreen)
         }
 
         toolbar.inflateMenu(R.menu.menu_entry_detail)
@@ -173,6 +145,45 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                     }
                     dialog.show(parentFragmentManager, "MediaFullscreen")
                 }
+
+                // Hero-Galerie: fancy Bildershow mit Dots + Zähler
+                if (e.media.isNotEmpty()) {
+                    heroPager.adapter = HeroMediaAdapter(e.media) { path ->
+                        val dialog = MediaDialogFragment().apply {
+                            arguments = Bundle().apply {
+                                putStringArrayList("mediaPaths", ArrayList(e.media))
+                                putInt("initialPosition", e.media.indexOf(path))
+                            }
+                        }
+                        dialog.show(parentFragmentManager, "MediaFullscreen")
+                    }
+                    heroDots.removeAllViews()
+                    val dotSize = (7 * resources.displayMetrics.density).toInt()
+                    val dotMargin = (4 * resources.displayMetrics.density).toInt()
+                    e.media.indices.forEach { i ->
+                        val dot = View(requireContext())
+                        dot.setBackgroundResource(R.drawable.bg_dot)
+                        val lp = LinearLayout.LayoutParams(dotSize, dotSize)
+                        lp.setMargins(dotMargin, 0, dotMargin, 0)
+                        dot.layoutParams = lp
+                        dot.alpha = if (i == 0) 1f else 0.35f
+                        heroDots.addView(dot)
+                    }
+                    heroPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+                        override fun onPageSelected(position: Int) {
+                            for (i in 0 until heroDots.childCount) {
+                                heroDots.getChildAt(i).alpha = if (i == position) 1f else 0.35f
+                            }
+                            tvMediaCounter.text = "${position + 1}/${heroDots.childCount}"
+                        }
+                    })
+                    tvMediaCounter.text = "1/${e.media.size}"
+                    tvMediaCounter.visibility = View.VISIBLE
+                } else {
+                    heroPager.visibility = View.GONE
+                    view.findViewById<View>(R.id.cvHeroMedia)?.visibility = View.GONE
+                }
+
                 // Karte in beiden Modi mit Position versorgen (inline + fullscreen)
                 updateGlobePosition()
                 if (isInline) {
@@ -286,60 +297,8 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         }
     }
 
-    private fun toggleFullscreen(cardMap: MaterialCardView, appBar: AppBarLayout, btn: ImageButton) {
-        isMapFullscreen = !isMapFullscreen
-        val nestedScrollView = view?.findViewById<NestedScrollView>(R.id.nestedScrollView)
-        val linearLayout = cardMap.parent as LinearLayout
-
-        if (isMapFullscreen) {
-            appBar.visibility = View.GONE
-            for (i in 0 until linearLayout.childCount) {
-                val child = linearLayout.getChildAt(i)
-                if (child != cardMap) child.visibility = View.GONE
-            }
-            linearLayout.setPadding(0, 0, 0, 0)
-            
-            nestedScrollView?.isFillViewport = true
-            val nvParams = nestedScrollView?.layoutParams as? CoordinatorLayout.LayoutParams
-            nvParams?.height = ViewGroup.LayoutParams.MATCH_PARENT
-            nvParams?.behavior = null 
-            nestedScrollView?.layoutParams = nvParams
-            
-            val llParams = linearLayout.layoutParams
-            llParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-            linearLayout.layoutParams = llParams
-            
-            val params = cardMap.layoutParams as LinearLayout.LayoutParams
-            params.height = ViewGroup.LayoutParams.MATCH_PARENT
-            params.setMargins(12, 12, 12, 12)
-            cardMap.layoutParams = params
-            btn.setImageResource(R.drawable.ic_fullscreen_exit)
-        } else {
-            appBar.visibility = View.VISIBLE
-            for (i in 0 until linearLayout.childCount) {
-                linearLayout.getChildAt(i).visibility = View.VISIBLE
-            }
-            view?.findViewById<View>(R.id.cvCountryName)?.visibility = View.GONE
-            
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            linearLayout.setPadding(padding, 0, padding, padding)
-            
-            nestedScrollView?.isFillViewport = false
-            val nvParams = nestedScrollView?.layoutParams as? CoordinatorLayout.LayoutParams
-            nvParams?.height = ViewGroup.LayoutParams.MATCH_PARENT
-            nvParams?.behavior = AppBarLayout.ScrollingViewBehavior()
-            nestedScrollView?.layoutParams = nvParams
-            
-            val llParams = linearLayout.layoutParams
-            llParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            linearLayout.layoutParams = llParams
-            
-            val params = cardMap.layoutParams as LinearLayout.LayoutParams
-            params.height = (250 * resources.displayMetrics.density).toInt()
-            params.setMargins(0, (16 * resources.displayMetrics.density).toInt(), 0, 0)
-            cardMap.layoutParams = params
-            btn.setImageResource(R.drawable.ic_fullscreen)
-        }
+    private fun toggleFullscreen(cardMap: MaterialCardView, appBar: AppBarLayout, btn: android.widget.ImageButton) {
+        // Karte aus der Detailansicht entfernt (Globe oben übernimmt) — Funktion bewusst deaktiviert
     }
 
     private fun loadCountryFlag(location: String?) {
@@ -380,47 +339,15 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
     }
 
-    private fun setupMapboxWebView() {
-        mapboxWebView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = true
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        }
-        
-        class JsInterface {
-            @JavascriptInterface
-            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
-        }
-        mapboxWebView.addJavascriptInterface(JsInterface(), "Android")
-        
-        mapboxWebView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                updateGlobePosition()
-            }
-        }
-        val html = try {
-            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
-        } catch (e: Exception) { "" }
-        mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
-    }
-
+    /** Ort auf dem FEED-Globe anzeigen (der Globe oben im Dashboard ist die Karte). */
     private fun updateGlobePosition() {
         lifecycleScope.launch {
             val currentEntry = entry ?: return@launch
             val coords = currentEntry.location?.split(",") ?: return@launch
             if (coords.size == 2) {
-                val lat = coords[0].toDouble()
-                val lon = coords[1].toDouble()
-                val imgPath = currentEntry.coverImage ?: currentEntry.media.firstOrNull()
-                val base64 = withContext(Dispatchers.Default) {
-                    GlobeUtils.getBase64Thumbnail(imgPath)
-                }
-                mapboxWebView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '${base64 ?: ""}');", null)
+                val lat = coords[0].trim().toDoubleOrNull() ?: return@launch
+                val lon = coords[1].trim().toDoubleOrNull() ?: return@launch
+                (parentFragment as? FeedFragment)?.zoomGlobeTo(lat, lon)
             }
         }
     }

@@ -5,14 +5,8 @@ import android.content.Context
 import android.location.Geocoder
 import android.os.Bundle
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.ImageView
@@ -30,7 +24,6 @@ import com.d_drostes_apps.placestracker.ui.feed.DetailMediaAdapter
 import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
 import com.d_drostes_apps.placestracker.data.WeatherRepository
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
-import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -44,7 +37,6 @@ import java.util.*
 class TripStopDetailFragment : BottomSheetDialogFragment() {
 
     private var stop: TripStop? = null
-    private lateinit var mapboxWebView: WebView
     private lateinit var llFlags: LinearLayout
     private lateinit var cvCountryName: View
     private lateinit var tvCountryNamePopup: TextView
@@ -72,27 +64,20 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
         val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
         val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
-        val cardMap = view.findViewById<MaterialCardView>(R.id.cardDetailMap)
         
         llFlags = view.findViewById(R.id.llDetailFlags)
         cvCountryName = view.findViewById(R.id.cvCountryName)
         tvCountryNamePopup = view.findViewById(R.id.tvCountryNamePopup)
         
-        mapboxWebView = view.findViewById(R.id.detailCesiumWebView)
-        
         val isInline = parentFragment is FeedFragment
         if (isInline) {
-            // Karte auch inline laden (früher GONE = "Karte lädt nicht")
-            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            setupCesiumWebView()
+            // Keine eigene Karte: Der Globe oben im Dashboard zeigt den Stop
             view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
                 (parentFragment as? FeedFragment)?.handleBack()
             }
         } else {
-            mapboxWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            setupCesiumWebView()
             toolbar.setNavigationOnClickListener {
                 stop?.let { s ->
                     val bundle = Bundle().apply {
@@ -114,14 +99,6 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             alpha = 0f
             translationY = 40f
             animate().alpha(1f).translationY(0f).setDuration(500).setStartDelay(100).start()
-        }
-
-        mapboxWebView.setOnTouchListener { v, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> v.parent.requestDisallowInterceptTouchEvent(true)
-                MotionEvent.ACTION_UP -> v.parent.requestDisallowInterceptTouchEvent(false)
-            }
-            false
         }
 
         view.findViewById<View>(R.id.detailRootLayout).setOnClickListener {
@@ -237,45 +214,15 @@ rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
         return String(Character.toChars(firstLetter)) + String(Character.toChars(secondLetter))
     }
 
-    private fun setupCesiumWebView() {
-        mapboxWebView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            allowFileAccessFromFileURLs = true
-            allowUniversalAccessFromFileURLs = true
-            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-        }
-        mapboxWebView.addJavascriptInterface(object {
-            @JavascriptInterface
-            fun checkAndMarkSpun(): Boolean = GlobeUtils.checkAndMarkSpun()
-        }, "Android")
-        mapboxWebView.webChromeClient = WebChromeClient()
-        mapboxWebView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                view?.postDelayed({
-                    updateGlobePosition()
-                }, 200)
-            }
-        }
-        val html = try {
-            requireContext().assets.open("cesium_globe.html").bufferedReader().use { it.readText() }
-        } catch (e: Exception) { "" }
-        mapboxWebView.loadDataWithBaseURL("https://localhost/", html, "text/html", "UTF-8", null)
-    }
-
+    /** Ort auf dem FEED-Globe anzeigen (Inline) — eigene Karte gibt es nicht mehr. */
     private fun updateGlobePosition() {
         lifecycleScope.launch {
             val stopItem = stop ?: return@launch
             val coords = stopItem.location?.split(",") ?: return@launch
             if (coords.size == 2) {
-                val lat = coords[0].toDouble()
-                val lon = coords[1].toDouble()
-                val stopImg = stopItem.coverImage ?: stopItem.media.firstOrNull()
-                val base64 = withContext(Dispatchers.Default) {
-                    GlobeUtils.getBase64Thumbnail(stopImg)
-                }
-                mapboxWebView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation($lat, $lon, '${base64 ?: ""}');", null)
+                val lat = coords[0].trim().toDoubleOrNull() ?: return@launch
+                val lon = coords[1].trim().toDoubleOrNull() ?: return@launch
+                (parentFragment as? FeedFragment)?.zoomGlobeTo(lat, lon)
             }
         }
     }

@@ -131,37 +131,59 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 
+            <!-- Hero Media Galerie: ersetzt die Karte — der Globe oben zeigt den Ort -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardDetailMap"
+                android:id="@+id/cvHeroMedia"
                 android:layout_width="match_parent"
-                android:layout_height="250dp"
-                android:layout_marginTop="20dp"
+                android:layout_height="280dp"
+                android:layout_marginTop="16dp"
                 app:cardCornerRadius="24dp"
-                app:cardElevation="4dp"
-                app:strokeWidth="1.5dp"
-                app:strokeColor="?attr/colorOutlineVariant">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp"
+                android:clipChildren="true"
+                android:clipToPadding="true">
 
                 <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
 
-                    <android.webkit.WebView
-                        android:id="@+id/detailCesiumWebView"
+                    <androidx.viewpager2.widget.ViewPager2
+                        android:id="@+id/heroMediaPager"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent" />
 
-                    <ImageButton
-                        android:id="@+id/btnFullscreenMap"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
+                    <!-- Unterer Verlauf für Titelschutz -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="100dp"
+                        android:layout_gravity="bottom"
+                        android:background="@drawable/bg_feed_card_gradient" />
+
+                    <!-- Bild-Zähler Badge oben rechts -->
+                    <TextView
+                        android:id="@+id/tvMediaCounter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_gravity="top|end"
                         android:layout_margin="12dp"
-                        android:background="@drawable/circle_background"
-                        android:backgroundTint="#80FFFFFF"
-                        android:src="@drawable/ic_fullscreen"
-                        android:elevation="4dp"
-                        android:contentDescription="@string/fullscreen"
-                        app:tint="@android:color/black" />
+                        android:background="@drawable/bg_tracking_badge"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="@android:color/white"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        tools:text="2/5" />
+
+                    <!-- Dots unten -->
+                    <LinearLayout
+                        android:id="@+id/heroDotsIndicator"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="bottom|center_horizontal"
+                        android:layout_marginBottom="10dp"
+                        android:gravity="center"
+                        android:orientation="horizontal"
+                        android:padding="4dp" />
                 </FrameLayout>
             </com.google.android.material.card.MaterialCardView>
 

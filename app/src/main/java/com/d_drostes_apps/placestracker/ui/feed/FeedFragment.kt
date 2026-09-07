@@ -40,6 +40,7 @@ import com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment
 import com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.chip.Chip
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.button.MaterialButton
@@ -84,6 +85,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private lateinit var feedListLayout: View
     private lateinit var detailContainer: View
+    private var detailSheetBehavior: BottomSheetBehavior<View>? = null
     private lateinit var feedEmptyState: View
 
     private var selectedAutoTripUris = mutableListOf<Uri>()
@@ -147,8 +149,22 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         recycler = view.findViewById(R.id.feedRecycler)
 
-        // Kein BottomSheet mehr: Globe ist fixierter Header (38%), Liste scrollt darunter.
-        // Damit entfallen alle Touch-Hacks und das per-Frame-Resize — Scrollen ist natives RecyclerView-Verhalten.
+        // Detail-Ansicht als ziehbares BottomSheet:
+        // COLLAPSED (Peek = 62% Bildschirmhöhe) = Globe voll sichtbar
+        // HALF (80%) = Globe ein bisschen sichtbar
+        // EXPANDED (100%) = Globe komplett verdeckt
+        detailContainer = view.findViewById(R.id.detailFragmentContainer)
+        detailSheetBehavior = BottomSheetBehavior.from(detailContainer).apply {
+            isHideable = false
+            // 62% der Bildschirmhöhe = gleiche Position wie die Feed-Liste (Globe 38% voll sichtbar)
+            peekHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
+            halfExpandedRatio = 0.8f
+            isFitToContents = false
+            skipCollapsed = false
+            state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+        // Sichtbarkeit: nur wenn ein Detail offen ist
+        detailContainer.visibility = View.GONE
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -853,6 +869,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         feedListLayout.visibility = View.GONE
         detailContainer.visibility = View.VISIBLE
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.GONE
+
+        // Sheet auf COLLAPSED (Globe voll sichtbar) — User kann hochziehen (HALF/EXPANDED)
+        detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
         
         val transaction = childFragmentManager.beginTransaction()
             .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
@@ -873,6 +892,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         feedListLayout.visibility = View.VISIBLE
         detailContainer.visibility = View.GONE
+        detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.VISIBLE
         val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
         if (fragment != null) {
