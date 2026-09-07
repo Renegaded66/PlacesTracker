@@ -504,13 +504,15 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val fabEdit = view.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabEditTrip)
                 fabEdit?.visibility = View.VISIBLE
                 fabEdit?.setOnClickListener {
-                    // Inline-Detail schließen, damit nach dem Speichern kein Doppel-Stack entsteht
-                    if (isInline) (parentFragment as? FeedFragment)?.closeDetail()
                     val bundle = Bundle().apply {
                         putInt("tripId", tripId)
                         putString("title", "Trip bearbeiten")
                     }
+                    // ZUERST navigieren, DANN Inline-Detail schließen.
+                    // Vorher: closeDetail() entfernte das Fragment (remove().commit()),
+                    // danach war findNavController() nicht mehr verfügbar -> IllegalStateException-Crash.
                     findNavController().navigate(R.id.newTripFragment, bundle)
+                    if (isInline) (parentFragment as? FeedFragment)?.closeDetail()
                 }
 
                 toolbar.menu.findItem(R.id.action_edit)?.apply {
@@ -599,13 +601,13 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         toolbar.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_edit -> {
-                    // Inline-Detail schließen, damit nach dem Speichern kein Doppel-Stack entsteht
-                    if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail()
                     val bundle = Bundle().apply {
                         putInt("tripId", tripId)
                         putString("title", "Trip bearbeiten")
                     }
+                    // ZUERST navigieren, DANN Inline-Detail schließen (sonst: Fragment detached -> NavController-Crash)
                     findNavController().navigate(R.id.newTripFragment, bundle)
+                    if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail()
                     true
                 }
                 R.id.action_delete -> {

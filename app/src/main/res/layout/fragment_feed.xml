@@ -323,14 +323,15 @@
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>
-    </LinearLayout>
 
-    <!-- Detail-Ansicht Container (Overlay über Globe + Liste) -->
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/detailFragmentContainer"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:visibility="gone" />
+        <!-- Detail-Ansicht Container: belegt die unteren 62% (Globe bleibt oben sichtbar) -->
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/detailFragmentContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.62"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <!-- FAB Container -->
     <LinearLayout
