@@ -15,13 +15,11 @@ import com.d_drostes_apps.placestracker.data.WeatherIconMapper
 
 import androidx.lifecycle.lifecycleScope
 import com.d_drostes_apps.placestracker.BuildConfig
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.TripStop
-import com.d_drostes_apps.placestracker.ui.feed.DetailMediaAdapter
 import com.d_drostes_apps.placestracker.ui.feed.FeedFragment
+import com.d_drostes_apps.placestracker.ui.feed.HeroMediaAdapter
 import com.d_drostes_apps.placestracker.data.WeatherRepository
 import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.google.android.material.appbar.MaterialToolbar
@@ -63,7 +61,10 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val tvDate = view.findViewById<TextView>(R.id.tvDetailDate)
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
         val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
-        val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
+        // Hero-Galerie (fancy Bildershow statt Karte)
+        val heroPager = view.findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.heroMediaPager)
+        val heroDots = view.findViewById<LinearLayout>(R.id.heroDotsIndicator)
+        val tvMediaCounter = view.findViewById<TextView>(R.id.tvMediaCounter)
         
         llFlags = view.findViewById(R.id.llDetailFlags)
         cvCountryName = view.findViewById(R.id.cvCountryName)
@@ -72,7 +73,6 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val isInline = parentFragment is FeedFragment
         if (isInline) {
             // Keine eigene Karte: Der Globe oben im Dashboard zeigt den Stop
-            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
                 (parentFragment as? FeedFragment)?.handleBack()
@@ -121,15 +121,42 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                 val sdf = java.text.SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
                 tvDate.text = sdf.format(Date(it.date))
 
-rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
-                rvMedia.adapter = DetailMediaAdapter(it.media) { path, _ ->
-                    val dialog = MediaDialogFragment().apply {
-                        arguments = Bundle().apply {
-                            putStringArrayList("mediaPaths", ArrayList(it.media))
-                            putInt("initialPosition", it.media.indexOf(path))
+                // Hero-Galerie: fancy Bildershow mit Dots + Zähler (einzige Medien-Ansicht)
+                if (it.media.isNotEmpty()) {
+                    heroPager.adapter = HeroMediaAdapter(it.media) { path ->
+                        val dialog = MediaDialogFragment().apply {
+                            arguments = Bundle().apply {
+                                putStringArrayList("mediaPaths", ArrayList(it.media))
+                                putInt("initialPosition", it.media.indexOf(path))
+                            }
                         }
+                        dialog.show(parentFragmentManager, "MediaFullscreen")
                     }
-                    dialog.show(parentFragmentManager, "MediaFullscreen")
+                    heroDots.removeAllViews()
+                    val dotSize = (7 * resources.displayMetrics.density).toInt()
+                    val dotMargin = (4 * resources.displayMetrics.density).toInt()
+                    it.media.indices.forEach { i ->
+                        val dot = View(requireContext())
+                        dot.setBackgroundResource(R.drawable.bg_dot)
+                        val lp = LinearLayout.LayoutParams(dotSize, dotSize)
+                        lp.setMargins(dotMargin, 0, dotMargin, 0)
+                        dot.layoutParams = lp
+                        dot.alpha = if (i == 0) 1f else 0.35f
+                        heroDots.addView(dot)
+                    }
+                    heroPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+                        override fun onPageSelected(position: Int) {
+                            for (i in 0 until heroDots.childCount) {
+                                heroDots.getChildAt(i).alpha = if (i == position) 1f else 0.35f
+                            }
+                            tvMediaCounter.text = "${position + 1}/${heroDots.childCount}"
+                        }
+                    })
+                    tvMediaCounter.text = "1/${it.media.size}"
+                    tvMediaCounter.visibility = View.VISIBLE
+                } else {
+                    heroPager.visibility = View.GONE
+                    view.findViewById<View>(R.id.cvHeroMedia)?.visibility = View.GONE
                 }
 
                 // Karte in beiden Modi mit Position versorgen (inline + fullscreen)

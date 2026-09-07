@@ -12,8 +12,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
@@ -52,7 +50,6 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
         val tvDate = view.findViewById<TextView>(R.id.tvDetailDate)
         val tvNotes = view.findViewById<TextView>(R.id.tvDetailNotes)
         val cvNotes = view.findViewById<MaterialCardView>(R.id.cvDetailNotes)
-        val rvMedia = view.findViewById<RecyclerView>(R.id.rvDetailMedia)
         val appBar = view.findViewById<AppBarLayout>(R.id.appBar)
         // Hero-Galerie (fancy Bildershow statt Karte)
         val heroPager = view.findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.heroMediaPager)
@@ -74,7 +71,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             }
             // Inline: keinen eigenen WebGL-Kontext starten — der Feed-Globe zeigt den Ort,
             // der Zoom passiert nach dem Laden des Entries (siehe Lade-Block unten).
-            view.findViewById<View>(R.id.drag_handle)?.visibility = View.GONE
+            // Drag-Handle bleibt sichtbar: signalisiert, dass das Sheet ziehbar ist
             // Increase top padding to account for missing appBar space if needed
             view.findViewById<View>(R.id.llDetailContent)?.setPadding(
                 (16 * resources.displayMetrics.density).toInt(),
@@ -135,18 +132,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                 val sdf = SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
                 tvDate.text = sdf.format(Date(e.date))
 
-                rvMedia.layoutManager = GridLayoutManager(requireContext(), 3)
-                rvMedia.adapter = DetailMediaAdapter(e.media) { path, transitionView ->
-                    val dialog = MediaDialogFragment().apply {
-                        arguments = Bundle().apply {
-                            putStringArrayList("mediaPaths", ArrayList(e.media))
-                            putInt("initialPosition", e.media.indexOf(path))
-                        }
-                    }
-                    dialog.show(parentFragmentManager, "MediaFullscreen")
-                }
-
-                // Hero-Galerie: fancy Bildershow mit Dots + Zähler
+                // Hero-Galerie: fancy Bildershow mit Dots + Zähler (einzige Medien-Ansicht)
                 if (e.media.isNotEmpty()) {
                     heroPager.adapter = HeroMediaAdapter(e.media) { path ->
                         val dialog = MediaDialogFragment().apply {

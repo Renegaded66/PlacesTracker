@@ -153,10 +153,11 @@
                                     android:scaleType="centerCrop"
                                     android:src="@drawable/vorschaubild" />
 
+                                <!-- Verlauf statt flachem Overlay: Titel bleibt lesbar, Bild wirkt hochwertiger -->
                                 <View
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:background="#30000000" />
+                                    android:background="@drawable/bg_feed_card_gradient" />
 
                             </FrameLayout>
 

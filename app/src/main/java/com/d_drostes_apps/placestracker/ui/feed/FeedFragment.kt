@@ -165,6 +165,30 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
         // Sichtbarkeit: nur wenn ein Detail offen ist
         detailContainer.visibility = View.GONE
+
+        // 🌟 Globe bewegt sich dynamisch mit dem Sheet (GPU-Transformation, kein Layout-Resize):
+        // Beim Hochziehen schiebt sich der Globe-Container nach unten und schrumpft leicht —
+        // so bleibt die Karte immer sichtbar und interaktiv, ohne WebGL-Jank.
+        val globeContainer = view.findViewById<View>(R.id.globeContainer)
+        detailSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
+                    globeContainer.animate().translationY(0f).scaleX(1f).scaleY(1f).setDuration(250).start()
+                } else if (newState == BottomSheetBehavior.STATE_EXPANDED) {
+                    globeContainer.animate().translationY(globeContainer.height * 0.9f).scaleX(0.85f).scaleY(0.85f).setDuration(250).start()
+                }
+            }
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                // slideOffset: -1 (EXPANDED) .. 0 (COLLAPSED) .. 1 (HIDDEN)
+                val progress = -slideOffset.coerceIn(-1f, 0f) // 0 = collapsed, 1 = expanded
+                val maxShift = if (globeContainer.height > 0) globeContainer.height * 0.9f else 0f
+                globeContainer.translationY = maxShift * progress
+                val scale = 1f - 0.15f * progress
+                globeContainer.scaleX = scale
+                globeContainer.scaleY = scale
+            }
+        })
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -870,8 +894,9 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         detailContainer.visibility = View.VISIBLE
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.GONE
 
-        // Sheet auf COLLAPSED (Globe voll sichtbar) — User kann hochziehen (HALF/EXPANDED)
-        detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+        // Sheet auf COLLAPSED (Globe voll sichtbar) — User kann hochziehen (HALF/EXPANDED).
+        // post(): erst nach dem Layout-Pass setzen, sonst springt das Sheet.
+        detailContainer.post { detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED }
         
         val transaction = childFragmentManager.beginTransaction()
             .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
@@ -893,6 +918,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         feedListLayout.visibility = View.VISIBLE
         detailContainer.visibility = View.GONE
         detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+        // Globe-Transformation zurücksetzen (falls onStateChanged nicht feuert)
+        view?.findViewById<View>(R.id.globeContainer)?.let { globe ->
+            globe.translationY = 0f
+            globe.scaleX = 1f
+            globe.scaleY = 1f
+        }
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.VISIBLE
         val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
         if (fragment != null) {
