@@ -94,9 +94,10 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
         // Lade-Icon anzeigen
         progressBar.visibility = View.VISIBLE
 
-        tvTripCount.text = trips.size.toString()
-        tvEntryCount.text = entries.size.toString()
-        tvStopCount.text = stops.size.toString()
+        // Wow-Moment: Zahlen zählen sichtbar hoch statt sofort zu stehen (nur bei Wertänderung).
+        animateStatCount(tvTripCount, trips.size)
+        animateStatCount(tvEntryCount, entries.size)
+        animateStatCount(tvStopCount, stops.size)
 
         // 🌟 FIX: Alle schweren Aufgaben im Hintergrund-Thread ausführen!
         lifecycleScope.launch(Dispatchers.IO) {
@@ -111,7 +112,7 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
                 val countryCount = countries.size
                 val percentage = (countryCount.toFloat() / 195f * 100f).toInt()
 
-                tvCountryCount.text = countryCount.toString()
+                animateStatCount(tvCountryCount, countryCount)
                 tvCountryPercentage.text = "$percentage%"
                 progressCountries.setProgress(percentage, true)
 
@@ -437,5 +438,12 @@ class StatisticsFragment : Fragment(R.layout.fragment_statistics) {
             }
         }
         return totalDist
+    }
+
+    /** Zählt nur neu hoch, wenn sich der Wert ändert — Flow-Refetches lassen die Zahl ruhig stehen. */
+    private fun animateStatCount(textView: TextView, target: Int) {
+        val current = textView.text.toString().toIntOrNull() ?: -1
+        if (current == target) return
+        com.d_drostes_apps.placestracker.utils.MicroInteractions.countUp(textView, target)
     }
 }

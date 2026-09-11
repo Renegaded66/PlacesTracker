@@ -146,6 +146,12 @@ class FeedAdapter(
         context.theme.resolveAttribute(MaterialR.attr.colorOnPrimary, typedValue, true)
         val activeColor = currentThemeColor ?: typedValue.data
 
+        // Staggered Entrance: neue Items sliden gestaffelt ein (Feed wirkt lebendig wie in Social-Apps).
+        // Nur beim ersten Binden — Recycled-Views (rebind ohne Layout) springen nicht erneut.
+        if (!holder.itemView.isLaidOut || holder.itemView.translationY != 0f) {
+            com.d_drostes_apps.placestracker.utils.MicroInteractions.slideUpIn(holder.itemView, position)
+        }
+
         // Apply shapes only in Standard/Diary mode
         if (currentViewMode == ViewMode.STANDARD) {
             val radiusNormal = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 28f, context.resources.displayMetrics)

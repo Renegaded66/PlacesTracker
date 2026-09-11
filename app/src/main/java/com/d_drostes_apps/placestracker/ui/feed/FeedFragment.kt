@@ -120,6 +120,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val btnEmptyAddExperience = view.findViewById<MaterialButton>(R.id.btnEmptyAddExperience)
 
         btnEmptyAddExperience.setOnClickListener {
+            com.d_drostes_apps.placestracker.utils.Feedback.tick(btnEmptyAddExperience)
             findNavController().navigate(R.id.newEntryFragment)
         }
 
@@ -415,7 +416,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val dialog = AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
             .setTitle(R.string.auto_trip_default_title)
             .setMessage(getString(R.string.auto_trip_confirm_msg, uris.size))
-            .setPositiveButton(R.string.yes_create) { _, _ -> 
+            .setPositiveButton(R.string.yes_create) { _, _ ->
                 createAutoTrip(uris)
                 selectedAutoTripUris.clear()
             }
@@ -436,7 +437,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     private fun createAutoTrip(uris: List<Uri>) {
-        val progressDialog = AlertDialog.Builder(requireContext()).setMessage("Bilder werden verarbeitet...").setCancelable(false).show()
+        val progressDialog = AlertDialog.Builder(requireContext()).setMessage(R.string.processing_images).setCancelable(false).show()
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -514,7 +515,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     withContext(Dispatchers.Main) {
                         if (progressDialog.isShowing) progressDialog.dismiss()
                         if (!isAdded) return@withContext
-                        Toast.makeText(requireContext(), "Keine gültigen Bilder gefunden.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), getString(R.string.no_valid_images), Toast.LENGTH_SHORT).show()
                     }
                     return@launch
                 }
@@ -561,7 +562,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 }
 
                 val firstDate = imageDataList.first().second
-                val tripId = tripDao.insertTrip(Trip(title = "Automatische Reise", date = firstDate, coverImage = imageDataList.first().first)).toInt()
+                val tripId = tripDao.insertTrip(Trip(title = getString(R.string.import_trip_title), date = firstDate, coverImage = imageDataList.first().first)).toInt()
 
                 val geocoder = Geocoder(requireContext(), Locale.getDefault())
                 val sdf = SimpleDateFormat("dd.MM.yy", Locale.getDefault())
@@ -608,7 +609,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     if (!isAdded) return@withContext
                     findNavController().navigate(R.id.newTripFragment, Bundle().apply {
                         putInt("tripId", tripId)
-                        putString("title", "Automatische Reise bearbeiten")
+                        putString("title", getString(R.string.import_trip_edit_title))
                     })
                 }
             } catch (e: Exception) {
@@ -695,7 +696,17 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             
             currentFilteredItems = filtered
             adapter?.updateItems(filtered)
-            feedEmptyState.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
+            if (filtered.isEmpty()) {
+                // Empty State sanft einblenden; 🌍 atmet (lebensnah statt statisch)
+                if (feedEmptyState.visibility != View.VISIBLE) {
+                    com.d_drostes_apps.placestracker.utils.MicroInteractions.fadeIn(feedEmptyState, 300)
+                    feedEmptyState.findViewById<View>(R.id.tvEmptyGlobe)?.let {
+                        com.d_drostes_apps.placestracker.utils.MicroInteractions.popIn(it, 150)
+                    }
+                }
+            } else {
+                feedEmptyState.visibility = View.GONE
+            }
             updateGlobeData()
         }
     }
@@ -991,8 +1002,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 radioTrip.isChecked -> showTripSelectionDialog()
             }
         }
-
-        dialog.show()
+        // show() nur einmal — der zweite Aufruf unten war ein Bug (Doppelnutzung desselben Dialogs)
     }
 
     private fun showTripSelectionDialog() {
@@ -1034,6 +1044,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
 
         fabAdd.setOnClickListener {
+            com.d_drostes_apps.placestracker.utils.Feedback.tick(fabAdd)
             if (isFabMenuOpen) {
                 closeFabMenu(fabAdd, layouts)
             } else {
@@ -1051,7 +1062,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.help_title))
             .setMessage(getString(R.string.help_content))
-            .setPositiveButton("Verstanden", null)
+            .setPositiveButton(getString(R.string.understood), null)
             .show()
     }
 

@@ -73,7 +73,7 @@ class FriendFeedFragment : Fragment(R.layout.fragment_friend_feed) {
     }
 
     private fun loadSupabaseFeed(userId: String, tvUsername: TextView, tvInfo: TextView, ivProfile: ShapeableImageView) {
-        tvUsername.text = "Live von Supabase"
+        tvUsername.text = getString(R.string.live_from_supabase)
         viewLifecycleOwner.lifecycleScope.launch {
             val trips = supabaseManager.getFriendTrips(userId)
             val entries = supabaseManager.getFriendEntries(userId)

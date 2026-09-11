@@ -64,7 +64,7 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
     private fun performBackup(uri: Uri) {
         lifecycleScope.launch {
             try {
-                showProgress(true, "Backup wird erstellt...")
+                showProgress(true, getString(R.string.creating_backup))
                 withContext(Dispatchers.IO) {
                     val context = requireContext()
                     val dataDir = context.applicationInfo.dataDir
@@ -107,9 +107,9 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                         }
                     }
                 }
-                Toast.makeText(requireContext(), "Backup erfolgreich erstellt", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.backup_ok), Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Fehler beim Backup: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.backup_err, e.message ?: ""), Toast.LENGTH_LONG).show()
             } finally {
                 showProgress(false, "")
             }
@@ -119,7 +119,7 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
     private fun performRestore(uri: Uri) {
         lifecycleScope.launch {
             try {
-                showProgress(true, "Daten werden wiederhergestellt...")
+                showProgress(true, getString(R.string.restoring_data))
                 withContext(Dispatchers.IO) {
                     val context = requireContext()
                     val dataDir = context.applicationInfo.dataDir
@@ -159,10 +159,10 @@ class BackupFragment : Fragment(R.layout.fragment_backup) {
                     }
                 }
 
-                Toast.makeText(requireContext(), "Wiederherstellung erfolgreich. App wird neu gestartet...", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.restore_ok), Toast.LENGTH_LONG).show()
                 restartApp()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Fehler bei Wiederherstellung: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.restore_err, e.message ?: ""), Toast.LENGTH_LONG).show()
                 showProgress(false, "")
             }
         }

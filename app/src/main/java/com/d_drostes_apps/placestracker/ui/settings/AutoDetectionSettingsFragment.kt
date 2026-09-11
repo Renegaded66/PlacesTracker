@@ -53,7 +53,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
         val allGranted = permissions.entries.all { it.value }
         if (!allGranted) {
             switchAutoGallery.isChecked = false
-            Toast.makeText(requireContext(), "Berechtigungen für Galerie-Zugriff erforderlich", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.err_perm_gallery), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -65,7 +65,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)) {
             fetchCurrentLocation()
         } else {
-            Toast.makeText(requireContext(), "Standortberechtigung wird benötigt.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.err_perm_location), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -132,7 +132,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
 
         btnSave.setOnClickListener {
             if (selectedLat == null || selectedLon == null) {
-                Toast.makeText(requireContext(), "Bitte markiere erst dein Zuhause auf der Karte!", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.err_home_missing), Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
@@ -158,7 +158,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
                 if (isEnabled) GalleryScanWorker.enqueue(requireContext())
                 else GalleryScanWorker.stop(requireContext())
 
-                Toast.makeText(requireContext(), "Einstellungen gespeichert", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_saved), Toast.LENGTH_SHORT).show()
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }
         }
@@ -186,7 +186,7 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
                 // Globus anweisen, dorthin zu fliegen und den Punkt zu setzen!
                 webView.evaluateJavascript("javascript:if(window.setLocation) window.setLocation(${location.latitude}, ${location.longitude});", null)
             } else {
-                Toast.makeText(requireContext(), "Standort konnte nicht ermittelt werden. Ist GPS aktiviert?", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.err_gps), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -259,6 +259,6 @@ class AutoDetectionSettingsFragment : Fragment(R.layout.fragment_auto_detection_
     private fun updateCoordsText() {
         if (selectedLat != null && selectedLon != null) {
             tvHomeCoords.text = String.format(Locale.getDefault(), "Lat: %.4f, Lon: %.4f", selectedLat, selectedLon)
-        } else tvHomeCoords.text = "Kein Standort festgelegt"
+        } else tvHomeCoords.text = getString(R.string.no_location_set)
     }
 }

@@ -249,7 +249,6 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PageViewHolder {
             val rv = RecyclerView(parent.context).apply {
-                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 layoutManager = LinearLayoutManager(context)
                 setPadding(16, 16, 16, 200)
                 clipToPadding = false
@@ -263,11 +262,67 @@ class BucketListFragment : Fragment(R.layout.fragment_bucket_list) {
 
         override fun getItemCount() = 3
 
-        inner class PageViewHolder(private val rv: RecyclerView) : RecyclerView.ViewHolder(rv) {
+        inner class PageViewHolder(rv: RecyclerView) : RecyclerView.ViewHolder(buildPageContainer(rv)) {
             private val adapter = BucketAdapter(onToggle, onEdit, onDelete)
-            init { rv.adapter = adapter }
+            private val emptyView: android.widget.LinearLayout
+            private val listRv: RecyclerView
+
+            init {
+                val container = itemView as android.widget.FrameLayout
+                listRv = container.getChildAt(0) as RecyclerView
+                emptyView = container.getChildAt(1) as android.widget.LinearLayout
+                listRv.adapter = adapter
+            }
+
             fun bind(data: List<BucketItem>) {
                 adapter.submitList(data)
+                // Empty State pro Tab statt weißer Leere — direkter Call-to-Action bleibt der FAB.
+                if (data.isEmpty()) {
+                    emptyView.alpha = 0f
+                    emptyView.visibility = View.VISIBLE
+                    emptyView.animate().alpha(1f).setDuration(300).start()
+                } else {
+                    emptyView.visibility = View.GONE
+                }
+            }
+        }
+
+        /** RecyclerView + Empty-State-Overlay in einem Container (itemView des Pagers). */
+        private fun buildPageContainer(rv: RecyclerView): android.widget.FrameLayout {
+            val ctx = rv.context
+            val emptyView = android.widget.LinearLayout(ctx).apply {
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                gravity = android.view.Gravity.CENTER
+                orientation = android.widget.LinearLayout.VERTICAL
+                visibility = View.GONE
+                val title = android.widget.TextView(ctx).apply {
+                    text = ctx.getString(R.string.bucket_empty_title)
+                    textSize = 22f
+                    paint.isFakeBoldText = true
+                    setPadding(48, 24, 48, 8)
+                    gravity = android.view.Gravity.CENTER
+                }
+                val desc = android.widget.TextView(ctx).apply {
+                    text = ctx.getString(R.string.bucket_empty_desc)
+                    textSize = 15f
+                    setPadding(48, 0, 48, 48)
+                    gravity = android.view.Gravity.CENTER
+                    alpha = 0.7f
+                }
+                addView(title)
+                addView(desc)
+            }
+            return android.widget.FrameLayout(ctx).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                rv.layoutParams = android.widget.FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                addView(rv)
+                addView(emptyView)
             }
         }
     }
@@ -381,7 +436,7 @@ class BucketAdapter(
         fun bind(item: BucketItem) {
             tvTitle.text = item.title
             tvType.text = if (item.isTrip) itemView.context.getString(R.string.bucket_type_trip) else itemView.context.getString(R.string.bucket_type_experience)
-            
+
             if (item.date != null) {
                 tvDate.text = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(item.date))
                 tvDate.visibility = View.VISIBLE
@@ -399,10 +454,28 @@ class BucketAdapter(
             overlay.visibility = if (item.isCompleted) View.VISIBLE else View.GONE
             checkIcon.visibility = if (item.isCompleted) View.VISIBLE else View.GONE
 
-            cbCompleted.setOnClickListener { onToggle(item) }
+            // Completion = Engagement-Moment: Haptik + Check-Icon popped ein, Overlay blendet weich.
+            cbCompleted.setOnClickListener {
+                com.d_drostes_apps.placestracker.utils.Feedback.confirm(it)
+                val wasCompleted = item.isCompleted
+                if (!wasCompleted) {
+                    checkIcon.animate().scaleX(0f).scaleY(0f).setDuration(0).start()
+                    checkIcon.visibility = View.VISIBLE
+                    checkIcon.animate().scaleX(1f).scaleY(1f).setDuration(260)
+                        .setInterpolator(android.view.animation.OvershootInterpolator(1.8f)).start()
+                    overlay.alpha = 0f
+                    overlay.visibility = View.VISIBLE
+                    overlay.animate().alpha(1f).setDuration(220).start()
+                } else {
+                    checkIcon.visibility = View.GONE
+                    overlay.visibility = View.GONE
+                    overlay.alpha = 1f
+                }
+                onToggle(item)
+            }
             btnDelete.setOnClickListener { onDelete(item) }
             btnEdit.setOnClickListener { onEdit(item) }
-            
+
             itemView.setOnClickListener { onEdit(item) }
         }
     }
