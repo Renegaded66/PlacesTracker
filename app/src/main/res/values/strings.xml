@@ -423,4 +423,7 @@
     <string name="transport_train">Zug</string>
     <string name="transport_walk">Zu Fuß</string>
     <string name="transport_none">Keines</string>
+
+    <!-- Trip-Detail Hero -->
+    <string name="trip_stats_format">%1$d Tage · %2$d Stops · %3$d Länder · %4$d km</string>
 </resources>

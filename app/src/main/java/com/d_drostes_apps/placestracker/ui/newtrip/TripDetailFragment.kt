@@ -146,21 +146,25 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
         if (isInline) {
             view.findViewById<View>(R.id.mapContainer)?.visibility = View.GONE
-            view.findViewById<View>(R.id.dragHandle)?.visibility = View.GONE
 
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
                 (parentFragment as? FeedFragment)?.handleBack()
             }
 
+            // Inline läuft TripDetail IM äußeren Detail-BottomSheet des Dashboards
+            // (FeedFragment.detailSheetBehavior — ziehbar: runter = Globe, hoch = fullscreen).
+            // Das innere bottomSheetTrip-Sheet darf NICHT selbst ein Behavior haben: Es würde
+            // alle Drags abfangen, das äußere Sheet nie erreichen und den Globus verdecken.
             try {
                 val behavior = BottomSheetBehavior.from(bottomSheet)
                 behavior.isDraggable = false
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
             } catch (e: Exception) {}
-
+            // Inneres Behavior neutralisieren: EXPANDED + Höhe fixiert, kein Nested-Slave
+            (bottomSheet?.layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)
+                ?.behavior = null
             bottomSheet?.elevation = 0f
-            nestedScroll.setPadding(0, 0, 0, (100 * resources.displayMetrics.density).toInt())
         } else {
             mapboxWebView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             if (mapboxWebView != null) setupCesiumWebView()
@@ -453,7 +457,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         }
 
                         val km = (distance / 1000).toInt()
-                        tvTripStats.text = "${days} Tage · ${stopCount} Stops · ${countries.size} Länder · ${km} km"
+                        tvTripStats.text = getString(R.string.trip_stats_format, days, stopCount, countries.size, km)
                     }
                 }
 

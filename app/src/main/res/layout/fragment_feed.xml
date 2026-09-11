@@ -6,33 +6,37 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- Vertikale Struktur: Globe oben fixiert, Liste scrollt darunter -->
+    <!-- 🌍 Globe fullscreen im Hintergrund: Der WebView füllt die ganze Fläche.
+         Das Feed-Sheet (ziehbar!) liegt darüber und deckt ihn je nach Zustand mehr
+         oder weniger ab. Beim Runterziehen auf HIDDEN wird der Globus komplett sichtbar. -->
+    <FrameLayout
+        android:id="@+id/globeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <WebView
+            android:id="@+id/feedCesiumWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <!-- 📋 Feed-Sheet als echtes BottomSheet (direktes Kind des CoordinatorLayout):
+         COLLAPSED (Peek 38%) = Standard-Ansicht, Globe oben sichtbar
+         Runterziehen         = HIDDEN → Globe fullscreen
+         Hochziehen           = HALF/EXPANDED → Liste fullscreen
+         Beim Wischen folgt der Globe dynamisch der Sheet-Kante (Resize wie früher bewährt). -->
     <LinearLayout
+        android:id="@+id/feedListLayout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <!-- Karten-Container: 38% der Höhe, bleibt beim Scrollen sichtbar -->
-        <FrameLayout
-            android:id="@+id/globeContainer"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="0.38">
-
-            <WebView
-                android:id="@+id/feedCesiumWebView"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-        </FrameLayout>
-
-        <!-- Listen-Container: 62% der Höhe, scrollt normal -->
-        <LinearLayout
-            android:id="@+id/feedListLayout"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="0.62"
-            android:orientation="vertical"
-            android:background="@drawable/bg_feed_bottom_sheet">
+        android:orientation="vertical"
+        android:background="@drawable/bg_feed_bottom_sheet"
+        app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+        app:behavior_peekHeight="280dp"
+        app:behavior_halfExpandedRatio="0.2"
+        app:behavior_hideable="true"
+        app:behavior_skipCollapsed="false"
+        app:behavior_fitToContents="false">
 
             <!-- Live-Tracking Banner: sofort sichtbar, wenn eine Reise aufgezeichnet wird -->
             <LinearLayout
@@ -324,7 +328,6 @@
                 </LinearLayout>
             </FrameLayout>
         </LinearLayout>
-    </LinearLayout>
 
     <!-- Detail-Ansicht als ziehbares BottomSheet (DIREKTES Kind des CoordinatorLayout, damit
          layout_behavior greift):

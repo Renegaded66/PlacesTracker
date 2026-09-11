@@ -136,11 +136,19 @@
                         android:paddingHorizontal="16dp"
                         android:paddingBottom="100dp">
 
+                    <!-- 🌄 Hero: großes Titelbild mit Scrim, Titel + Stats direkt drauf -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cvTripHeroCard"
+                        android:layout_width="match_parent"
+                        android:layout_height="240dp"
+                        android:layout_marginTop="4dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardElevation="6dp">
+
                         <FrameLayout
                             android:id="@+id/cvTripHero"
                             android:layout_width="match_parent"
-                            android:layout_height="210dp"
-                            android:layout_marginTop="8dp">
+                            android:layout_height="match_parent">
 
                             <FrameLayout
                                 android:layout_width="match_parent"
@@ -153,35 +161,51 @@
                                     android:scaleType="centerCrop"
                                     android:src="@drawable/vorschaubild" />
 
-                                <!-- Verlauf statt flachem Overlay: Titel bleibt lesbar, Bild wirkt hochwertiger -->
+                                <!-- Scrim: unten dunkel, damit Titel+Stats lesbar bleiben -->
                                 <View
                                     android:layout_width="match_parent"
                                     android:layout_height="match_parent"
-                                    android:background="@drawable/bg_feed_card_gradient" />
+                                    android:background="@drawable/bg_trip_hero_scrim" />
 
                             </FrameLayout>
 
+                            <!-- Titel + Stats über dem Bild (App-Feel wie moderne Reiseservices) -->
+                            <LinearLayout
+                                android:id="@+id/heroTextBlock"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="bottom"
+                                android:orientation="vertical"
+                                android:paddingHorizontal="18dp"
+                                android:paddingBottom="16dp">
+
+                                <TextView
+                                    android:id="@+id/tvTripDetailTitle"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    android:textColor="#FFFFFF"
+                                    android:shadowColor="#80000000"
+                                    android:shadowRadius="8"
+                                    android:maxLines="2"
+                                    android:ellipsize="end"
+                                    tools:text="Sommerurlaub 2024" />
+
+                                <TextView
+                                    android:id="@+id/tvTripStats"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:textColor="#D9FFFFFF"
+                                    android:textSize="14sp"
+                                    tools:text="5 Tage · 8 Stops · 3 Länder · 1240 km" />
+                            </LinearLayout>
+
                         </FrameLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
-                        <TextView
-                            android:id="@+id/tvTripDetailTitle"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:textSize="32sp"
-                            android:textStyle="bold"
-                            tools:text="Sommerurlaub 2024" />
-
-                        <TextView
-                            android:id="@+id/tvTripStats"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:textColor="?android:attr/textColorSecondary"
-                            android:textSize="14sp"
-                            tools:text="5 Tage · 8 Stops · 3 Länder · 1240 km" />
-
-                        <com.google.android.material.chip.ChipGroup
+                    <com.google.android.material.chip.ChipGroup
                             android:id="@+id/chipGroupTripPeopleDetail"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"

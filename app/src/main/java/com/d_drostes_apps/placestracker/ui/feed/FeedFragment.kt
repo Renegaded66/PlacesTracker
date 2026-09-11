@@ -150,16 +150,16 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         recycler = view.findViewById(R.id.feedRecycler)
 
-        // Detail-Ansicht als ziehbares BottomSheet:
-        // COLLAPSED (Peek = 62% Bildschirmhöhe) = Globe voll sichtbar
-        // HALF (80%) = Globe ein bisschen sichtbar
-        // EXPANDED (100%) = Globe komplett verdeckt
+        // Detail-Ansicht als ziehbares BottomSheet (über dem Feed-Sheet):
+        // COLLAPSED (Peek 38%) = Globe oben voll sichtbar, Detail-Inhalt darunter
+        // HALF/EXPANDED        = Detail-Inhalt fullscreen
+        // Runterziehen (HIDDEN)= Detail schließt sich → zurück zum Feed
         detailContainer = view.findViewById(R.id.detailFragmentContainer)
         detailSheetBehavior = BottomSheetBehavior.from(detailContainer).apply {
-            isHideable = false
-            // 62% der Bildschirmhöhe = gleiche Position wie die Feed-Liste (Globe 38% voll sichtbar)
-            peekHeight = (resources.displayMetrics.heightPixels * 0.62f).toInt()
-            halfExpandedRatio = 0.8f
+            isHideable = true
+            // 38% der Bildschirmhöhe → identische Kante wie das Feed-Sheet; Globe bleibt oben frei
+            peekHeight = (resources.displayMetrics.heightPixels * 0.38f).toInt()
+            halfExpandedRatio = 0.5f
             isFitToContents = false
             skipCollapsed = false
             state = BottomSheetBehavior.STATE_COLLAPSED
@@ -167,29 +167,56 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         // Sichtbarkeit: nur wenn ein Detail offen ist
         detailContainer.visibility = View.GONE
 
-        // 🌟 Globe bewegt sich dynamisch mit dem Sheet (GPU-Transformation, kein Layout-Resize):
-        // Beim Hochziehen schiebt sich der Globe-Container nach unten und schrumpft leicht —
-        // so bleibt die Karte immer sichtbar und interaktiv, ohne WebGL-Jank.
-        val globeContainer = view.findViewById<View>(R.id.globeContainer)
-        detailSheetBehavior?.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+        // 🌟 Der Globe füllt den ganzen Bildschirm hinter den Sheets. Der WebView folgt
+        // dynamisch der unteren Sheet-Kante (Resize wie früher bewährt — ohne WebGL-Jank,
+        // da Cesium mit requestRender nur bei tatsächlichen Größenänderungen rendert).
+        // Beide Sheets (Feed-Liste + Detail) teilen sich einen Callback.
+        val feedSheetBehavior = BottomSheetBehavior.from(view.findViewById(R.id.feedListLayout))
+
+        fun syncGlobeToSheetTop(sheetTop: Int) {
+            val lp = cesiumWebView.layoutParams
+            if (lp != null && lp.height != sheetTop && sheetTop > 0) {
+                lp.height = sheetTop
+                cesiumWebView.layoutParams = lp
+            }
+        }
+
+        val globeSync = object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
-                if (newState == BottomSheetBehavior.STATE_COLLAPSED) {
-                    globeContainer.animate().translationY(0f).scaleX(1f).scaleY(1f).setDuration(250).start()
-                } else if (newState == BottomSheetBehavior.STATE_EXPANDED) {
-                    globeContainer.animate().translationY(globeContainer.height * 0.9f).scaleX(0.85f).scaleY(0.85f).setDuration(250).start()
-                }
+                syncGlobeToSheetTop(bottomSheet.top)
+                // FABs ausblenden, wenn der Globus fullscreen ist
+                view?.findViewById<View>(R.id.fabContainer)?.visibility =
+                    if (newState == BottomSheetBehavior.STATE_HIDDEN) View.GONE else View.VISIBLE
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                // slideOffset: -1 (EXPANDED) .. 0 (COLLAPSED) .. 1 (HIDDEN)
-                val progress = -slideOffset.coerceIn(-1f, 0f) // 0 = collapsed, 1 = expanded
-                val maxShift = if (globeContainer.height > 0) globeContainer.height * 0.9f else 0f
-                globeContainer.translationY = maxShift * progress
-                val scale = 1f - 0.15f * progress
-                globeContainer.scaleX = scale
-                globeContainer.scaleY = scale
+                syncGlobeToSheetTop(bottomSheet.top)
+            }
+        }
+        feedSheetBehavior.addBottomSheetCallback(globeSync)
+        detailSheetBehavior?.addBottomSheetCallback(globeSync)
+
+        // Feed-Sheet auf COLLAPSED (Peek) starten: Liste unten, Globe oben sichtbar
+        feedSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        view.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                val sheetTop = view.findViewById<View>(R.id.feedListLayout).top
+                if (sheetTop > 0) {
+                    view.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    syncGlobeToSheetTop(sheetTop)
+                }
             }
         })
+
+        // Rückkehr aus Globe-Fullscreen: Tippen auf den freigelegten Globus oder ein
+        // kleiner "Feed anzeigen"-Griff holt die Liste zurück.
+        view.findViewById<View>(R.id.globeContainer)?.setOnClickListener {
+            if (feedSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                feedSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            } else if (detailContainer.isVisible && detailSheetBehavior?.state == BottomSheetBehavior.STATE_HIDDEN) {
+                detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+            }
+        }
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -970,7 +997,8 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         detailContainer.visibility = View.VISIBLE
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.GONE
 
-        // Sheet auf COLLAPSED (Globe voll sichtbar) — User kann hochziehen (HALF/EXPANDED).
+        // Detail-Sheet auf COLLAPSED (Peek 38%: Globe oben frei, Inhalt unten) —
+        // User kann hochziehen (HALF/EXPANDED) oder runterziehen (HIDDEN = schließen).
         // post(): erst nach dem Layout-Pass setzen, sonst springt das Sheet.
         detailContainer.post { detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED }
         
@@ -994,12 +1022,18 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         feedListLayout.visibility = View.VISIBLE
         detailContainer.visibility = View.GONE
         detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
-        // Globe-Transformation zurücksetzen (falls onStateChanged nicht feuert)
-        view?.findViewById<View>(R.id.globeContainer)?.let { globe ->
-            globe.translationY = 0f
-            globe.scaleX = 1f
-            globe.scaleY = 1f
-        }
+        // Feed-Sheet zurück auf Peek (Globe oben sichtbar) + WebView-Größe synchronisieren
+        try {
+            val feedBehavior = BottomSheetBehavior.from(feedListLayout)
+            feedBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            feedListLayout.post {
+                if (isAdded && cesiumWebView.isAttachedToWindow) {
+                    val lp = cesiumWebView.layoutParams
+                    lp.height = feedListLayout.top
+                    cesiumWebView.layoutParams = lp
+                }
+            }
+        } catch (_: Exception) {}
         view?.findViewById<View>(R.id.fabContainer)?.visibility = View.VISIBLE
         val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
         if (fragment != null) {

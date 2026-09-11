@@ -423,4 +423,7 @@
     <string name="transport_train">Train</string>
     <string name="transport_walk">Walk</string>
     <string name="transport_none">None</string>
+
+    <!-- Trip-Detail Hero -->
+    <string name="trip_stats_format">%1$d days · %2$d stops · %3$d countries · %4$d km</string>
 </resources>
