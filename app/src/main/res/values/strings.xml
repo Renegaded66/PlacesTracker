@@ -53,7 +53,6 @@
     <string name="no_coordinates">Keine Koordinaten</string>
     <string name="media">Medien</string>
     <string name="add_trip_cover">Reisebild hinzufügen</string>
-    <string name="trip_title_hint">Titel des Trips</string>
     <string name="auto_trip_switch">Automatische Reise</string>
     <string name="timepoints_stations">Zeitpunkte / Stationen</string>
     <string name="add_another_timepoint">Weiteren Zeitpunkt hinzufügen</string>
@@ -159,7 +158,6 @@
     <string name="select_countries">Länder wählen</string>
     <string name="filter">Filtern</string>
     <string name="deselect_all">Alle abwählen</string>
-    <string name="understood">Verstanden</string>
     <string name="edit_auto_trip">Automatische Reise bearbeiten</string>
     <string name="no_countries_visited">Noch keine Länder besucht</string>
     <string name="your_year">Dein Jahr %1$d</string>
@@ -181,7 +179,6 @@
     <string name="stop_saved">Stopp gespeichert</string>
 
     <string name="cancel">Abbrechen</string>
-    <string name="yes_create">Ja, erstellen</string>
     <string name="pick_color_title">Farbe wählen</string>
 
     <string name="all">Alle</string>
@@ -209,7 +206,6 @@
     <string name="mark_home_instruction">Bitte markiere erst dein Zuhause auf der Karte!</string>
     <string name="settings_saved">Einstellungen gespeichert</string>
     <string name="location_error_gps">Standort konnte nicht ermittelt werden. Ist GPS aktiviert?</string>
-    <string name="no_location_set">Kein Standort festgelegt</string>
     <string name="profile_saved">Profil gespeichert</string>
     <string name="enter_name_error">Bitte gib einen Namen ein</string>
 
@@ -329,7 +325,6 @@
     <string name="trip_selection_tracker_desc">Tracke live deine Reise während du unterwegs bist.</string>
     <string name="trip_selection_auto">Fertige Reise</string>
     <string name="trip_selection_auto_desc">Füge Bilder mit Standortdaten hinzu, um eine fertig zusammengestellte Reise zu erhalten.</string>
-    <string name="add_more_images">Mehr Bilder hinzufügen</string>
 
     <string name="plus_symbol">+</string>
 
@@ -370,4 +365,62 @@
     <string name="trip_section_period">Zeitraum</string>
     <string name="trip_end_set">Enddatum setzen</string>
     <string name="stop_saved_title">Gespeichert</string>
+
+    <!-- UX Polish: Engagement & Micro-Interactions -->
+    <string name="action_save">Speichern</string>
+    <string name="action_saving">Speichern…</string>
+    <string name="action_saved">✓ Gespeichert</string>
+    <string name="action_save_changes">Änderungen speichern</string>
+    <string name="add_time">Uhrzeit hinzufügen</string>
+    <string name="err_title_needed">Gib deinem Eintrag erst einen Titel</string>
+    <string name="err_stop_title_needed">Gib der Station erst einen Namen</string>
+    <string name="no_valid_images">Keine gültigen Bilder gefunden.</string>
+    <string name="location_applied">Standort übernommen</string>
+    <string name="trip_end_title">Reiseende</string>
+    <string name="trip_end_set_option">Enddatum festlegen</string>
+    <string name="trip_end_change_option">Enddatum ändern</string>
+    <string name="trip_end_remove_option">Enddatum entfernen</string>
+    <string name="mini_stop_delete_title">Mini-Stopp löschen?</string>
+    <string name="mini_stop_delete_msg">Dieser aufgezeichnete Zwischenpunkt wird dauerhaft gelöscht.</string>
+    <string name="transport_mode_pick_title">Transportmittel wählen</string>
+    <string name="transport_mode_apply_title">Transportmittel anwenden</string>
+    <string name="transport_mode_apply_msg">Soll dieses Transportmittel für den gesamten Trip übernommen werden?</string>
+    <string name="err_profile_needed">Bitte erstelle zuerst ein Profil</string>
+    <string name="err_location_permission">Location permission required</string>
+    <string name="err_perm_gallery">Berechtigungen für Galerie-Zugriff erforderlich</string>
+    <string name="err_perm_location">Standortberechtigung wird benötigt.</string>
+    <string name="err_home_missing">Bitte markiere erst dein Zuhause auf der Karte!</string>
+    <string name="err_gps">Standort konnte nicht ermittelt werden. Ist GPS aktiviert?</string>
+    <string name="no_location_set">Kein Standort festgelegt</string>
+    <string name="backup_ok">Backup erfolgreich erstellt</string>
+    <string name="backup_err">Fehler beim Backup: %1$s</string>
+    <string name="restore_ok">Wiederherstellung erfolgreich. App wird neu gestartet…</string>
+    <string name="restore_err">Fehler bei Wiederherstellung: %1$s</string>
+    <string name="live_from_supabase">Live von Supabase</string>
+    <string name="add_person_hint">Person hinzufügen</string>
+    <string name="cover_choose">Cover wählen</string>
+    <string name="trip_partner_hint">Reisepartner hinzufügen</string>
+    <string name="trip_title_hint">Name der Reise…</string>
+    <string name="trip_notes_hint">Beschreibung der Reise…</string>
+    <string name="trip_save">Reise speichern</string>
+    <string name="trip_header">Deine Reise</string>
+    <string name="stop_add">Station hinzufügen</string>
+    <string name="import_trip_title">Automatische Reise</string>
+    <string name="import_trip_edit_title">Automatische Reise bearbeiten</string>
+    <string name="import_confirm_msg">%1$d Bilder importieren und Stationen automatisch erstellen?</string>
+    <string name="yes_create">Ja, erstellen</string>
+    <string name="add_more_images">Mehr Bilder hinzufügen</string>
+    <string name="understood">Verstanden</string>
+    <string name="bucket_completed_hint">Abgehakt — findest du im Tab „Erledigt“</string>
+    <string name="bucket_empty_title">Worauf wartest du?</string>
+    <string name="bucket_empty_desc">Trage Orte, Trips und Träume ein, die du noch erleben willst.</string>
+    <string name="stats_await">Statistiken werden berechnet…</string>
+    <string name="onboarding_hint_title">Tipp: Ziehe das Panel nach oben</string>
+    <string name="onboarding_hint_desc">Der Globus bleibt oben — zieh das Sheet nach oben für Details, nach unten für die volle Weltkarte.</string>
+    <string name="transport_car">Auto</string>
+    <string name="transport_bike">Fahrrad</string>
+    <string name="transport_plane">Flugzeug</string>
+    <string name="transport_train">Zug</string>
+    <string name="transport_walk">Zu Fuß</string>
+    <string name="transport_none">Keines</string>
 </resources>

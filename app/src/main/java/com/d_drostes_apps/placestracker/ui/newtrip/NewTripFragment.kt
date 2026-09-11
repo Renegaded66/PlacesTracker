@@ -157,9 +157,10 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
 
         view.findViewById<View>(R.id.cardTripEndDate).setOnClickListener {
             // Bei gesetztem Enddatum: Long-Press-ähnliche Auswahl per Dialog
-            val options = if (tripEndDate == null) arrayOf("Enddatum festlegen") else arrayOf("Enddatum ändern", "Enddatum entfernen")
+            val options = if (tripEndDate == null) arrayOf(getString(R.string.trip_end_set_option))
+            else arrayOf(getString(R.string.trip_end_change_option), getString(R.string.trip_end_remove_option))
             androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
-                .setTitle("Reiseende")
+                .setTitle(getString(R.string.trip_end_title))
                 .setItems(options) { _, which ->
                     if (tripEndDate == null || which == 0) {
                         DatePickerDialog(requireContext(), { _, y, m, d ->
@@ -236,8 +237,8 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             onDeleteMiniStop = { location ->
                 // Sicherheitsfrage vor dem Löschen eines Mini-Stops
                 androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
-                    .setTitle("Mini-Stopp löschen?")
-                    .setMessage("Dieser aufgezeichnete Zwischenpunkt wird dauerhaft gelöscht.")
+                    .setTitle(getString(R.string.mini_stop_delete_title))
+                    .setMessage(getString(R.string.mini_stop_delete_msg))
                     .setPositiveButton(R.string.delete) { _, _ ->
                         lifecycleScope.launch {
                             tripDao.deleteLocation(location)
@@ -339,7 +340,11 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             val title = inputTitle.text.toString()
             val notes = inputNotes.text.toString()
             if (title.isBlank()) {
-                Toast.makeText(requireContext(), getString(R.string.title_required), Toast.LENGTH_SHORT).show()
+                // Inline-Feedback statt Toast: Shake + Haptik direkt am Feld
+                com.d_drostes_apps.placestracker.utils.Feedback.reject(inputTitle)
+                com.d_drostes_apps.placestracker.utils.Feedback.shake(inputTitle)
+                Toast.makeText(requireContext(), getString(R.string.err_title_needed), Toast.LENGTH_SHORT).show()
+                inputTitle.requestFocus()
                 return@setOnClickListener
             }
 
@@ -347,6 +352,11 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             if (tripEndDate != null && tripEndDate!! < tripStartDate.timeInMillis) {
                 tripEndDate = tripStartDate.timeInMillis
             }
+
+            // Doppel-Save-Schutz + sichtbarer Ladezustand
+            val saveBtn = view?.findViewById<MaterialButton>(R.id.btnSaveTrip)
+            saveBtn?.let { com.d_drostes_apps.placestracker.utils.SaveButton.toLoading(it, getString(R.string.action_saving)) }
+            com.d_drostes_apps.placestracker.utils.Feedback.confirm(saveBtn ?: inputTitle)
 
             lifecycleScope.launch {
                 val isTrackingNow = switchAutoTrip.isChecked
@@ -400,9 +410,13 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 if (editingTripId != -1) {
                     tripDao.deleteStopsForTrip(editingTripId)
                 }
-                
+
                 stops.forEach { stop ->
                     tripDao.insertStop(stop.copy(id = 0, tripId = finalTripId))
+                }
+
+                saveBtn?.let {
+                    com.d_drostes_apps.placestracker.utils.SaveButton.toIdle(it, getString(R.string.action_saved))
                 }
 
                 val bundle = Bundle().apply {
@@ -689,10 +703,17 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
             val titleStr = inputStopTitle.text.toString()
             val notesStr = inputStopNotes.text.toString()
             if (titleStr.isBlank()) {
-                Toast.makeText(requireContext(), getString(R.string.title_required), Toast.LENGTH_SHORT).show()
+                // Inline-Feedback: Shake + Haptik direkt am Titelfeld
+                com.d_drostes_apps.placestracker.utils.Feedback.reject(inputStopTitle)
+                com.d_drostes_apps.placestracker.utils.Feedback.shake(inputStopTitle)
+                Toast.makeText(requireContext(), getString(R.string.err_stop_title_needed), Toast.LENGTH_SHORT).show()
+                inputStopTitle.requestFocus()
                 return@setOnClickListener
             }
-            
+
+            // Doppel-Save-Schutz + sichtbarer Ladezustand
+            com.d_drostes_apps.placestracker.utils.SaveButton.toLoading(btnConfirm, getString(R.string.action_saving))
+            com.d_drostes_apps.placestracker.utils.Feedback.confirm(btnConfirm)
             lifecycleScope.launch {
                 val newStop = TripStop(
                     id = existingStop?.id ?: 0,
@@ -718,6 +739,7 @@ class NewTripFragment : Fragment(R.layout.fragment_new_trip) {
                 stops.addAll(dbStops)
                 updateAdapterItems()
                // updateTripMap()
+                com.d_drostes_apps.placestracker.utils.SaveButton.toIdle(btnConfirm, getString(R.string.action_saved))
                 dialog.dismiss()
 
                 Toast.makeText(requireContext(), getString(R.string.stop_saved), Toast.LENGTH_SHORT).show()

@@ -240,7 +240,7 @@
                         android:id="@+id/etExperiencePeople"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="Person hinzufügen"
+                        android:hint="@string/add_person_hint"
                         android:background="@null"
                         android:paddingVertical="8dp"
                         android:imeOptions="actionDone"

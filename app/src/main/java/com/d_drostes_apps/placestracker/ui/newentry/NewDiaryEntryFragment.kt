@@ -160,7 +160,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
                     addPersonChip(person)
                 }
                 
-                view?.findViewById<Button>(R.id.btnSaveDiary)?.text = "Änderungen speichern"
+                view?.findViewById<Button>(R.id.btnSaveDiary)?.text = getString(R.string.action_save_changes)
                 // Laden feuert die TextWatcher → Dirty-Flag zurücksetzen
                 isDirty = false
             }
@@ -221,7 +221,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
         val latLong = FloatArray(2)
         if (exif?.getLatLong(latLong) == true) {
             updateLocation(latLong[0].toDouble(), latLong[1].toDouble())
-            Toast.makeText(requireContext(), "Standort übernommen", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.location_applied), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -307,14 +307,18 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
             val sdf = SimpleDateFormat("HH:mm 'Uhr'", Locale.getDefault())
             tvTime.text = sdf.format(selectedDate.time)
         } else {
-            tvTime.text = "Uhrzeit hinzufügen"
+            tvTime.text = getString(R.string.add_time)
         }
     }
 
     private fun saveEntry() {
         val title = etTitle.text.toString()
         if (title.isBlank()) {
-            Toast.makeText(requireContext(), "Bitte gib einen Titel ein", Toast.LENGTH_SHORT).show()
+            // Inline-Feedback statt Toast: Shake + Haptik direkt am Feld
+            com.d_drostes_apps.placestracker.utils.Feedback.reject(etTitle)
+            com.d_drostes_apps.placestracker.utils.Feedback.shake(etTitle)
+            Toast.makeText(requireContext(), getString(R.string.err_title_needed), Toast.LENGTH_SHORT).show()
+            etTitle.requestFocus()
             return
         }
 
@@ -322,6 +326,10 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
             selectedDate.set(Calendar.HOUR_OF_DAY, 0)
             selectedDate.set(Calendar.MINUTE, 0)
         }
+
+        val btn = view?.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSaveDiary)
+        btn?.let { com.d_drostes_apps.placestracker.utils.SaveButton.toLoading(it, getString(R.string.action_saving)) }
+        com.d_drostes_apps.placestracker.utils.Feedback.confirm(etTitle)
 
         val entry = Entry(
             id = if (editingEntryId != -1) editingEntryId else 0,
@@ -339,6 +347,7 @@ class NewDiaryEntryFragment : Fragment(R.layout.fragment_new_diary_entry) {
         lifecycleScope.launch {
             (requireActivity().application as PlacesApplication).repository.insert(entry)
             isDirty = false
+            btn?.let { com.d_drostes_apps.placestracker.utils.SaveButton.toIdle(it, getString(R.string.action_saved)) }
             requireActivity().onBackPressedDispatcher.onBackPressed()
         }
     }

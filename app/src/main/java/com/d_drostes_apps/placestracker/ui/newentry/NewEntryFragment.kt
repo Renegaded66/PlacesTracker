@@ -26,6 +26,8 @@ import com.d_drostes_apps.placestracker.PlacesApplication
 import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.ui.themes.newentry.MediaAdapter
+import com.d_drostes_apps.placestracker.utils.Feedback
+import com.d_drostes_apps.placestracker.utils.SaveButton
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
@@ -205,8 +207,8 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                     mediaFiles.addAll(it.media)
                     mediaAdapter.updateCoverImage(selectedCoverImage)
                     mediaAdapter.notifyDataSetChanged()
-                    
-                    btnSave.text = "Änderungen speichern"
+
+                    btnSave.text = getString(R.string.action_save_changes)
                     // Laden feuert die TextWatcher → Dirty-Flag zurücksetzen
                     isDirty = false
                 }
@@ -286,7 +288,11 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
         btnSave.setOnClickListener {
             val title = inputTitle.text.toString()
             if (title.isBlank()) {
-                Toast.makeText(requireContext(), "Bitte Titel eingeben", Toast.LENGTH_SHORT).show()
+                // Inline-Feedback statt Toast: Shake + Haptik direkt am Feld
+                Feedback.reject(inputTitle)
+                Feedback.shake(inputTitle)
+                Toast.makeText(requireContext(), getString(R.string.err_title_needed), Toast.LENGTH_SHORT).show()
+                inputTitle.requestFocus()
                 return@setOnClickListener
             }
 
@@ -294,6 +300,10 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
                 selectedDate.set(Calendar.HOUR_OF_DAY, 0)
                 selectedDate.set(Calendar.MINUTE, 0)
             }
+
+            val wasEditing = editingEntryId != -1
+            SaveButton.toLoading(btnSave, getString(R.string.action_saving))
+            Feedback.confirm(btnSave)
 
             val entry = Entry(
                 people = selectedPeople.toList(),
@@ -312,6 +322,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             lifecycleScope.launch {
                 repository.insert(entry)
                 isDirty = false
+                SaveButton.toIdle(btnSave, getString(R.string.action_saved))
                 requireActivity().onBackPressedDispatcher.onBackPressed()
             }
         }
@@ -494,7 +505,7 @@ class NewEntryFragment : Fragment(R.layout.fragment_new_entry) {
             val sdf = SimpleDateFormat("HH:mm 'Uhr'", Locale.getDefault())
             tvTimeDisplay.text = sdf.format(selectedDate.time)
         } else {
-            tvTimeDisplay.text = "Uhrzeit hinzufügen"
+            tvTimeDisplay.text = getString(R.string.add_time)
         }
     }
 

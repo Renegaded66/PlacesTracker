@@ -103,7 +103,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             startUserLocationUpdates()
         } else {
             context?.let {
-                Toast.makeText(it, "Location permission required", Toast.LENGTH_SHORT).show()
+                Toast.makeText(it, getString(R.string.err_location_permission), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -238,8 +238,8 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             onDeleteMiniStop = { location ->
                 // Sicherheitsfrage vor dem Löschen eines Mini-Stops
                 androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomAlertDialog)
-                    .setTitle("Mini-Stopp löschen?")
-                    .setMessage("Dieser aufgezeichnete Zwischenpunkt wird dauerhaft gelöscht.")
+                    .setTitle(getString(R.string.mini_stop_delete_title))
+                    .setMessage(getString(R.string.mini_stop_delete_msg))
                     .setPositiveButton(R.string.delete) { _, _ ->
                         lifecycleScope.launch {
                             tripDao.deleteLocation(location)
@@ -687,11 +687,18 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     }
 
     private fun showTransportSelection(stopId: Int, currentMode: String?) {
-        val modes = arrayOf("Auto", "Fahrrad", "Flugzeug", "Zug", "Zu Fuß", "Keines")
+        val modes = arrayOf(
+            requireContext().getString(R.string.transport_car),
+            requireContext().getString(R.string.transport_bike),
+            requireContext().getString(R.string.transport_plane),
+            requireContext().getString(R.string.transport_train),
+            requireContext().getString(R.string.transport_walk),
+            requireContext().getString(R.string.transport_none)
+        )
         val modeKeys = arrayOf("car", "bike", "plane", "train", "walk", null)
 
         AlertDialog.Builder(requireContext())
-            .setTitle("Transportmittel wählen")
+            .setTitle(getString(R.string.transport_mode_pick_title))
             .setItems(modes) { _, which ->
                 val selectedMode = modeKeys[which]
                 val hasAnyModeSet = allStops.any { it.transportMode != null }
@@ -709,15 +716,15 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
 
     private fun askApplyToAll(stopId: Int, mode: String?) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Transportmittel anwenden")
-            .setMessage("Soll dieses Transportmittel für den gesamten Trip übernommen werden?")
-            .setPositiveButton("Ja") { _, _ ->
+            .setTitle(getString(R.string.transport_mode_apply_title))
+            .setMessage(getString(R.string.transport_mode_apply_msg))
+            .setPositiveButton(android.R.string.yes) { _, _ ->
                 lifecycleScope.launch {
                     val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
                     tripDao.updateAllTransportModes(tripId, mode)
                 }
             }
-            .setNegativeButton("Nein") { _, _ ->
+            .setNegativeButton(android.R.string.no) { _, _ ->
                 lifecycleScope.launch {
                     val tripDao = (requireActivity().application as PlacesApplication).database.tripDao()
                     tripDao.updateTransportMode(stopId, mode)
@@ -738,7 +745,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                 val locations = app.database.tripDao().getLocationsForTripSync(tripId)
                 sharingManager.shareTrip(trip, allStops, locations, profile)
             } else {
-                Toast.makeText(currentContext, "Bitte erstelle zuerst ein Profil", Toast.LENGTH_SHORT).show()
+                Toast.makeText(currentContext, getString(R.string.err_profile_needed), Toast.LENGTH_SHORT).show()
             }
         }
     }

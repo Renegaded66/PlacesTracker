@@ -53,7 +53,6 @@
     <string name="no_coordinates">No coordinates</string>
     <string name="media">Media</string>
     <string name="add_trip_cover">Add trip cover</string>
-    <string name="trip_title_hint">Trip title</string>
     <string name="auto_trip_switch">Automatic trip</string>
     <string name="timepoints_stations">Timepoints / Stations</string>
     <string name="add_another_timepoint">Add another timepoint</string>
@@ -159,7 +158,6 @@
     <string name="select_countries">Select countries</string>
     <string name="filter">Filter</string>
     <string name="deselect_all">Deselect all</string>
-    <string name="understood">Understood</string>
     <string name="edit_auto_trip">Edit automatic trip</string>
     <string name="no_countries_visited">No countries visited yet</string>
     <string name="your_year">Your year %1$d</string>
@@ -181,7 +179,6 @@
     <string name="stop_saved">Stop saved</string>
 
     <string name="cancel">Cancel</string>
-    <string name="yes_create">Yes, create</string>
     <string name="pick_color_title">Pick color</string>
 
     <string name="all">All</string>
@@ -209,7 +206,6 @@
     <string name="mark_home_instruction">Please mark your home location on the map first!</string>
     <string name="settings_saved">Settings saved</string>
     <string name="location_error_gps">Location could not be determined. Is GPS enabled?</string>
-    <string name="no_location_set">No location set</string>
     <string name="profile_saved">Profile saved</string>
     <string name="enter_name_error">Please enter a name</string>
 
@@ -330,7 +326,6 @@
     <string name="trip_selection_tracker_desc">Track your journey live while traveling.</string>
     <string name="trip_selection_auto">Finished trip</string>
     <string name="trip_selection_auto_desc">Add images with location data to generate a completed trip.</string>
-    <string name="add_more_images">Add more images</string>
 
     <string name="plus_symbol">+</string>
 
@@ -370,4 +365,62 @@
     <string name="trip_section_period">Period</string>
     <string name="trip_end_set">Set end date</string>
     <string name="stop_saved_title">Saved</string>
+
+    <!-- UX Polish: Engagement & Micro-Interactions -->
+    <string name="action_save">Save</string>
+    <string name="action_saving">Saving…</string>
+    <string name="action_saved">✓ Saved</string>
+    <string name="action_save_changes">Save changes</string>
+    <string name="add_time">Add time</string>
+    <string name="err_title_needed">Give your entry a title first</string>
+    <string name="err_stop_title_needed">Give the stop a name first</string>
+    <string name="no_valid_images">No valid images found.</string>
+    <string name="location_applied">Location applied</string>
+    <string name="trip_end_title">Journey end</string>
+    <string name="trip_end_set_option">Set end date</string>
+    <string name="trip_end_change_option">Change end date</string>
+    <string name="trip_end_remove_option">Remove end date</string>
+    <string name="mini_stop_delete_title">Delete mini stop?</string>
+    <string name="mini_stop_delete_msg">This recorded waypoint will be permanently deleted.</string>
+    <string name="transport_mode_pick_title">Choose transport mode</string>
+    <string name="transport_mode_apply_title">Apply transport mode</string>
+    <string name="transport_mode_apply_msg">Apply this transport mode to the whole trip?</string>
+    <string name="err_profile_needed">Please create a profile first</string>
+    <string name="err_location_permission">Location permission required</string>
+    <string name="err_perm_gallery">Gallery permissions are required</string>
+    <string name="err_perm_location">Location permission is required.</string>
+    <string name="err_home_missing">Please mark your home on the map first!</string>
+    <string name="err_gps">Could not determine location. Is GPS enabled?</string>
+    <string name="no_location_set">No location set</string>
+    <string name="backup_ok">Backup created successfully</string>
+    <string name="backup_err">Backup error: %1$s</string>
+    <string name="restore_ok">Restore successful. Restarting app…</string>
+    <string name="restore_err">Restore error: %1$s</string>
+    <string name="live_from_supabase">Live from Supabase</string>
+    <string name="add_person_hint">Add person</string>
+    <string name="cover_choose">Choose cover</string>
+    <string name="trip_partner_hint">Add travel partners</string>
+    <string name="trip_title_hint">Name of the journey…</string>
+    <string name="trip_notes_hint">Describe the journey…</string>
+    <string name="trip_save">Save journey</string>
+    <string name="trip_header">Your journey</string>
+    <string name="stop_add">Add stop</string>
+    <string name="import_trip_title">Automatic journey</string>
+    <string name="import_trip_edit_title">Edit automatic journey</string>
+    <string name="import_confirm_msg">Import %1$d images and create stops automatically?</string>
+    <string name="yes_create">Yes, create</string>
+    <string name="add_more_images">Add more images</string>
+    <string name="understood">Got it</string>
+    <string name="bucket_completed_hint">Checked off — find it in the “Completed” tab</string>
+    <string name="bucket_empty_title">What are you waiting for?</string>
+    <string name="bucket_empty_desc">Collect places, trips and dreams you still want to experience.</string>
+    <string name="stats_await">Calculating statistics…</string>
+    <string name="onboarding_hint_title">Tip: Drag the panel up</string>
+    <string name="onboarding_hint_desc">The globe stays on top — drag the sheet up for details, down to see the full world map.</string>
+    <string name="transport_car">Car</string>
+    <string name="transport_bike">Bike</string>
+    <string name="transport_plane">Plane</string>
+    <string name="transport_train">Train</string>
+    <string name="transport_walk">Walk</string>
+    <string name="transport_none">None</string>
 </resources>
