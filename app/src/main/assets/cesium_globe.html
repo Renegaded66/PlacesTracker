@@ -283,6 +283,12 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
     const markerDataSource = new Cesium.CustomDataSource('markers');
     viewer.dataSources.add(markerDataSource);
 
+    // Einheitliche Markergröße: Erlebnisse (Foto-Billboards, vorher 72px) und
+    // Trip-Stops (Punkte, vorher 16px) erscheinen nun gleich groß (48px),
+    // Diary-Icons nutzen bereits 48px und bleiben damit konsistent.
+    const MARKER_SIZE = 48;
+    const MARKER_CANVAS = MARKER_SIZE + 24; // Canvas = sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
+
     // enable clustering for dense friend markers
     markerDataSource.clustering.enabled = true;
     markerDataSource.clustering.pixelRange = 6; // cluster only on real overlap (>=3 Marker), damit Pins einzeln tappbar bleiben
@@ -400,7 +406,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
         if (roundImageCache.has(cacheKey)) return roundImageCache.get(cacheKey);
 
         return new Promise(resolve => {
-            const baseSize = 96; // 72px sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
+            const baseSize = MARKER_CANVAS; // 48px sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
             const canvas = document.createElement("canvas");
             canvas.width = baseSize; canvas.height = baseSize;
             const ctx = canvas.getContext("2d");
@@ -408,7 +414,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
 
             img.onload = () => {
-                const c = baseSize / 2; const r = 36; // sichtbarer Kreis 72px, Rand = vergrößerte Tapp-Fläche
+                const c = baseSize / 2; const r = MARKER_SIZE / 2; // sichtbarer Kreis 48px, Rand = vergrößerte Tapp-Fläche
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 1, 0, Math.PI * 2);
                 ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.fillStyle = color; ctx.fill(); ctx.restore();
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
@@ -475,7 +481,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             position: Cesium.Cartesian3.fromDegrees(item.lon, item.lat),
             // 🌟 FIX 3: Punkt sofort zeichnen und IMMER über der Erde halten
             point: {
-                pixelSize: 16,
+                pixelSize: MARKER_SIZE,
                 color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"),
                 outlineColor: Cesium.Color.fromCssColorString(borderColor),
                 outlineWidth: 2,
@@ -495,8 +501,8 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                 if (finalImageUrl) {
                     entity.billboard = {
                         image: finalImageUrl,
-                        width: 72,
-                        height: 72,
+                        width: MARKER_SIZE,
+                        height: MARKER_SIZE,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -611,7 +617,7 @@ window.setTripPath = function(data) {
                     const entity = viewer.entities.add({
                         position: pos,
                         point: {
-                            pixelSize: 20,
+                            pixelSize: MARKER_SIZE,
                             color: Cesium.Color.RED,
                             outlineColor: Cesium.Color.WHITE,
                             outlineWidth: 3,
@@ -634,8 +640,8 @@ window.setTripPath = function(data) {
 
                                 entity.billboard = {
                                     image: img,
-                                    width: 72,
-                                    height: 72,
+                                    width: MARKER_SIZE,
+                                    height: MARKER_SIZE,
                                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
