@@ -992,6 +992,19 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
     }
 
     /**
+     * Inline vom Dashboard aus direkt zum Trip-Detail wechseln (z.B. Zurück-Pfeil
+     * eines Trip-Stop-Details, wenn das Trip-Detail nicht mehr im Inline-Stack liegt).
+     */
+    fun navigateToTripDetail(tripId: Int) {
+        lastItems.find { it is FeedItem.TripItem && it.id == tripId }?.let { item ->
+            // Ohne BackStack-Eintrag: das Trip-Detail ersetzt den Stop direkt.
+            // Sonst würde der nächste Zurück-Klick den Stop wiederherstellen statt
+            // zum Dashboard zu führen.
+            navigateToDetail(item, addToBackStack = false)
+        }
+    }
+
+    /**
      * Zoom-Befehl an den Globe schicken — aber erst, wenn die Cesium-Seite wirklich
      * geladen ist. Davor existiert window.zoomToPoint nicht und der JS-Guard
      * "if(window.zoomToPoint)" verwirft den Aufruf stillschweigend — genau das hat
@@ -1014,7 +1027,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
-    fun navigateToDetail(item: FeedItem, stopId: Int? = null) {
+    fun navigateToDetail(item: FeedItem, stopId: Int? = null, addToBackStack: Boolean = true) {
         val fragment = when {
             stopId != null -> TripStopDetailFragment().apply {
                 arguments = Bundle().apply { putInt("stopId", stopId) }
@@ -1074,7 +1087,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             .setCustomAnimations(R.anim.slide_in_right, R.anim.slide_out_left, R.anim.slide_in_left, R.anim.slide_out_right)
             .replace(R.id.detailFragmentContainer, fragment)
         
-        if (childFragmentManager.findFragmentById(R.id.detailFragmentContainer) != null) {
+        if (addToBackStack && childFragmentManager.findFragmentById(R.id.detailFragmentContainer) != null) {
             transaction.addToBackStack(null)
         }
         

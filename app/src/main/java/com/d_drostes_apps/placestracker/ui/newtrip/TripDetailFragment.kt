@@ -226,7 +226,9 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             if (mapboxWebView != null) setupCesiumWebView()
 
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
-            toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+            toolbar.setNavigationOnClickListener {
+                com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
+            }
 
             if (bottomSheet != null) {
                 try {
@@ -718,7 +720,7 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         tripDao.insertLocation(newLocation)
                     }
                     Toast.makeText(requireContext(), R.string.added_to_my_feed_success, Toast.LENGTH_SHORT).show()
-                    findNavController().navigateUp()
+                    com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -1039,7 +1041,11 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         tripDao.deleteTrip(it)
                     }
                     if (isAdded) {
-                        if (parentFragment is FeedFragment) (parentFragment as FeedFragment).closeDetail() else findNavController().navigateUp()
+                        if (parentFragment is FeedFragment) {
+                            (parentFragment as FeedFragment).closeDetail()
+                        } else {
+                            com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
+                        }
                     }
                 }
             }

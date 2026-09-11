@@ -83,7 +83,9 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
             // Globe-Hint einblenden: laedt ein, das Sheet nach unten zu ziehen
             cvGlobeHint.visibility = View.VISIBLE
         } else {
-            toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+            toolbar.setNavigationOnClickListener {
+                com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
+            }
         }
 
         // Schwebende Toolbar via DetailChrome: Hero laeuft dahinter durch, Scrim blendet ein
@@ -426,7 +428,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                     val newEntry = currentEntry.copy(id = 0, friendId = null)
                     app.database.entryDao().insert(newEntry)
                     Toast.makeText(requireContext(), R.string.added_to_my_feed_success, Toast.LENGTH_SHORT).show()
-                    findNavController().navigateUp()
+                    com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -457,7 +459,7 @@ class EntryDetailFragment : Fragment(R.layout.fragment_entry_detail) {
                         if (parentFragment is FeedFragment) {
                             (parentFragment as FeedFragment).handleBack()
                         } else {
-                            findNavController().navigateUp()
+                            com.d_drostes_apps.placestracker.utils.BackNavigation.toDashboard(findNavController())
                         }
                     }
                 }

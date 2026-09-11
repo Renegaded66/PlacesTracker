@@ -35,6 +35,13 @@ import java.util.*
 class TripStopDetailFragment : BottomSheetDialogFragment() {
 
     private var stop: TripStop? = null
+
+    /**
+     * tripId des geladenen Stops — wird im Async-Load gesetzt. Der Zurück-Pfeil
+     * braucht den Trip-Kontext, kann aber vor dem Load-Ende getippt werden;
+     * deshalb zusätzlich DAO-Fallback im Click-Handler (race-sicher).
+     */
+    private var loadedTripId: Int? = null
     private lateinit var tvFlag: TextView
     private lateinit var tvCountryName: TextView
 
@@ -54,7 +61,6 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val activity = activity ?: return
         val app = (activity.application as PlacesApplication)
         val tripDao = app.database.tripDao()
-
         val toolbar = view.findViewById<MaterialToolbar>(R.id.toolbar)
         val tvTitle = view.findViewById<TextView>(R.id.tvDetailTitle)
         val tvDate = view.findViewById<TextView>(R.id.tvDetailDate)
@@ -78,24 +84,44 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             // Keine eigene Karte: Der Globe oben im Dashboard zeigt den Stop
             toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
             toolbar.setNavigationOnClickListener {
-                (parentFragment as? FeedFragment)?.handleBack()
+                // Stop-Detail vom Dashboard: zurück zum TRIP-DETAIL (nicht Dashboard schließen).
+                // Liegt das Trip-Detail im Inline-Stack (Detail → Stop), einfach poppen;
+                // sonst (Stop direkt vom Dashboard/Globe) das Trip-Detail inline öffnen.
+                lifecycleScope.launch {
+                    val tripId = loadedTripId ?: tripDao.getStopById(stopId)?.tripId
+                    if (tripId != null) {
+                        if (parentFragmentManager.backStackEntryCount > 0) {
+                            parentFragmentManager.popBackStack()
+                        } else {
+                            (parentFragment as? FeedFragment)?.navigateToTripDetail(tripId)
+                        }
+                    } else if (isAdded) {
+                        dismiss()
+                    }
+                }
             }
             // Bottom-Puffer + Globe-Hint (wie in EntryDetailFragment)
             view.findViewById<View>(R.id.llDetailContent)?.setPadding(0, 0, 0, (110 * resources.displayMetrics.density).toInt())
             view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cvGlobeHint)?.visibility = View.VISIBLE
         } else {
             toolbar.setNavigationOnClickListener {
-                stop?.let { s ->
-                    val bundle = Bundle().apply {
-                        putInt("tripId", s.tripId)
+                // Zurück zum zugehörigen Trip-Detail (explizit, unabhängig vom Tab,
+                // aus dem das Stop-Detail geöffnet wurde). Alte TripDetail-Instanz
+                // wird per popUpTo im NavGraph-Action entfernt → kein Doppel-Detail.
+                lifecycleScope.launch {
+                    val tripId = loadedTripId ?: tripDao.getStopById(stopId)?.tripId
+                    if (tripId != null) {
+                        val bundle = Bundle().apply {
+                            putInt("tripId", tripId)
+                        }
+                        dismiss()
+                        (activity.supportFragmentManager
+                            .findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment)
+                            ?.navController
+                            ?.navigate(R.id.action_tripStopDetailFragment_to_tripDetailFragment, bundle)
+                    } else if (isAdded) {
+                        dismiss()
                     }
-                    dismiss()
-                    (activity.supportFragmentManager
-                        .findFragmentById(R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment)
-                        ?.navController
-                        ?.navigate(R.id.action_tripStopDetailFragment_to_tripDetailFragment, bundle)
-                } ?: run {
-                    if (isAdded) dismiss()
                 }
             }
         }
@@ -119,6 +145,7 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             val dbStop = tripDao.getStopById(stopId)
             dbStop?.let {
                 stop = it
+                loadedTripId = it.tripId
                 tvTitle.text = it.title
                 
                 if (!it.notes.isNullOrBlank()) {
