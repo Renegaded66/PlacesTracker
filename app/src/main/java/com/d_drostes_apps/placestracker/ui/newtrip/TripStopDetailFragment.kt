@@ -35,9 +35,8 @@ import java.util.*
 class TripStopDetailFragment : BottomSheetDialogFragment() {
 
     private var stop: TripStop? = null
-    private lateinit var llFlags: LinearLayout
-    private lateinit var cvCountryName: View
-    private lateinit var tvCountryNamePopup: TextView
+    private lateinit var tvFlag: TextView
+    private lateinit var tvCountryName: TextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,9 +65,13 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         val heroDots = view.findViewById<LinearLayout>(R.id.heroDotsIndicator)
         val tvMediaCounter = view.findViewById<TextView>(R.id.tvMediaCounter)
         
-        llFlags = view.findViewById(R.id.llDetailFlags)
-        cvCountryName = view.findViewById(R.id.cvCountryName)
-        tvCountryNamePopup = view.findViewById(R.id.tvCountryNamePopup)
+        tvFlag = view.findViewById(R.id.tvFlag)
+        tvCountryName = view.findViewById(R.id.tvCountryName)
+
+        // Info-Icons themefarben tinten (wie in EntryDetailFragment)
+        val onSurfaceVariant = com.google.android.material.color.MaterialColors.getColor(view, com.google.android.material.R.attr.colorOnSurfaceVariant)
+        view.findViewById<ImageView>(R.id.ivCalendarIcon)?.setColorFilter(onSurfaceVariant)
+        view.findViewById<ImageView>(R.id.ivGlobeHintIcon)?.setColorFilter(onSurfaceVariant)
         
         val isInline = parentFragment is FeedFragment
         if (isInline) {
@@ -77,6 +80,9 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             toolbar.setNavigationOnClickListener {
                 (parentFragment as? FeedFragment)?.handleBack()
             }
+            // Bottom-Puffer + Globe-Hint (wie in EntryDetailFragment)
+            view.findViewById<View>(R.id.llDetailContent)?.setPadding(0, 0, 0, (110 * resources.displayMetrics.density).toInt())
+            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cvGlobeHint)?.visibility = View.VISIBLE
         } else {
             toolbar.setNavigationOnClickListener {
                 stop?.let { s ->
@@ -94,6 +100,10 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
             }
         }
 
+        // Schwebende Toolbar via DetailChrome (geteilt mit EntryDetailFragment)
+        com.d_drostes_apps.placestracker.utils.DetailChrome.attach(view)
+        com.d_drostes_apps.placestracker.utils.DetailChrome.tint(toolbar, dark = false)
+
         // Animation für den Content
         view.findViewById<View>(R.id.llDetailContent)?.apply {
             alpha = 0f
@@ -102,12 +112,12 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         }
 
         view.findViewById<View>(R.id.detailRootLayout).setOnClickListener {
-            cvCountryName.visibility = View.GONE
+            // Kein Country-Popup mehr im Redesign (Land steht direkt in der Ortszeile)
         }
 
         lifecycleScope.launch {
             val dbStop = tripDao.getStopById(stopId)
-            dbStop?.let { 
+            dbStop?.let {
                 stop = it
                 tvTitle.text = it.title
                 
@@ -118,11 +128,15 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                     cvNotes.visibility = View.GONE
                 }
                 
-                val sdf = java.text.SimpleDateFormat("dd.MM.yyyy - HH:mm", Locale.getDefault())
-                tvDate.text = sdf.format(Date(it.date))
+                // Editorial-Datum: "Sonntag, 12. Mai 2024  ·  14:30"
+                val dateOnly = java.text.SimpleDateFormat("EEEE, d. MMMM yyyy", Locale.getDefault())
+                val timeOnly = java.text.SimpleDateFormat("HH:mm", Locale.getDefault())
+                val dateObj = Date(it.date)
+                tvDate.text = dateOnly.format(dateObj) + "  ·  " + timeOnly.format(dateObj)
 
-                // Hero-Galerie: fancy Bildershow mit Dots + Zähler (einzige Medien-Ansicht)
+                // Hero-Galerie: fancy Bildershow mit morphenden Dots + Zähler (einzige Medien-Ansicht)
                 if (it.media.isNotEmpty()) {
+                    heroPager.visibility = View.VISIBLE
                     heroPager.adapter = HeroMediaAdapter(it.media) { path ->
                         val dialog = MediaDialogFragment().apply {
                             arguments = Bundle().apply {
@@ -132,31 +146,17 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
                         }
                         dialog.show(parentFragmentManager, "MediaFullscreen")
                     }
-                    heroDots.removeAllViews()
-                    val dotSize = (7 * resources.displayMetrics.density).toInt()
-                    val dotMargin = (4 * resources.displayMetrics.density).toInt()
-                    it.media.indices.forEach { i ->
-                        val dot = View(requireContext())
-                        dot.setBackgroundResource(R.drawable.bg_dot)
-                        val lp = LinearLayout.LayoutParams(dotSize, dotSize)
-                        lp.setMargins(dotMargin, 0, dotMargin, 0)
-                        dot.layoutParams = lp
-                        dot.alpha = if (i == 0) 1f else 0.35f
-                        heroDots.addView(dot)
-                    }
-                    heroPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
-                        override fun onPageSelected(position: Int) {
-                            for (i in 0 until heroDots.childCount) {
-                                heroDots.getChildAt(i).alpha = if (i == position) 1f else 0.35f
-                            }
-                            tvMediaCounter.text = "${position + 1}/${heroDots.childCount}"
-                        }
-                    })
-                    tvMediaCounter.text = "1/${it.media.size}"
+                    setupPillDots(heroDots, it.media.size, heroPager, tvMediaCounter)
                     tvMediaCounter.visibility = View.VISIBLE
                 } else {
+                    // Leer-Zustand statt unsichtbarem Loch
                     heroPager.visibility = View.GONE
-                    view.findViewById<View>(R.id.cvHeroMedia)?.visibility = View.GONE
+                    tvMediaCounter.visibility = View.GONE
+                    val heroCard = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cvHeroMedia)
+                    val heroFrame = heroCard.getChildAt(0) as? android.widget.FrameLayout
+                    if (heroFrame != null && heroFrame.findViewById<View>(R.id.emptyHero) == null) {
+                        layoutInflater.inflate(R.layout.view_empty_hero, heroFrame, true)
+                    }
                 }
 
                 // Karte in beiden Modi mit Position versorgen (inline + fullscreen)
@@ -208,18 +208,73 @@ class TripStopDetailFragment : BottomSheetDialogFragment() {
         lifecycleScope.launch {
             val info = getCountryInfo(requireContext(), location)
             info?.let { (code, name) ->
-                val flagView = TextView(requireContext()).apply {
-                    text = getFlagEmoji(code)
-                    textSize = 24f
-                    setOnClickListener {
-                        tvCountryNamePopup.text = name
-                        cvCountryName.visibility = View.VISIBLE
-                    }
-                }
-                llFlags.removeAllViews()
-                llFlags.addView(flagView)
+                tvFlag.text = getFlagEmoji(code)
+                tvCountryName.text = name.uppercase(Locale.getDefault())
             }
         }
+    }
+
+    /**
+     * Instagram-Stil Dots: aktiver Dot ist eine weisse Pille, inaktive Punkte sind
+     * halbtransparent. Morph-Animation (Breite + Alpha) beim Seitenwechsel.
+     */
+    private fun setupPillDots(
+        heroDots: LinearLayout,
+        count: Int,
+        heroPager: androidx.viewpager2.widget.ViewPager2,
+        tvMediaCounter: TextView
+    ) {
+        heroDots.removeAllViews()
+        val density = resources.displayMetrics.density
+        val dotSize = (7 * density).toInt()
+        val pillWidth = (22 * density).toInt()
+        val dotMargin = (3 * density).toInt()
+
+        fun styleDot(dot: View, active: Boolean, animate: Boolean) {
+            val targetWidth = if (active) pillWidth else dotSize
+            val lp = dot.layoutParams as LinearLayout.LayoutParams
+            dot.background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 99f * density
+                setColor(if (active) android.graphics.Color.WHITE else android.graphics.Color.parseColor("#80FFFFFF"))
+            }
+            if (animate && lp.width != targetWidth) {
+                val from = lp.width
+                dot.animate().alpha(if (active) 1f else 0.4f).setDuration(200).start()
+                android.animation.ValueAnimator.ofInt(from, targetWidth).apply {
+                    duration = 220
+                    addUpdateListener { animator ->
+                        lp.width = animator.animatedValue as Int
+                        dot.layoutParams = lp
+                    }
+                    start()
+                }
+            } else {
+                lp.width = targetWidth
+                dot.alpha = if (active) 1f else 0.4f
+                dot.layoutParams = lp
+            }
+        }
+
+        for (i in 0 until count) {
+            val dot = View(requireContext())
+            val lp = LinearLayout.LayoutParams(if (i == 0) pillWidth else dotSize, dotSize)
+            lp.setMargins(dotMargin, 0, dotMargin, 0)
+            dot.layoutParams = lp
+            heroDots.addView(dot)
+        }
+        for (i in 0 until count) {
+            styleDot(heroDots.getChildAt(i), i == 0, animate = false)
+        }
+
+        heroPager.registerOnPageChangeCallback(object : androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                for (i in 0 until heroDots.childCount) {
+                    styleDot(heroDots.getChildAt(i), i == position, animate = true)
+                }
+                tvMediaCounter.text = "${position + 1}/$count"
+            }
+        })
+        tvMediaCounter.text = "1/$count"
     }
 
     private suspend fun getCountryInfo(context: Context, location: String): Pair<String, String>? = withContext(Dispatchers.IO) {

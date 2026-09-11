@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Toolbar-Scrim: oben transparent, unten opak dunkel (passt zum Dark-Theme) -->
+    <gradient
+        android:angle="90"
+        android:startColor="#001C1B22"
+        android:endColor="#F21C1B22" />
+</shape>
