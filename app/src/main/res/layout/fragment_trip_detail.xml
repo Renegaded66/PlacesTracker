@@ -8,6 +8,7 @@
     android:background="?android:attr/windowBackground"
     android:paddingTop="24dp">
 
+    <!-- 🌍 Karte/Globus im Hintergrund (nur Non-Inline): der Sheet-Inhalt liegt darüber -->
     <FrameLayout
         android:id="@+id/mapContainer"
         android:layout_width="match_parent"
@@ -47,6 +48,7 @@
             app:tint="@android:color/black" />
     </FrameLayout>
 
+    <!-- 🔻 Bottom-Sheet: ziehbar (nur Non-Inline), Inhalt im Editorial-Stil der Erlebnis-Detailansicht -->
     <androidx.cardview.widget.CardView
         android:id="@+id/bottomSheetTrip"
         android:layout_width="match_parent"
@@ -61,26 +63,26 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
+            <!-- Schwebende Toolbar: dunkler Top-Scrim hält Icons über dem Globus lesbar -->
             <com.google.android.material.appbar.AppBarLayout
                 android:id="@+id/appBarTrip"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@android:color/transparent"
+                android:background="@drawable/bg_scrim_toolbar"
+                android:elevation="0dp"
                 app:elevation="0dp">
 
-                <View
+                <com.google.android.material.bottomsheet.BottomSheetDragHandleView
                     android:id="@+id/dragHandle"
-                    android:layout_width="40dp"
-                    android:layout_height="4dp"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="12dp"
-                    android:background="#40808080" />
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp" />
 
                 <com.google.android.material.appbar.MaterialToolbar
                     android:id="@+id/toolbarTrip"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="4dp"
                     app:navigationIcon="@drawable/ic_arrow_back"
                     app:title="@string/trip_details"
                     app:titleTextColor="?attr/colorOnSurface" />
@@ -91,6 +93,7 @@
                 android:layout_height="match_parent"
                 app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
+                <!-- 📍 Tages-Indikator-Rail (links, folgt dem Scroll) -->
                 <FrameLayout
                     android:layout_width="60dp"
                     android:layout_height="match_parent"
@@ -112,14 +115,15 @@
                         app:cardElevation="6dp"
                         app:strokeWidth="2dp"
                         app:strokeColor="?attr/colorPrimary">
+
                         <TextView
                             android:id="@+id/tvDayNumber"
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:gravity="center"
                             android:text="1"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
                     </com.google.android.material.card.MaterialCardView>
                 </FrameLayout>
 
@@ -127,7 +131,9 @@
                     android:id="@+id/tripNestedScroll"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="60dp">
+                    android:layout_marginStart="60dp"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never">
 
                     <LinearLayout
                         android:id="@+id/llTripContent"
@@ -135,23 +141,22 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:paddingHorizontal="16dp"
-                        android:paddingBottom="100dp">
+                        android:paddingBottom="110dp">
 
-                    <!-- 🌄 Hero: großes Titelbild mit Scrim, Titel + Stats direkt drauf -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/cvTripHeroCard"
-                        android:layout_width="match_parent"
-                        android:layout_height="240dp"
-                        android:layout_marginTop="4dp"
-                        app:cardCornerRadius="24dp"
-                        app:cardElevation="6dp">
-
-                        <FrameLayout
-                            android:id="@+id/cvTripHero"
+                        <!-- 🌄 Hero: großes Titelbild mit Scrim, Titel + Stats direkt drauf -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cvTripHeroCard"
                             android:layout_width="match_parent"
-                            android:layout_height="match_parent">
+                            android:layout_height="260dp"
+                            android:layout_marginTop="4dp"
+                            android:clipChildren="true"
+                            android:clipToPadding="true"
+                            app:cardCornerRadius="24dp"
+                            app:cardElevation="8dp"
+                            app:strokeWidth="0dp">
 
                             <FrameLayout
+                                android:id="@+id/cvTripHero"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent">
 
@@ -168,100 +173,48 @@
                                     android:layout_height="match_parent"
                                     android:background="@drawable/bg_trip_hero_scrim" />
 
+                                <!-- Titel + Stats über dem Bild (modernes Reise-App-Feel) -->
+                                <LinearLayout
+                                    android:id="@+id/heroTextBlock"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_gravity="bottom"
+                                    android:orientation="vertical"
+                                    android:paddingHorizontal="18dp"
+                                    android:paddingBottom="16dp">
+
+                                    <TextView
+                                        android:id="@+id/tvTripDetailTitle"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:ellipsize="end"
+                                        android:letterSpacing="-0.02"
+                                        android:lineSpacingMultiplier="1.05"
+                                        android:maxLines="2"
+                                        android:shadowColor="#80000000"
+                                        android:shadowRadius="8"
+                                        android:textColor="#FFFFFF"
+                                        android:textSize="30sp"
+                                        android:textStyle="bold"
+                                        tools:text="Sommerurlaub 2024" />
+
+                                    <TextView
+                                        android:id="@+id/tvTripStats"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="10dp"
+                                        android:background="@drawable/bg_trip_stats_pill"
+                                        android:letterSpacing="0.02"
+                                        android:paddingHorizontal="12dp"
+                                        android:paddingVertical="6dp"
+                                        android:textColor="#E6FFFFFF"
+                                        android:textSize="13sp"
+                                        tools:text="5 Tage · 8 Stops · 3 Länder · 1240 km" />
+                                </LinearLayout>
                             </FrameLayout>
-
-                            <!-- Titel + Stats über dem Bild (App-Feel wie moderne Reiseservices) -->
-                            <LinearLayout
-                                android:id="@+id/heroTextBlock"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_gravity="bottom"
-                                android:orientation="vertical"
-                                android:paddingHorizontal="18dp"
-                                android:paddingBottom="16dp">
-
-                                <TextView
-                                    android:id="@+id/tvTripDetailTitle"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:textSize="28sp"
-                                    android:textStyle="bold"
-                                    android:textColor="#FFFFFF"
-                                    android:shadowColor="#80000000"
-                                    android:shadowRadius="8"
-                                    android:maxLines="2"
-                                    android:ellipsize="end"
-                                    tools:text="Sommerurlaub 2024" />
-
-                                <TextView
-                                    android:id="@+id/tvTripStats"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="4dp"
-                                    android:textColor="#D9FFFFFF"
-                                    android:textSize="14sp"
-                                    tools:text="5 Tage · 8 Stops · 3 Länder · 1240 km" />
-                            </LinearLayout>
-
-                        </FrameLayout>
-                    </com.google.android.material.card.MaterialCardView>
-
-                    <com.google.android.material.chip.ChipGroup
-                            android:id="@+id/chipGroupTripPeopleDetail"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            app:singleLine="false" />
-
-                        <LinearLayout
-                            android:id="@+id/layoutTripRating"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="12dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="⭐"
-                                android:textSize="18sp"
-                                android:layout_marginEnd="6dp"/>
-
-                            <RatingBar
-                                android:id="@+id/ratingTripDetail"
-                                style="?android:attr/ratingBarStyleSmall"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:numStars="5"
-                                android:stepSize="0.5"
-                                android:isIndicator="true" />
-
-                        </LinearLayout>
-
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/cvTripNotes"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:visibility="gone"
-                            app:cardCornerRadius="16dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="?attr/colorOutlineVariant"
-                            app:cardBackgroundColor="?attr/colorSurface">
-
-                            <TextView
-                                android:id="@+id/tvTripDetailNotes"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:padding="16dp"
-                                android:textColor="?android:attr/textColorSecondary"
-                                android:textSize="16sp"
-                                android:lineSpacingExtra="4dp"
-                                tools:text="Das ist eine Notiz zum gesamten Trip." />
                         </com.google.android.material.card.MaterialCardView>
 
+                        <!-- 🚩 Länder-Flags (Tap → Ländername-Popup) -->
                         <LinearLayout
                             android:id="@+id/llTripFlags"
                             android:layout_width="wrap_content"
@@ -286,17 +239,207 @@
                                 android:paddingVertical="4dp"
                                 android:textSize="12sp"
                                 tools:text="Deutschland" />
-
                         </com.google.android.material.card.MaterialCardView>
 
+                        <!-- 📅 Zeitraum-Zeile (Editorial-Stil wie in der Erlebnis-Detailansicht) -->
+                        <LinearLayout
+                            android:id="@+id/llTripDateRange"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:visibility="gone">
+
+                            <ImageView
+                                android:id="@+id/ivCalendarIcon"
+                                android:layout_width="15dp"
+                                android:layout_height="15dp"
+                                android:contentDescription="@string/weather_icon"
+                                android:src="@drawable/ic_calendar" />
+
+                            <TextView
+                                android:id="@+id/tvTripDateRange"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="7dp"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textSize="14sp"
+                                tools:text="12.05.2024 – 18.05.2024" />
+                        </LinearLayout>
+
+                        <!-- 👥 Mitreisende -->
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/chipGroupTripPeopleDetail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            app:singleLine="false" />
+
+                        <!-- ⭐ Bewertung -->
+                        <LinearLayout
+                            android:id="@+id/layoutTripRating"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="6dp"
+                                android:text="⭐"
+                                android:textSize="18sp" />
+
+                            <RatingBar
+                                android:id="@+id/ratingTripDetail"
+                                style="?android:attr/ratingBarStyleSmall"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:isIndicator="true"
+                                android:numStars="5"
+                                android:stepSize="0.5" />
+                        </LinearLayout>
+
+                        <!-- 📝 Notizen: Journal-Stil mit Akzentbalken (Design-Sprache Erlebnis-Detail) -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cvTripNotes"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:visibility="gone"
+                            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                            app:cardCornerRadius="20dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="top"
+                                android:orientation="horizontal"
+                                android:padding="18dp">
+
+                                <View
+                                    android:layout_width="3dp"
+                                    android:layout_height="match_parent"
+                                    android:background="?attr/colorPrimary" />
+
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:paddingStart="14dp">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:letterSpacing="0.12"
+                                        android:text="@string/notes"
+                                        android:textAllCaps="true"
+                                        android:textColor="?attr/colorPrimary"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvTripDetailNotes"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="8dp"
+                                        android:lineSpacingMultiplier="1.45"
+                                        android:textColor="?attr/colorOnSurface"
+                                        android:textSize="15sp"
+                                        tools:text="Das ist eine Notiz zum gesamten Trip." />
+                                </LinearLayout>
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- 🌍 Globe-Hinweis (nur inline): lädt ein, das Sheet nach unten zu ziehen -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cvGlobeHint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center_horizontal"
+                            android:layout_marginTop="18dp"
+                            android:visibility="gone"
+                            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                            app:cardCornerRadius="22dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="0dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:paddingHorizontal="16dp"
+                                android:paddingVertical="9dp">
+
+                                <ImageView
+                                    android:id="@+id/ivGlobeHintIcon"
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:contentDescription="@string/weather_icon"
+                                    android:src="@drawable/ic_location" />
+
+                                <TextView
+                                    android:id="@+id/tvGlobeHint"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
+                                    android:text="@string/view_on_globe_hint"
+                                    android:textColor="?attr/colorOnSurfaceVariant"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <!-- 🗺️ Reiseverlauf: Editorial-Sektion -->
+                        <LinearLayout
+                            android:id="@+id/llRouteHeader"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="24dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvRouteHeader"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:letterSpacing="0.14"
+                                android:text="@string/trip_route_header"
+                                android:textAllCaps="true"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <View
+                                android:layout_width="0dp"
+                                android:layout_height="1dp"
+                                android:layout_marginStart="12dp"
+                                android:layout_marginEnd="12dp"
+                                android:layout_weight="1"
+                                android:background="?attr/colorOutlineVariant" />
+
+                            <TextView
+                                android:id="@+id/tvRouteCount"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                android:textSize="13sp"
+                                tools:text="8 Stops" />
+                        </LinearLayout>
+
+                        <!-- 🛑 Stop-Liste (Timeline) -->
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/rvTripDetailStops"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="12dp"
                             android:clipToPadding="false"
                             android:nestedScrollingEnabled="false" />
-
                     </LinearLayout>
                 </androidx.core.widget.NestedScrollView>
             </RelativeLayout>

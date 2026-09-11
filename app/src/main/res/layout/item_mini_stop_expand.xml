@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
-    android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
-    android:focusable="true">
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="12dp">
 
     <ImageView
         android:id="@+id/ivExpandIcon"
         android:layout_width="24dp"
         android:layout_height="24dp"
+        android:contentDescription="@string/mini_stop"
         android:src="@drawable/ic_add_circle"
-        app:tint="?attr/colorPrimary"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:contentDescription="@string/mini_stop" />
+        app:tint="?attr/colorPrimary" />
 
     <TextView
         android:id="@+id/tvExpandInfo"
@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:text="3 Mini-Stopps"
-        android:textStyle="italic"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textStyle="bold" />
 
 </LinearLayout>

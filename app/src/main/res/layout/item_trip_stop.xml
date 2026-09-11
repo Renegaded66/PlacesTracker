@@ -18,7 +18,7 @@
 
         <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="143dp">
+            android:layout_height="180dp">
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/ivStopPic"
@@ -78,7 +78,9 @@
                 android:id="@+id/tvStopTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="22sp"
+                android:letterSpacing="-0.01"
+                android:lineSpacingMultiplier="1.05"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 tools:text="Titel des Stopps" />
 
@@ -88,7 +90,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="?android:attr/textColorSecondary"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 tools:text="12.05.2024 14:30" />
 
             <LinearLayout

@@ -49,6 +49,7 @@ import com.d_drostes_apps.placestracker.ui.feed.MediaDialogFragment
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -77,6 +78,13 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
     private lateinit var rvStops: RecyclerView
     private lateinit var tvTripNotes: TextView
     private lateinit var cvTripNotes: MaterialCardView
+    private lateinit var llDateRange: LinearLayout
+    private lateinit var tvDateRange: TextView
+    private lateinit var ivCalendarIcon: android.widget.ImageView
+    private lateinit var llRouteHeader: View
+    private lateinit var tvRouteCount: TextView
+    private lateinit var cvGlobeHint: MaterialCardView
+    private lateinit var ivGlobeHintIcon: android.widget.ImageView
 
     private lateinit var cvDayIndicator: MaterialCardView
     private lateinit var tvDayNumber: TextView
@@ -125,6 +133,13 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
         tvTripNotes = view.findViewById(R.id.tvTripDetailNotes)
         cvTripNotes = view.findViewById(R.id.cvTripNotes)
         rvStops = view.findViewById(R.id.rvTripDetailStops)
+        llDateRange = view.findViewById(R.id.llTripDateRange)
+        tvDateRange = view.findViewById(R.id.tvTripDateRange)
+        ivCalendarIcon = view.findViewById(R.id.ivCalendarIcon)
+        llRouteHeader = view.findViewById(R.id.llRouteHeader)
+        tvRouteCount = view.findViewById(R.id.tvRouteCount)
+        cvGlobeHint = view.findViewById(R.id.cvGlobeHint)
+        ivGlobeHintIcon = view.findViewById(R.id.ivGlobeHintIcon)
 
         val chipGroupPeople = view.findViewById<com.google.android.material.chip.ChipGroup>(R.id.chipGroupTripPeopleDetail)
         val ratingBar = view.findViewById<android.widget.RatingBar>(R.id.ratingTripDetail)
@@ -165,6 +180,47 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             (bottomSheet?.layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)
                 ?.behavior = null
             bottomSheet?.elevation = 0f
+
+            // 🌍 Globe-Hinweis einblenden (Design-Sprache der Erlebnis-Detailansicht):
+            // lädt ein, das äußere Dashboard-Sheet nach unten zu ziehen und den Globus freizugeben.
+            cvGlobeHint.visibility = View.VISIBLE
+            cvGlobeHint.alpha = 0f
+            cvGlobeHint.scaleX = 0.9f
+            cvGlobeHint.scaleY = 0.9f
+            val pulse = android.view.animation.AccelerateDecelerateInterpolator()
+            cvGlobeHint.animate()
+                .scaleX(1f).scaleY(1f).alpha(1f)
+                .setDuration(400L)
+                .setStartDelay(700L)
+                .setInterpolator(pulse)
+                .withEndAction {
+                    cvGlobeHint.animate()
+                        .scaleX(1.05f).scaleY(1.05f)
+                        .setDuration(600L).setStartDelay(900L)
+                        .setInterpolator(pulse)
+                        .withEndAction {
+                            cvGlobeHint.animate()
+                                .scaleX(1f).scaleY(1f)
+                                .setDuration(600L)
+                                .setInterpolator(pulse)
+                                .start()
+                        }
+                        .start()
+                }
+                .start()
+            cvGlobeHint.setOnClickListener {
+                // Äußeres Sheet (detailFragmentContainer im Feed) nach unten ziehen:
+                // der Globus kommt voll zum Vorschein.
+                val sheet = view.parent as? View
+                if (sheet != null) {
+                    try {
+                        val behavior = BottomSheetBehavior.from(sheet)
+                        behavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                    } catch (_: Exception) {
+                        // Fullscreen-Modus: kein Sheet vorhanden
+                    }
+                }
+            }
         } else {
             mapboxWebView?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             if (mapboxWebView != null) setupCesiumWebView()
@@ -199,6 +255,14 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
             translationY = 50f
             animate().alpha(1f).translationY(0f).setDuration(600).setStartDelay(150).start()
         }
+
+        // Info-Icons themefarben tinten (XML-Attr imageTintList ist hier nicht linkbar)
+        // — gleiche Behandlung wie in der Erlebnis-Detailansicht (EntryDetailFragment).
+        try {
+            val onSurfaceVariant = MaterialColors.getColor(view, com.google.android.material.R.attr.colorOnSurfaceVariant)
+            ivCalendarIcon.setColorFilter(onSurfaceVariant)
+            ivGlobeHintIcon.setColorFilter(onSurfaceVariant)
+        } catch (_: Exception) {}
 
         mapboxWebView?.setOnTouchListener { v, event ->
             when (event.action) {
@@ -410,15 +474,22 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         .into(ivHero)
                 }
 
-                // compute trip stats
+                // compute trip stats + Zeitraum (Redesign: Editorial-Kopfzeile)
                 lifecycleScope.launch {
                     val stopsForTrip = tripDao.getStopsForTrip(tripId).first()
+
+                    tvRouteCount.text = getString(R.string.trip_route_count, stopsForTrip.size)
 
                     if (stopsForTrip.isNotEmpty()) {
                         val minDate = stopsForTrip.minOf { it.date }
                         val maxDate = maxOf(stopsForTrip.maxOf { it.date }, t.endDate ?: 0L)
                         val days = ((maxDate - minDate) / (1000 * 60 * 60 * 24)).toInt() + 1
                         val stopCount = stopsForTrip.size
+
+                        // Zeitraum-Zeile (Kalender-Icon + Datumsbereich)
+                        val dateFmt = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault())
+                        tvDateRange.text = dateFmt.format(java.util.Date(minDate)) + " – " + dateFmt.format(java.util.Date(maxDate))
+                        llDateRange.visibility = View.VISIBLE
 
                         val countries = mutableSetOf<String>()
                         var distance = 0f
@@ -459,14 +530,6 @@ class TripDetailFragment : Fragment(R.layout.fragment_trip_detail) {
                         val km = (distance / 1000).toInt()
                         tvTripStats.text = getString(R.string.trip_stats_format, days, stopCount, countries.size, km)
                     }
-                }
-
-                // hero image
-                if (t.coverImage != null) {
-                    com.bumptech.glide.Glide.with(this@TripDetailFragment)
-                        .load(java.io.File(t.coverImage))
-                        .centerCrop()
-                        .into(ivHero)
                 }
 
                 if (t.isTrackingActive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

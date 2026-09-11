@@ -426,6 +426,8 @@
 
     <!-- Trip-Detail Hero -->
     <string name="trip_stats_format">%1$d Tage · %2$d Stops · %3$d Länder · %4$d km</string>
+    <string name="trip_route_header">Reiseverlauf</string>
+    <string name="trip_route_count">%1$d Stops</string>
 
     <!-- Erlebnis-Detail (Redesign) -->
     <string name="detail_info_divider">·</string>
