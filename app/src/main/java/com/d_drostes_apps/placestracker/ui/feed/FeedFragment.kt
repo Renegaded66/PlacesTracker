@@ -84,6 +84,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
     private var lastZoomedId: String? = null
 
+    /** Cesium-Seite fertig geladen (onPageFinished)? Erst dann existiert window.zoomToPoint. */
+    private var globePageReady = false
+
+    /** Zoom, der vor dem Fertigladen des Globus angefordert wurde — wird nach onPageFinished nachgeholt. */
+    private var pendingGlobeZoom: (() -> Unit)? = null
+
     private lateinit var feedListLayout: View
     private lateinit var detailContainer: View
     private var detailSheetBehavior: BottomSheetBehavior<View>? = null
@@ -863,8 +869,18 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }, "Android")
         cesiumWebView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
+                globePageReady = true
+                // Zoom-Wunsch nachholen, der kam, bevor window.zoomToPoint existierte
+                // (z.B. Dashboard-Klick direkt nach App-Start, während Cesium noch lädt).
+                val hadPendingZoom = pendingGlobeZoom != null
+                pendingGlobeZoom?.let { it() }
+                pendingGlobeZoom = null
                 updateGlobeData()
-                cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
+                // Kein Intro-Spin, wenn der Nutzer bereits auf ein Erlebnis/Trip geklickt
+                // hat — sonst kämpft die Rotation mit dem Zoom-Flug um die Kamera.
+                if (!hadPendingZoom) {
+                    cesiumWebView.evaluateJavascript("javascript:if(window.startIntroSpin) window.startIntroSpin();", null)
+                }
             }
         }
         val html = try {
@@ -947,10 +963,26 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         }
     }
 
+    /**
+     * Zoom-Befehl an den Globe schicken — aber erst, wenn die Cesium-Seite wirklich
+     * geladen ist. Davor existiert window.zoomToPoint nicht und der JS-Guard
+     * "if(window.zoomToPoint)" verwirft den Aufruf stillschweigend — genau das hat
+     * sich als "Globus lädt nicht / zoomt nicht zum Trip" gezeigt, wenn man direkt
+     * nach dem App-Start vom Dashboard auf ein Erlebnis oder einen Trip klickt.
+     * Der Wunsch wird gemerkt und nach onPageFinished nachgeholt (nur der letzte zählt).
+     */
+    private fun dispatchGlobeZoom(js: String) {
+        if (!globePageReady) {
+            pendingGlobeZoom = { if (::cesiumWebView.isInitialized) cesiumWebView.evaluateJavascript(js, null) }
+            return
+        }
+        cesiumWebView.evaluateJavascript(js, null)
+    }
+
     /** Zoom den Feed-Globe sanft auf einen Ort (von Inline-Detailansichten genutzt). */
     fun zoomGlobeTo(lat: Double, lon: Double) {
         if (::cesiumWebView.isInitialized) {
-            cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, 0.35);", null)
+            dispatchGlobeZoom("javascript:if(window.zoomToPoint) window.zoomToPoint($lat, $lon, 0.35);")
         }
     }
 
@@ -974,7 +1006,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                     if (coords.size == 2) {
                         val lat = coords[0].toDoubleOrNull() ?: return@let
                         val lon = coords[1].toDoubleOrNull() ?: return@let
-                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint($lat,$lon,0.0);", null)
+                        dispatchGlobeZoom("javascript:if(window.zoomToPoint) window.zoomToPoint($lat,$lon,0.0);")
                     }
                 }
             }
@@ -985,13 +1017,17 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
                 if (lats.isNotEmpty() && lons.isNotEmpty()) {
                     if (lats.size == 1) {
-                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToPoint) window.zoomToPoint(${lats[0]},${lons[0]},0.0);", null)
+                        dispatchGlobeZoom("javascript:if(window.zoomToPoint) window.zoomToPoint(${lats[0]},${lons[0]},0.0);")
                     } else {
                         val minLat = lats.minOrNull() ?: return
                         val maxLat = lats.maxOrNull() ?: return
                         val minLon = lons.minOrNull() ?: return
                         val maxLon = lons.maxOrNull() ?: return
-                        cesiumWebView.evaluateJavascript("javascript:if(window.zoomToBounds) window.zoomToBounds($minLat,$minLon,$maxLat,$maxLon,0.0);", null)
+                        // Die Trip-Route zeichnet das inline geöffnete TripDetailFragment
+                        // selbst (setTripPath + viewer.zoomTo). Hier nur sicherstellen,
+                        // dass der Globe auf die Trip-Region zoomt — auch wenn der
+                        // Detail-Fragment-Load noch nicht fertig ist.
+                        dispatchGlobeZoom("javascript:if(window.zoomToBounds) window.zoomToBounds($minLat,$minLon,$maxLat,$maxLon,0.0);")
                     }
                 }
             }
