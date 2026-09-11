@@ -19,20 +19,14 @@ import com.d_drostes_apps.placestracker.R
 import com.d_drostes_apps.placestracker.data.Entry
 import com.d_drostes_apps.placestracker.data.Trip
 import com.d_drostes_apps.placestracker.data.TripStop
+import com.d_drostes_apps.placestracker.utils.AutoDetection
+import com.d_drostes_apps.placestracker.utils.PhotoSample
 import kotlinx.coroutines.flow.first
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-
-    private data class PhotoGroup(
-        val lat: Double,
-        val lon: Double,
-        val uris: MutableList<Uri> = mutableListOf(),
-        val timestamp: Long
-    )
 
     override suspend fun doWork(): Result {
         Log.d("GalleryScanWorker", "Starting gallery scan...")
@@ -46,9 +40,6 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             return Result.success()
         }
 
-        // 🌟 POINT 3: Live-Trip läuft → Fotos werden als Stop-Entwürfe dem Trip zugeordnet.
-        // Ein separater Home-Distanz-Check ist während der Reise sinnlos (man ist ja unterwegs),
-        // deshalb scannen wir bewusst weiter und gruppieren nach Tag+Ort.
         val activeTrip = tripDao.getActiveTrackingTrip()
         if (activeTrip != null) {
             Log.d("GalleryScanWorker", "Travel tracking is active for trip: ${activeTrip.title}. Scanning for stop drafts.")
@@ -57,9 +48,12 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             val newMediaWhileTracking = queryNewMedia(lastScan)
 
             if (newMediaWhileTracking.isNotEmpty()) {
-                val groups = groupPhotosByDayAndLocation(newMediaWhileTracking)
+                // Live-Trip: pro Tag können bewusst mehrere Orte (Stops) vorkommen,
+                // deshalb Tag+Ort-Clustering beibehalten.
+                val groups = AutoDetection.groupByDayAndLocation(toSamples(newMediaWhileTracking))
                 groups.forEach { group ->
-                    createDraft(group.uris, group.lat, group.lon, group.timestamp, activeTrip)
+                    val uris = group.uris.map { Uri.parse(it) }
+                    mergeOrCreateStop(uris, group.lat, group.lon, group.timestamp, activeTrip)
                 }
             }
             prefsWhileTracking.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
@@ -78,56 +72,23 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
             return Result.success()
         }
 
-        val groups = mutableListOf<PhotoGroup>()
-        val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
-        newMedia.forEach { (uri, dateTaken) ->
-            try {
-                applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    val exif = ExifInterface(inputStream)
-                    val latLong = FloatArray(2)
-                    
-                    if (exif.getLatLong(latLong)) {
-                        val photoLat = latLong[0].toDouble()
-                        val photoLon = latLong[1].toDouble()
-                        
-                        val distFromHome = FloatArray(1)
-                        Location.distanceBetween(profile.homeLatitude!!, profile.homeLongitude!!, photoLat, photoLon, distFromHome)
-                        
-                        val minDistanceMeters = profile.autoGalleryScanDistance * 1000
-                        if (minDistanceMeters == 0 || distFromHome[0] > minDistanceMeters) {
-                            var foundGroup = false
-                            val photoDay = sdfDay.format(Date(dateTaken))
-
-                            for (group in groups) {
-                                val groupDay = sdfDay.format(Date(group.timestamp))
-                                
-                                // 🌟 POINT 3: Group by Day AND Location (500m)
-                                if (photoDay == groupDay) {
-                                    val distToGroup = FloatArray(1)
-                                    Location.distanceBetween(group.lat, group.lon, photoLat, photoLon, distToGroup)
-                                    if (distToGroup[0] < 500) { 
-                                        group.uris.add(uri)
-                                        foundGroup = true
-                                        break
-                                    }
-                                }
-                            }
-                            if (!foundGroup) {
-                                groups.add(PhotoGroup(photoLat, photoLon, mutableListOf(uri), dateTaken))
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("GalleryScanWorker", "Error reading EXIF for $uri", e)
-            }
+        val newSamples = toSamples(newMedia).filter { sample ->
+            val distFromHome = FloatArray(1)
+            Location.distanceBetween(profile.homeLatitude!!, profile.homeLongitude!!, sample.lat, sample.lon, distFromHome)
+            val minDistanceMeters = profile.autoGalleryScanDistance * 1000
+            minDistanceMeters == 0 || distFromHome[0] > minDistanceMeters
         }
 
-        Log.d("GalleryScanWorker", "Created ${groups.size} location groups")
+        Log.d("GalleryScanWorker", "${newSamples.size} media items with GPS after home filter")
+
+        // 🌟 POINT 3: One experience per calendar day — every photo of a day belongs
+        // to exactly one suggestion, no matter how far apart it was taken.
+        val groups = AutoDetection.groupByDay(newSamples)
+        Log.d("GalleryScanWorker", "Created ${groups.size} day groups")
 
         groups.forEach { group ->
-            createDraft(group.uris, group.lat, group.lon, group.timestamp, null)
+            val uris = group.uris.map { Uri.parse(it) }
+            mergeOrCreateExperience(uris, group.lat, group.lon, group.timestamp)
         }
 
         prefs.edit().putLong("last_scan_time", System.currentTimeMillis()).apply()
@@ -135,87 +96,117 @@ class GalleryScanWorker(context: Context, params: WorkerParameters) : CoroutineW
     }
 
     /**
-     * Gruppiert Medien nach Tag UND Ort (500m). Wird für den Live-Trip-Pfad genutzt,
-     * wo es keinen Home-Filter gibt — jedes Cluster ergibt einen Stop-Entwurf.
+     * Erzeugt einen Erlebnis-Entwurf für den Tag — außer es existiert bereits ein
+     * Entwurf an diesem Tag. Dann werden die neuen Fotos dem bestehenden Entwurf
+     * hinzugefügt. So entsteht auch über mehrere Scan-Läufe hinweg nur EIN
+     * Vorschlag pro Tag.
      */
-    private fun groupPhotosByDayAndLocation(media: List<Pair<Uri, Long>>): List<PhotoGroup> {
-        val groups = mutableListOf<PhotoGroup>()
-        val sdfDay = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    private suspend fun mergeOrCreateExperience(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long) {
+        val app = applicationContext as PlacesApplication
+        val entryDao = app.database.entryDao()
 
-        media.forEach { (uri, dateTaken) ->
+        val dayStart = AutoDetection.dayStartMillis(timestamp)
+        val dayEnd = AutoDetection.dayEndMillis(timestamp)
+        val existingDraft = entryDao.getDraftForDay(dayStart, dayEnd)
+        if (existingDraft != null) {
+            val mergedMedia = (existingDraft.media + photoUris.mapNotNull { uri ->
+                try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
+            }).distinct()
+            if (mergedMedia.size == existingDraft.media.size) return
+            entryDao.update(
+                existingDraft.copy(
+                    media = mergedMedia,
+                    coverImage = existingDraft.coverImage ?: mergedMedia.firstOrNull()
+                )
+            )
+            Log.d("GalleryScanWorker", "Merged ${photoUris.size} photos into existing draft for day ${Date(dayStart)}")
+            return
+        }
+
+        val internalFilePaths = photoUris.mapNotNull { uri ->
+            try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
+        }
+        if (internalFilePaths.isEmpty()) return
+
+        val draftEntry = Entry(
+            title = "Neues Erlebnis (Entwurf)",
+            date = timestamp,
+            notes = "",
+            location = "$lat,$lon",
+            media = internalFilePaths,
+            isDraft = true,
+            coverImage = internalFilePaths.firstOrNull()
+        )
+        entryDao.insert(draftEntry)
+        sendNotification("Neues Erlebnis erkannt!", "Möchtest du ein Erlebnis mit ${internalFilePaths.size} Fotos erstellen?", -1, false)
+    }
+
+    /**
+     * Live-Trip: Fotos werden als Stop-Entwürfe dem Trip zugeordnet. Existiert bereits
+     * ein Stop am selben Tag (Entwurf oder bestätigt), werden die Fotos dort ergänzt
+     * statt einen weiteren Stop anzulegen.
+     */
+    private suspend fun mergeOrCreateStop(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long, trip: Trip) {
+        val app = applicationContext as PlacesApplication
+        val tripDao = app.database.tripDao()
+
+        val dayStart = AutoDetection.dayStartMillis(timestamp)
+        val dayEnd = AutoDetection.dayEndMillis(timestamp)
+        val existingStop = tripDao.getLatestStopForDay(trip.id, dayStart, dayEnd)
+        if (existingStop != null) {
+            val mergedMedia = (existingStop.media + photoUris.mapNotNull { uri ->
+                try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
+            }).distinct()
+            if (mergedMedia.size == existingStop.media.size) return
+            tripDao.updateStop(
+                existingStop.copy(
+                    media = mergedMedia,
+                    coverImage = existingStop.coverImage ?: mergedMedia.firstOrNull()
+                )
+            )
+            Log.d("GalleryScanWorker", "Merged ${photoUris.size} photos into existing stop for day ${Date(dayStart)}")
+            return
+        }
+
+        val internalFilePaths = photoUris.mapNotNull { uri ->
+            try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
+        }
+        if (internalFilePaths.isEmpty()) return
+
+        val draftStop = TripStop(
+            tripId = trip.id,
+            title = "Neuer Stopp (Entwurf)",
+            date = timestamp,
+            location = "$lat,$lon",
+            media = internalFilePaths,
+            isDraft = true,
+            coverImage = internalFilePaths.firstOrNull()
+        )
+        tripDao.insertStop(draftStop)
+        sendNotification("Neuer Stopp erkannt!", "Möchtest du ${internalFilePaths.size} Fotos deinem aktuellen Trip hinzufügen?", trip.id, true)
+    }
+
+    /** Wandelt (Uri, timestamp)-Paare in reine, testbare Samples um. */
+    private fun toSamples(media: List<Pair<Uri, Long>>): List<PhotoSample> =
+        media.mapNotNull { (uri, dateTaken) ->
             try {
                 applicationContext.contentResolver.openInputStream(uri)?.use { inputStream ->
                     val exif = ExifInterface(inputStream)
                     val latLong = FloatArray(2)
-
                     if (exif.getLatLong(latLong)) {
-                        val photoLat = latLong[0].toDouble()
-                        val photoLon = latLong[1].toDouble()
-                        val photoDay = sdfDay.format(Date(dateTaken))
-
-                        var foundGroup = false
-                        for (group in groups) {
-                            val groupDay = sdfDay.format(Date(group.timestamp))
-                            if (photoDay == groupDay) {
-                                val distToGroup = FloatArray(1)
-                                Location.distanceBetween(group.lat, group.lon, photoLat, photoLon, distToGroup)
-                                if (distToGroup[0] < 500) {
-                                    group.uris.add(uri)
-                                    foundGroup = true
-                                    break
-                                }
-                            }
-                        }
-                        if (!foundGroup) {
-                            groups.add(PhotoGroup(photoLat, photoLon, mutableListOf(uri), dateTaken))
-                        }
-                    }
+                        PhotoSample(
+                            uri = uri.toString(),
+                            takenAt = dateTaken,
+                            lat = latLong[0].toDouble(),
+                            lon = latLong[1].toDouble()
+                        )
+                    } else null
                 }
             } catch (e: Exception) {
                 Log.e("GalleryScanWorker", "Error reading EXIF for $uri", e)
+                null
             }
         }
-        return groups
-    }
-
-    private suspend fun createDraft(photoUris: List<Uri>, lat: Double, lon: Double, timestamp: Long, activeTrip: Trip?) {
-        val app = applicationContext as PlacesApplication
-        val tripDao = app.database.tripDao()
-        val entryDao = app.database.entryDao()
-        
-        val trip = activeTrip ?: tripDao.getActiveTrackingTrip()
-        val internalFilePaths = photoUris.mapNotNull { uri ->
-            try { copyToInternalStorage(uri).absolutePath } catch (e: Exception) { null }
-        }
-        
-        if (internalFilePaths.isEmpty()) return
-        
-        if (trip != null) {
-            val draftStop = TripStop(
-                tripId = trip.id,
-                title = "Neuer Stopp (Entwurf)",
-                date = timestamp,
-                location = "$lat,$lon",
-                media = internalFilePaths,
-                isDraft = true,
-                coverImage = internalFilePaths.firstOrNull()
-            )
-            tripDao.insertStop(draftStop)
-            sendNotification("Neuer Stopp erkannt!", "Möchtest du ${internalFilePaths.size} Fotos deinem aktuellen Trip hinzufügen?", trip.id, true)
-        } else {
-            val draftEntry = Entry(
-                title = "Neues Erlebnis (Entwurf)",
-                date = timestamp,
-                notes = "",
-                location = "$lat,$lon",
-                media = internalFilePaths,
-                isDraft = true,
-                coverImage = internalFilePaths.firstOrNull()
-            )
-            entryDao.insert(draftEntry)
-            sendNotification("Neues Erlebnis erkannt!", "Möchtest du ein Erlebnis mit ${internalFilePaths.size} Fotos erstellen?", -1, false)
-        }
-    }
 
     private fun queryNewMedia(since: Long): List<Pair<Uri, Long>> {
         val media = mutableListOf<Pair<Uri, Long>>()

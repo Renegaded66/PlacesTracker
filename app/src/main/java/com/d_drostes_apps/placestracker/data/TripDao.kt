@@ -47,6 +47,13 @@ interface TripDao {
     @Query("SELECT * FROM trip_stops WHERE tripId = :tripId ORDER BY date ASC")
     suspend fun getStopsForTripSync(tripId: Int): List<TripStop>
 
+    @Query("SELECT * FROM trip_stops WHERE tripId = :tripId ORDER BY date ASC LIMIT 1")
+    suspend fun getFirstStopForTrip(tripId: Int): TripStop?
+
+    /** Latest stop (draft or confirmed) whose day starts within [dayStartMillis, dayEndMillis). */
+    @Query("SELECT * FROM trip_stops WHERE tripId = :tripId AND date >= :dayStartMillis AND date < :dayEndMillis ORDER BY date DESC LIMIT 1")
+    suspend fun getLatestStopForDay(tripId: Int, dayStartMillis: Long, dayEndMillis: Long): TripStop?
+
     @Query("SELECT * FROM trip_stops ORDER BY date ASC")
     fun getAllTripStops(): Flow<List<TripStop>>
 

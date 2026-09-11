@@ -17,6 +17,10 @@ interface EntryDao {
     @Query("SELECT * FROM entries WHERE id = :id")
     suspend fun getEntryById(id: Int): Entry?
 
+    /** Draft (auto-suggestion) whose day starts within [dayStartMillis, dayEndMillis). */
+    @Query("SELECT * FROM entries WHERE isDraft = 1 AND date >= :dayStartMillis AND date < :dayEndMillis LIMIT 1")
+    suspend fun getDraftForDay(dayStartMillis: Long, dayEndMillis: Long): Entry?
+
     @Query("SELECT * FROM entries WHERE friendId = :friendId AND title = :title LIMIT 1")
     suspend fun getEntryByFriendAndTitle(friendId: String, title: String): Entry?
 
