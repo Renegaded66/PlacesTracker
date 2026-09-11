@@ -283,11 +283,18 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
     const markerDataSource = new Cesium.CustomDataSource('markers');
     viewer.dataSources.add(markerDataSource);
 
-    // Einheitliche Markergröße: Erlebnisse (Foto-Billboards, vorher 72px) und
-    // Trip-Stops (Punkte, vorher 16px) erscheinen nun gleich groß (48px),
-    // Diary-Icons nutzen bereits 48px und bleiben damit konsistent.
-    const MARKER_SIZE = 48;
+    // Einheitliche Markergröße: Erlebnisse (Foto-Billboards), Trip-Stops und
+    // Diary-Icons erscheinen alle exakt gleich groß (48px sichtbarer Kreis).
+    // WICHTIG: Das Billboard muss die GESAMTE Canvas (inkl. Tipp-Rand) zeigen —
+    // wird es auf MARKER_SIZE gesetzt, schrumpft der sichtbare Kreis mit
+    // (48px Canvas × 48/72 = 32px) und Single-Bilder wirken kleiner als Punkte.
+    const MARKER_SIZE = 48;   // sichtbarer Durchmesser aller Marker
     const MARKER_CANVAS = MARKER_SIZE + 24; // Canvas = sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
+    // Billboards zeigen die volle Canvas 1:1, damit der Kreis exakt MARKER_SIZE ist:
+    const MARKER_BILLBOARD = MARKER_CANVAS;
+    // Cluster: sichtbar 56px wie bisher, Canvas 1:1 dazu (identisches Schema: +24 Tipp-Rand)
+    const CLUSTER_SIZE = 56;
+    const CLUSTER_CANVAS = CLUSTER_SIZE + 24;
 
     // enable clustering for dense friend markers
     markerDataSource.clustering.enabled = true;
@@ -298,11 +305,11 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
         cluster.label.show = false;
 
         // Asynchrones Laden des Cluster-Bildes
-        createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor).then(clusterImageUrl => {
+        createRoundImage(firstEntity._originalImage, firstEntity._typeColor, count, firstEntity._borderColor, CLUSTER_SIZE).then(clusterImageUrl => {
             if (clusterImageUrl) {
                 cluster.billboard.show = true;
                 cluster.billboard.image = clusterImageUrl;
-                cluster.billboard.width = 56; cluster.billboard.height = 56;
+                cluster.billboard.width = CLUSTER_CANVAS; cluster.billboard.height = CLUSTER_CANVAS;
                 cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
                 cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
                 // 🌟 FIX: Cluster bleiben beim Rauszoomen immer sichtbar!
@@ -337,7 +344,9 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
 
     function getDiaryIcon(color) {
         const path = svgPaths['book'];
-        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="22" fill="${color}" stroke="#ffffff" stroke-width="2"/><path d="${path}" fill="#ffffff" transform="translate(12,12) scale(1)"/></svg>`;
+        // r=23.5 + 1px Stroke = exakt 48px Gesamtdurchmesser — identisch zum 48px-Foto-Marker
+        // (fill=48) und zum 48px-Stop-Punkt. Vorher (r=22, stroke 2) war das Buch-Icon 2px kleiner.
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48"><circle cx="24" cy="24" r="23.5" fill="${color}" stroke="#ffffff" stroke-width="1"/><path d="${path}" fill="#ffffff" transform="translate(12,12) scale(1)"/></svg>`;
         return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
     }
 
@@ -400,13 +409,13 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
     // 🌟 FIX: Ein Speicher-Cache, der verhindert, dass gleiche Bilder x-mal gerendert werden!
     const roundImageCache = new Map();
 
-    async function createRoundImage(imageUrl, color, count = 0, borderColor = "#ffffff") {
+    async function createRoundImage(imageUrl, color, count = 0, borderColor = "#ffffff", size = MARKER_SIZE) {
         if (!imageUrl || imageUrl === "null") return null;
-        const cacheKey = `${imageUrl}_${color}_${count}_${borderColor}`;
+        const cacheKey = `${imageUrl}_${color}_${count}_${borderColor}_${size}`;
         if (roundImageCache.has(cacheKey)) return roundImageCache.get(cacheKey);
 
         return new Promise(resolve => {
-            const baseSize = MARKER_CANVAS; // 48px sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
+            const baseSize = size + 24; // Canvas = sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
             const canvas = document.createElement("canvas");
             canvas.width = baseSize; canvas.height = baseSize;
             const ctx = canvas.getContext("2d");
@@ -414,7 +423,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
 
             img.onload = () => {
-                const c = baseSize / 2; const r = MARKER_SIZE / 2; // sichtbarer Kreis 48px, Rand = vergrößerte Tapp-Fläche
+                const c = baseSize / 2; const r = size / 2; // sichtbarer Kreis, Rand = vergrößerte Tapp-Fläche
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 1, 0, Math.PI * 2);
                 ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.fillStyle = color; ctx.fill(); ctx.restore();
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
@@ -501,8 +510,8 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                 if (finalImageUrl) {
                     entity.billboard = {
                         image: finalImageUrl,
-                        width: MARKER_SIZE,
-                        height: MARKER_SIZE,
+                        width: MARKER_BILLBOARD,
+                        height: MARKER_BILLBOARD,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -640,8 +649,8 @@ window.setTripPath = function(data) {
 
                                 entity.billboard = {
                                     image: img,
-                                    width: MARKER_SIZE,
-                                    height: MARKER_SIZE,
+                                    width: MARKER_BILLBOARD,
+                                    height: MARKER_BILLBOARD,
                                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
