@@ -387,6 +387,61 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         setupExpandableFab(view)
         setupFilters(view)
         setupViewMode(view)
+        maybeShowOnboardingHint(view)
+    }
+
+    /**
+     * Einsteiger-Tipp: zeigt beim ersten App-Start (bis zum ersten Detail-Öffnen) einen
+     * dezenten Hinweis über dem Feed an, dass das Panel ziehbar ist — Onboarding ohne Zwang.
+     */
+    private fun maybeShowOnboardingHint(view: View) {
+        val prefs = requireContext().getSharedPreferences("ux_onboarding", android.content.Context.MODE_PRIVATE)
+        if (prefs.getBoolean("sheet_hint_dismissed", false)) return
+        if (lastItems.isNotEmpty()) return // nur für echte Neulinge
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // Kurz warten bis erste Flow-Daten da sind; falls dann immer noch leer → Tipp zeigen
+            kotlinx.coroutines.delay(1200)
+            if (!isAdded || lastItems.isNotEmpty()) return@launch
+
+            val hint = com.google.android.material.chip.Chip(requireContext()).apply {
+                text = getString(R.string.onboarding_hint_title)
+                isCloseIconVisible = true
+                chipStrokeWidth = 0f
+                setOnCloseIconClickListener {
+                    prefs.edit().putBoolean("sheet_hint_dismissed", true).apply()
+                    (view.findViewById<View>(R.id.feedRecycler) ?: view).announceForAccessibility("")
+                }
+                setOnClickListener {
+                    prefs.edit().putBoolean("sheet_hint_dismissed", true).apply()
+                    // Tipp weg, FAB-Menü andeuten: das ist die eigentliche Call-to-Action
+                    if (!isFabMenuOpen) view.findViewById<FloatingActionButton>(R.id.fabAdd)?.performClick()
+                }
+            }
+            hint.layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            (view as? android.view.ViewGroup)?.let { root ->
+                (root.findViewById<android.view.ViewGroup>(R.id.feedListLayout) as? android.view.ViewGroup)
+                    ?.let { listLayout ->
+                        val holder = android.widget.FrameLayout(requireContext())
+                        holder.addView(hint, android.widget.FrameLayout.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        ).apply { gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.BOTTOM })
+                        listLayout.post {
+                            try {
+                                listLayout.addView(holder, 0, android.view.ViewGroup.LayoutParams(
+                                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                                ))
+                                com.d_drostes_apps.placestracker.utils.MicroInteractions.popIn(holder)
+                            } catch (_: Exception) {}
+                        }
+                    }
+            }
+        }
     }
 
     private fun setupViewMode(view: View) {
