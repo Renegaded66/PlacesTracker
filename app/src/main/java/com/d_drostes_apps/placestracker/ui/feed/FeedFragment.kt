@@ -202,6 +202,16 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
             }
         })
 
+        // Globe-Verbindungen restaurieren, wenn eine Inline-Detailansicht geschlossen wird:
+        // TripDetail ruft im Globe window.setTripPath() auf, das ALLE globalen Polylines
+        // (die Trip-Verbindungen aller Trips) entfernt. Bei Rückkehr ins Dashboard würde
+        // sonst nur die zuletzt angesehene Route als rote Linie übrig bleiben.
+        childFragmentManager.addOnBackStackChangedListener {
+            if (childFragmentManager.backStackEntryCount == 0 && detailContainer.isVisible) {
+                updateGlobeData()
+            }
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 userDao.getUserProfile().collectLatest { profile ->

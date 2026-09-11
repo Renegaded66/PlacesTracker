@@ -285,7 +285,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
 
     // enable clustering for dense friend markers
     markerDataSource.clustering.enabled = true;
-    markerDataSource.clustering.pixelRange = -30; // cluster only when markers overlap ~50%
+    markerDataSource.clustering.pixelRange = 6; // cluster only on real overlap (>=3 Marker), damit Pins einzeln tappbar bleiben
     markerDataSource.clustering.minimumClusterSize = 3;
     markerDataSource.clustering.clusterEvent.addEventListener(async function(clusteredEntities, cluster) {
         const count = clusteredEntities.length; const firstEntity = clusteredEntities[0];
@@ -296,7 +296,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             if (clusterImageUrl) {
                 cluster.billboard.show = true;
                 cluster.billboard.image = clusterImageUrl;
-                cluster.billboard.width = 40; cluster.billboard.height = 40;
+                cluster.billboard.width = 56; cluster.billboard.height = 56;
                 cluster.billboard.verticalOrigin = Cesium.VerticalOrigin.CENTER;
                 cluster.billboard.heightReference = Cesium.HeightReference.CLAMP_TO_GROUND;
                 // 🌟 FIX: Cluster bleiben beim Rauszoomen immer sichtbar!
@@ -400,7 +400,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
         if (roundImageCache.has(cacheKey)) return roundImageCache.get(cacheKey);
 
         return new Promise(resolve => {
-            const baseSize = 64; // Klein und extrem schnell
+            const baseSize = 96; // 72px sichtbarer Kreis + 12px unsichtbarer Tipp-Rand
             const canvas = document.createElement("canvas");
             canvas.width = baseSize; canvas.height = baseSize;
             const ctx = canvas.getContext("2d");
@@ -408,13 +408,27 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             if (!imageUrl.startsWith("data:")) img.crossOrigin = "anonymous";
 
             img.onload = () => {
-                const c = baseSize / 2; const r = 26;
+                const c = baseSize / 2; const r = 36; // sichtbarer Kreis 72px, Rand = vergrößerte Tapp-Fläche
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r + 1, 0, Math.PI * 2);
-                ctx.shadowColor = color; ctx.shadowBlur = 6; ctx.fillStyle = color; ctx.fill(); ctx.restore();
+                ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.fillStyle = color; ctx.fill(); ctx.restore();
                 ctx.save(); ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.clip();
                 ctx.drawImage(img, c - r, c - r, r * 2, r * 2); ctx.restore();
                 ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2);
-                ctx.strokeStyle = borderColor; ctx.lineWidth = 3; ctx.stroke();
+                ctx.strokeStyle = borderColor; ctx.lineWidth = 4; ctx.stroke();
+
+                // Count-Badge bei Clustern (>1): zeigt gebündelte Marker
+                if (count > 1) {
+                    const label = count > 99 ? "99+" : String(count);
+                    ctx.font = "bold " + (label.length > 1 ? 14 : 17) + "px sans-serif";
+                    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                    const bw = label.length > 1 ? 26 : 22;
+                    const bcx = c + r - 4, bcy = c - r + 4;
+                    ctx.beginPath(); ctx.arc(bcx, bcy, bw / 2, 0, Math.PI * 2);
+                    ctx.fillStyle = "rgba(20,20,20,0.92)"; ctx.fill();
+                    ctx.lineWidth = 2.5; ctx.strokeStyle = "#ffffff"; ctx.stroke();
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillText(label, bcx, bcy + 1);
+                }
 
                 const resultUrl = canvas.toDataURL("image/webp", 0.6);
                 roundImageCache.set(cacheKey, resultUrl);
@@ -461,7 +475,7 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             position: Cesium.Cartesian3.fromDegrees(item.lon, item.lat),
             // 🌟 FIX 3: Punkt sofort zeichnen und IMMER über der Erde halten
             point: {
-                pixelSize: 14,
+                pixelSize: 16,
                 color: Cesium.Color.fromCssColorString(typeColor || "#FF0000"),
                 outlineColor: Cesium.Color.fromCssColorString(borderColor),
                 outlineWidth: 2,
@@ -481,12 +495,12 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                 if (finalImageUrl) {
                     entity.billboard = {
                         image: finalImageUrl,
-                        width: 40,
-                        height: 40,
+                        width: 72,
+                        height: 72,
                         verticalOrigin: Cesium.VerticalOrigin.CENTER,
                         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                         disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                        scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.4)
+                        scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.7)
                     };
                     // 🌟 Pop-in-Animation: Marker skaliert beim Laden von 0.2 auf 1 (easeOutCubic)
                     const appearStart = viewer.clock.currentTime;
@@ -505,12 +519,12 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
             // Diary-Eintrag ohne Bild -> Buch-Icon anzeigen
             entity.billboard = {
                 image: getDiaryIcon(typeColor),
-                width: 32,
-                height: 32,
+                width: 48,
+                height: 48,
                 verticalOrigin: Cesium.VerticalOrigin.CENTER,
                 heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.4)
+                scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.7)
             };
             entity.point = undefined;
         }
@@ -556,7 +570,15 @@ viewer.scene.globe.tileLoadProgressEvent.addEventListener(count => {
                             }
                         }
                         if (coordinates.length > 1) {
-                            polylineEntities.push(viewer.entities.add({ polyline: { positions: coordinates, width: 4.0, material: Cesium.Color.RED, clampToGround: true } }));
+                            // dezente Trip-Route: dünn, halbtransparent, weiß
+                            polylineEntities.push(viewer.entities.add({
+                                polyline: {
+                                    positions: coordinates,
+                                    width: 1.5,
+                                    material: Cesium.Color.WHITE.withAlpha(0.55),
+                                    clampToGround: true
+                                }
+                            }));
                         }
                     }
                 }
@@ -580,7 +602,7 @@ window.setTripPath = function(data) {
                 if (prevPos && item.transportMode && svgPaths[item.transportMode]) {
                     const midPos = Cesium.Cartesian3.lerp(prevPos, pos, 0.5, new Cesium.Cartesian3());
                     const maxVisibility = Math.max(Cesium.Cartesian3.distance(prevPos, pos) * 4.0, 50000.0);
-                    detailEntities.push(viewer.entities.add({ position: midPos, billboard: { image: getCustomTransportIcon(item.transportMode), width: 28, height: 28, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY, distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, maxVisibility) } }));
+                    detailEntities.push(viewer.entities.add({ position: midPos, billboard: { image: getCustomTransportIcon(item.transportMode), width: 40, height: 40, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY, distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, maxVisibility) } }));
                 }
                 if (!item.isMini) {
 
@@ -589,7 +611,7 @@ window.setTripPath = function(data) {
                     const entity = viewer.entities.add({
                         position: pos,
                         point: {
-                            pixelSize: 15,
+                            pixelSize: 20,
                             color: Cesium.Color.RED,
                             outlineColor: Cesium.Color.WHITE,
                             outlineWidth: 3,
@@ -612,12 +634,12 @@ window.setTripPath = function(data) {
 
                                 entity.billboard = {
                                     image: img,
-                                    width: 40,
-                                    height: 40,
+                                    width: 72,
+                                    height: 72,
                                     verticalOrigin: Cesium.VerticalOrigin.CENTER,
                                     heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                                     disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                                    scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.4)
+                                    scaleByDistance: new Cesium.NearFarScalar(1000, 1.0, 20000000, 0.7)
                                 };
 
                                 entity.point = undefined;
@@ -633,7 +655,7 @@ window.setTripPath = function(data) {
                     detailEntities.push(viewer.entities.add({
                         position: pos,
                         point: {
-                            pixelSize: 8,
+                            pixelSize: 10,
                             color: Cesium.Color.WHITE.withAlpha(0.8),
                             heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                             disableDepthTestDistance: 0
