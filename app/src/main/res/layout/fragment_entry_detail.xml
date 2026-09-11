@@ -5,7 +5,8 @@
     android:id="@+id/detailRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/windowBackground">
+    android:background="?android:attr/windowBackground"
+    android:paddingTop="24dp">
 
     <!-- Reihenfolge = Z-Ordnung (alles ohne Elevation, kein Shadow-Balken ueber dem Hero):
          1. NestedScrollView (unten)   2. Toolbar (davor)   3. Drag-Handle (ganz vorn) -->
