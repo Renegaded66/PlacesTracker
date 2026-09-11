@@ -324,8 +324,16 @@ class FeedAdapter(
         holder.draftBadge?.visibility = if (isDraft) View.VISIBLE else View.GONE
         holder.draftOverlay?.visibility = if (isDraft && currentViewMode == ViewMode.COMPACT) View.VISIBLE else View.GONE
         holder.draftActions?.visibility = if (isDraft && currentViewMode == ViewMode.STANDARD) View.VISIBLE else View.GONE
-        holder.btnConfirmDraft?.setOnClickListener { onConfirmDraft(item) }
-        holder.btnRemoveDraft?.setOnClickListener { onRemoveDraft(item) }
+        holder.btnConfirmDraft?.setOnClickListener {
+            // Belohnungs-Moment: Haptik + Button-Pop bevor der Editor öffnet
+            com.d_drostes_apps.placestracker.utils.Feedback.confirm(it)
+            com.d_drostes_apps.placestracker.utils.MicroInteractions.successPulse(it)
+            onConfirmDraft(item)
+        }
+        holder.btnRemoveDraft?.setOnClickListener {
+            com.d_drostes_apps.placestracker.utils.Feedback.reject(it)
+            onRemoveDraft(item)
+        }
 
         holder.ivTypeIcon?.setColorFilter(activeColor)
 
@@ -523,7 +531,15 @@ class TripStopPreviewAdapter(
             holder.ivPic.setImageResource(R.drawable.vorschaubild)
         }
 
-        holder.itemView.setOnClickListener { onStopClick(stop) }
+        // Chips poppen gestaffelt auf, wenn die Stops-Leiste aufgeklappt wird
+        if (!holder.itemView.isLaidOut || holder.itemView.scaleX < 1f) {
+            com.d_drostes_apps.placestracker.utils.MicroInteractions.popIn(holder.itemView, position * 50L)
+        }
+
+        holder.itemView.setOnClickListener {
+            com.d_drostes_apps.placestracker.utils.Feedback.tick(holder.itemView)
+            onStopClick(stop)
+        }
     }
 
     override fun getItemCount(): Int = stops.size
