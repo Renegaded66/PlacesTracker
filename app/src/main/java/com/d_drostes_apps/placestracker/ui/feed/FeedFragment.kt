@@ -227,6 +227,34 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
             }
         }
+
+        // Rückkehr per Geste: Zieht der User im Globe-Fullscreen (Sheet HIDDEN) nach
+        // oben, kommt das Sheet zurück — auch wenn der WebView den Tap gefressen hat.
+        // onTouchListener greift in der Dispatch-Phase (noch VOR dem WebView) und
+        // konsumiert nichts (return false), damit die Globe-Interaktion unberührt bleibt.
+        val touchSlop = android.view.ViewConfiguration.get(requireContext()).scaledTouchSlop * 2
+        var dragDownY = 0f
+        var dragRestored = false
+        view.findViewById<View>(R.id.globeContainer)?.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    dragDownY = event.rawY
+                    dragRestored = false
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    if (!dragRestored && dragDownY - event.rawY > touchSlop) {
+                        dragRestored = true
+                        if (feedSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                            feedSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+                        } else if (detailContainer.isVisible && detailSheetBehavior?.state == BottomSheetBehavior.STATE_HIDDEN) {
+                            detailSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+                        }
+                    }
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> dragRestored = false
+            }
+            false // nicht konsumieren: WebView behält Globe-Pan/Rotate
+        }
         
         // Handle Back Press to close details
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
