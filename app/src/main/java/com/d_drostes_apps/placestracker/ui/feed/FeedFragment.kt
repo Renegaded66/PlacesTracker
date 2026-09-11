@@ -39,6 +39,7 @@ import com.d_drostes_apps.placestracker.data.TripStop
 import com.d_drostes_apps.placestracker.ui.newtrip.TripDetailFragment
 import com.d_drostes_apps.placestracker.ui.newtrip.TripStopDetailFragment
 import com.d_drostes_apps.placestracker.utils.GlobeUtils
+import com.d_drostes_apps.placestracker.utils.FabVisibilityRules
 import com.d_drostes_apps.placestracker.utils.ThemeHelper
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.chip.Chip
@@ -184,9 +185,12 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
         val globeSync = object : BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 syncGlobeToSheetTop(bottomSheet.top)
-                // FABs ausblenden, wenn der Globus fullscreen ist
-                view?.findViewById<View>(R.id.fabContainer)?.visibility =
-                    if (newState == BottomSheetBehavior.STATE_HIDDEN) View.GONE else View.VISIBLE
+                // FAB nur im Dashboard zeigen — nie bei offenem Detail.
+                // Vorher stand hier "nur bei STATE_HIDDEN ausblenden": Dadurch hat
+                // dieser Callback den Button bei JEDEM Sheet-State != HIDDEN wieder
+                // eingeblendet — auch wenn er gerade von navigateToDetail() für ein
+                // offenes Detail ausgeblendet wurde.
+                updateFabVisibility()
             }
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
@@ -995,7 +999,7 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
 
         feedListLayout.visibility = View.GONE
         detailContainer.visibility = View.VISIBLE
-        view?.findViewById<View>(R.id.fabContainer)?.visibility = View.GONE
+        updateFabVisibility()
 
         // Detail-Sheet auf COLLAPSED (Peek 38%: Globe oben frei, Inhalt unten) —
         // User kann hochziehen (HALF/EXPANDED) oder runterziehen (HIDDEN = schließen).
@@ -1034,13 +1038,36 @@ class FeedFragment : Fragment(R.layout.fragment_feed) {
                 }
             }
         } catch (_: Exception) {}
-        view?.findViewById<View>(R.id.fabContainer)?.visibility = View.VISIBLE
+        updateFabVisibility()
         val fragment = childFragmentManager.findFragmentById(R.id.detailFragmentContainer)
         if (fragment != null) {
             childFragmentManager.beginTransaction().remove(fragment).commit()
         }
         lastZoomedId = null
         cesiumWebView.evaluateJavascript("javascript:if(window.resetGlobeView) window.resetGlobeView();", null)
+    }
+
+    /**
+     * Einzige Quelle der Wahrheit für die Sichtbarkeit des Dashboard-FAB:
+     * sichtbar NUR, wenn (a) kein Detail offen ist und (b) das Feed-Sheet
+     * nicht gerade den Globus als Fullscreen freigibt (STATE_HIDDEN).
+     *
+     * Vorher gab es zwei unabhängige Stellen (navigateToDetail/closeDetail und
+     * der BottomSheet-Callback), die sich gegenseitig überschrieben — der
+     * Callback blendete den FAB über geöffneten Details wieder ein.
+     */
+    private fun updateFabVisibility() {
+        val fabContainer = view?.findViewById<View>(R.id.fabContainer) ?: return
+        val detailOpen = this::detailContainer.isInitialized && detailContainer.isVisible
+        val feedSheetHidden = if (this::feedListLayout.isInitialized) {
+            try {
+                BottomSheetBehavior.from(feedListLayout).state == BottomSheetBehavior.STATE_HIDDEN
+            } catch (_: Exception) {
+                false
+            }
+        } else false
+        fabContainer.visibility =
+            if (FabVisibilityRules.shouldShow(detailOpen, feedSheetHidden)) View.VISIBLE else View.GONE
     }
 
     private fun showAddSelectionDialog() {
