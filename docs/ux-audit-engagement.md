@@ -17,12 +17,14 @@ Sichtung aller Dialog-, Feed- und Editor-Layouts und der Navigations-Animationen
 7. Dead Code: showAddSelectionDialog() mit doppeltem dialog.show() (Bug: zweites show() nach Konfiguration).
 8. Auto-Trip-Progress: nackter Default-AlertDialog (themefremd, kein Spinner).
 9. Empty State des Feeds: statisches 🌍-Emoji, keine Bewegung.
+10. Kein Onboarding-Hint: das ziehbare Panel ist für Neulinge nicht entdeckbar.
 
-## Umgesetzte Verbesserungen (7 Commits auf hermes/ux-overhaul)
+## Umgesetzte Verbesserungen (4 Code-Commits auf hermes/ux-overhaul, gepusht)
 - 7229d7d feat: save-flow polish — inline validation, loading states, haptics, i18n fixes
 - 8494975 feat: engagement polish — staggered feed entrance, animated empty states,
   bucket completion feedback, stats count-up, FAB haptics
 - 09dcf5d feat: draft confirm as reward moment, trip stop preview chips pop in
+- b4482c8 feat: first-use onboarding hint chip above feed (dismissible, only for empty feed)
 
 ### Neue Infrastruktur (utils/)
 - Feedback.kt: tick/confirm/reject-Haptik (API-Level-sicher) + Shake-Effekt
